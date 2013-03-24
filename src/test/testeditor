@@ -1,0 +1,154 @@
+(
+    success
+    (
+        2
+        2
+        (
+        )
+        (
+            edit-pipeline
+            svndiff1
+            absent-entries
+            commit-revprops
+            depth
+            log-revprops
+            partial-replay
+        )
+    )
+)
+
+
+(
+    success
+    (
+        (
+            ANONYMOUS
+        )
+        36:ccf9f872-aa2e-dd11-9fc8-001c23d0bc1f
+    )
+)
+
+
+(
+    success
+    (
+        0:
+    )
+)
+
+(
+    success
+    (
+        36:ccf9f872-aa2e-dd11-9fc8-001c23d0bc1f
+        26:svn://svn.freebsd.org/base
+        (
+            mergeinfo
+        )
+    )
+)
+
+
+(
+    success
+    (
+        (
+        )
+        0:
+    )
+)
+
+(
+    target-rev
+    (
+        123123
+    )
+)
+(
+    open-root
+    (
+        ( 123123 )
+        2:d0
+    )
+)
+(
+    open-root
+    (
+        ( )
+        2:d0
+    )
+)
+(
+    add-dir
+    (
+        4:qwer
+        2:as
+        2:zx
+        ( 4:asdf 112233 )
+    )
+)
+(
+    add-dir
+    (
+        4:qwer
+        2:as
+        2:zx
+        (  )
+    )
+)
+(
+    apply-textdelta
+    (
+        2:c1
+        ( )
+    )
+)
+(
+    textdelta-chunk
+    (
+        2:c1
+        4:SVN
+    )
+)
+(
+    textdelta-chunk
+    (
+        2:c1
+        5:
+    )
+)
+(
+    textdelta-chunk
+    (
+        2:c1
+        8:01010101
+    )
+)
+(
+    textdelta-chunk
+    (
+        2:c1
+        33: 12345678901234567890123456789012
+    )
+)
+(
+    textdelta-chunk
+    (
+        2:c1
+        34:!123456789012345678901234567!!!!!!
+    )
+)
+(
+    textdelta-end
+    (
+        2:c1
+    )
+)
+(
+    close-edit
+    (
+    )
+)
+(
+    foo
+    ( )
+)

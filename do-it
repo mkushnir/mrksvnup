@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Initially create all:
+#
+#aclocal
+#autoheader
+#autoreconf
+#automake --add-missing
+#libtoolize
+
+# At each reconfiguration:
+#
+#make distclean
+#autoreconf
+#./configure --prefix=$HOME
+#make
