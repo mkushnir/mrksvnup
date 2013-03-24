@@ -14,7 +14,7 @@
 #include "mrksvnup/svnproto.h"
 
 const char *_malloc_options = "J";
-#define DOTFILE ".svnsup"
+#define DOTFILE ".svnup"
 
 static int
 update_cb(svnc_ctx_t *ctx,
@@ -49,7 +49,7 @@ update_cb(svnc_ctx_t *ctx,
     return 0;
 }
 
-UNUSED static void
+static void
 run(const char *url,
     long target_rev,
     const char *localroot)
