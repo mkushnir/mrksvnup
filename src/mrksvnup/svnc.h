@@ -11,7 +11,7 @@
 
 #define SVN_DEFAULT_PORT 3690
 
-#define RA_CLIENT ("mrksvnup/" SVNUP_VERSION_STR)
+#define RA_CLIENT ("mrksvnup/" PACKAGE_VERSION)
 
 typedef struct _svnc_ctx {
     char *url;
