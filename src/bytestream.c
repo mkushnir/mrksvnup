@@ -227,7 +227,7 @@ bytestream_cat(bytestream_t *stream, size_t sz, const char *data)
     if (need > 0) {
         //TRACE("need more: %ld", need);
         if (bytestream_grow(stream, (need < BLOCKSZ) ? BLOCKSZ : need) != 0) {
-            TRRET(BYTESTREAM_NPRINTF + 1);
+            TRRET(BYTESTREAM_CAT + 1);
         }
     }
 

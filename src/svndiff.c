@@ -28,7 +28,7 @@ decode_version(const char *start, const char *end, char *n)
           start[1] == 'V' &&
           start[2] == 'N')) {
 
-        TRRETNULL(DECODE_VERSION + 1);
+        TRRETNULL(DECODE_VERSION + 2);
     }
 
     *n = *(start + 3);
@@ -70,14 +70,14 @@ decode_insn(const char *start, const char *end, svndiff_insn_t *insn)
     if (insn->len == 0) {
         /* find size next to insncode */
         if ((start = decode_number(start, end, &insn->len)) == NULL) {
-            TRRETNULL(SVNDIFF_DECODE_INSN + 1);
+            TRRETNULL(DECODE_INSN + 1);
         }
     }
 
     if (insn->code != SVN_TXDELTA_NEW) {
         /* only source and target contain offset */
         if ((start = decode_number(start, end, &insn->offset)) == NULL) {
-            TRRETNULL(SVNDIFF_DECODE_INSN + 2);
+            TRRETNULL(DECODE_INSN + 2);
         }
     }
     return start;
@@ -91,7 +91,7 @@ decode_bytes(const char *start, const char *end,
     const char *savedstart = start;
 
     if ((start = decode_number(start, end, &orig_len)) == NULL) {
-        TRRETNULL(SVNDIFF_DECODE_BYTES + 1);
+        TRRETNULL(DECODE_BYTES + 1);
 
     }
     encoded_len -= (start - savedstart);
@@ -115,7 +115,7 @@ decode_bytes(const char *start, const char *end,
 
             free(*out);
             *out = NULL;
-            TRRETNULL(SVNDIFF_DECODE_BYTES + 2);
+            TRRETNULL(DECODE_BYTES + 2);
         }
     }
 

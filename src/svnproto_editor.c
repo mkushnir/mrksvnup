@@ -886,7 +886,7 @@ editor_cb2(svnc_ctx_t *ctx,
 
     } else if (strcmp(cmd, "close-edit") == 0) {
         if (svnproto_unpack(ctx, in, "()") != 0) {
-            res = SVNPROTO_EDITOR + 17;
+            res = SVNPROTO_EDITOR + 18;
             goto END;
         }
 
@@ -896,7 +896,7 @@ editor_cb2(svnc_ctx_t *ctx,
 
     } else if (strcmp(cmd, "abort-edit") == 0) {
         if (svnproto_unpack(ctx, in, "()") != 0) {
-            res = SVNPROTO_EDITOR + 18;
+            res = SVNPROTO_EDITOR + 19;
             goto END;
         }
 
@@ -906,7 +906,7 @@ editor_cb2(svnc_ctx_t *ctx,
 
     } else if (strcmp(cmd, "finish-replay") == 0) {
         if (svnproto_unpack(ctx, in, "()") != 0) {
-            res = SVNPROTO_EDITOR + 19;
+            res = SVNPROTO_EDITOR + 20;
             goto END;
         }
 
@@ -922,7 +922,7 @@ editor_cb2(svnc_ctx_t *ctx,
                               &ctx->last_error.message,
                               &ctx->last_error.file,
                               &ctx->last_error.line) != 0) {
-            res = SVNPROTO_EDITOR + 20;
+            res = SVNPROTO_EDITOR + 21;
             goto END;
         }
 
@@ -934,7 +934,7 @@ editor_cb2(svnc_ctx_t *ctx,
 
     } else {
         TRACE(FRED("unknown: %s"), cmd);
-        res = SVNPROTO_EDITOR + 21;
+        res = SVNPROTO_EDITOR + 22;
         goto END;
     }
 
@@ -954,7 +954,7 @@ editor_cb1(svnc_ctx_t *ctx,
            UNUSED void *udata)
 {
     if ((svnproto_unpack(ctx, in, "w", &cmd)) != 0) {
-        TRRET(SVNPROTO_EDITOR + 22);
+        TRRET(SVNPROTO_EDITOR + 23);
     }
     return 0;
 
@@ -984,7 +984,7 @@ svnproto_editor(svnc_ctx_t *ctx)
 {
     /* editor starts with check auth */
     if (svnproto_check_auth(ctx) != 0) {
-        TRRET(SVNPROTO_EDITOR + 23);
+        TRRET(SVNPROTO_EDITOR + 24);
     }
 
     cmd = NULL;
@@ -992,7 +992,7 @@ svnproto_editor(svnc_ctx_t *ctx)
 
 
     if (svnproto_unpack(ctx, &ctx->in, "r*", editor_cb0, NULL) != 0) {
-        //TRRET(SVNPROTO_EDITOR + 24);
+        //TRRET(SVNPROTO_EDITOR + 25);
     }
 
     //TRACE("consumed %ld", ctx->in.pos - saved_pos);

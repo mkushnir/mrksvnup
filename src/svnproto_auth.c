@@ -156,19 +156,19 @@ int svnproto_check_auth(svnc_ctx_t *ctx)
 
             /* auth response */
             if (pack_list(&ctx->out, auth_response, ctx, NULL) != 0) {
-                res = SVNPROTO_CHECK_AUTH + 3;
+                res = SVNPROTO_CHECK_AUTH + 2;
                 goto END;
             }
 
             if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
-                res = SVNPROTO_CHECK_AUTH + 4;
+                res = SVNPROTO_CHECK_AUTH + 3;
                 goto END;
             }
 
             bytestream_rewind(&ctx->out);
 
             if (svnproto_check_challenge(ctx) != 0) {
-                res = SVNPROTO_CHECK_AUTH + 5;
+                res = SVNPROTO_CHECK_AUTH + 4;
                 goto END;
             }
         }

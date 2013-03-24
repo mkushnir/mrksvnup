@@ -37,17 +37,17 @@ svncdir_walk(svnc_ctx_t *ctx, const char *path, svncdir_cb_t cb, void *udata)
     //TRACE("rev=%ld", rev);
 
     if (svnproto_check_path(ctx, path, rev, &kind) != 0) {
-        res = SVNCDIR_WALK + 1;
+        res = SVNCDIR_WALK + 2;
         goto END;
     }
 
     if (kind != SVNP_KIND_DIR) {
-        res = SVNCDIR_WALK + 1;
+        res = SVNCDIR_WALK + 3;
         goto END;
     }
 
     if (svnproto_get_dir(ctx, path, rev, &dirents) != 0) {
-        res = SVNCDIR_WALK + 1;
+        res = SVNCDIR_WALK + 4;
         goto END;
     }
 
@@ -72,7 +72,7 @@ svncdir_walk(svnc_ctx_t *ctx, const char *path, svncdir_cb_t cb, void *udata)
                 free(newpath);
                 newpath = NULL;
                 svnproto_fileent_fini(&fe);
-                res = SVNCDIR_WALK + 1;
+                res = SVNCDIR_WALK + 5;
                 goto END;
             }
 
@@ -83,7 +83,7 @@ svncdir_walk(svnc_ctx_t *ctx, const char *path, svncdir_cb_t cb, void *udata)
                     free(newpath);
                     newpath = NULL;
                     svnproto_fileent_fini(&fe);
-                    res = SVNCDIR_WALK + 1;
+                    res = SVNCDIR_WALK + 6;
                     goto END;
                 }
             }
@@ -96,7 +96,7 @@ svncdir_walk(svnc_ctx_t *ctx, const char *path, svncdir_cb_t cb, void *udata)
                 if (cb(ctx, path, de, newpath, NULL, udata) != 0) {
                     free(newpath);
                     newpath = NULL;
-                    res = SVNCDIR_WALK + 1;
+                    res = SVNCDIR_WALK + 7;
                     goto END;
                 }
             }
@@ -105,7 +105,7 @@ svncdir_walk(svnc_ctx_t *ctx, const char *path, svncdir_cb_t cb, void *udata)
 
                 free(newpath);
                 newpath = NULL;
-                res = SVNCDIR_WALK + 1;
+                res = SVNCDIR_WALK + 8;
                 goto END;
             }
 
@@ -126,7 +126,7 @@ END:
     }
 
     array_fini(&dirents);
-    return res;
+    TRRET(res);
 }
 
 

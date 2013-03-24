@@ -24,11 +24,11 @@ pack1(UNUSED svnc_ctx_t *ctx,
 {
     if (pack_word(out,
                   strlen("get-latest-rev"), "get-latest-rev") != 0) {
-        TRRET(GET_LATEST_REV_PACK + 1);
+        TRRET(SVNPROTO_GET_LATEST_REV + 1);
     }
 
     if (pack_list(out, NULL, NULL, NULL) != 0) {
-        TRRET(GET_LATEST_REV_PACK + 2);
+        TRRET(SVNPROTO_GET_LATEST_REV + 2);
     }
 
     return 0;
@@ -40,19 +40,19 @@ svnproto_get_latest_rev(svnc_ctx_t *ctx, long *rev)
     int res = 0;
 
     if (pack_list(&ctx->out, pack1, NULL, NULL) != 0) {
-        TRRET(SVNPROTO_GET_LATEST_REV + 1);
-    }
-
-    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
-        TRRET(SVNPROTO_GET_LATEST_REV + 2);
-    }
-
-    if (svnproto_check_auth(ctx) != 0) {
         TRRET(SVNPROTO_GET_LATEST_REV + 3);
     }
 
-    if (svnproto_command_response(ctx, "(n)", rev) != 0) {
+    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
         TRRET(SVNPROTO_GET_LATEST_REV + 4);
+    }
+
+    if (svnproto_check_auth(ctx) != 0) {
+        TRRET(SVNPROTO_GET_LATEST_REV + 5);
+    }
+
+    if (svnproto_command_response(ctx, "(n)", rev) != 0) {
+        TRRET(SVNPROTO_GET_LATEST_REV + 6);
     }
 
     bytestream_rewind(&ctx->in);

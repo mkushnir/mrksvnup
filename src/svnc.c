@@ -187,7 +187,7 @@ svnc_close(svnc_ctx_t *ctx)
     if (ctx->fd != -1) {
         if (close(ctx->fd) != 0) {
 
-            TRRET(SVNC_CLOSE + 3);
+            TRRET(SVNC_CLOSE + 1);
         }
 
         ctx->fd = -1;
