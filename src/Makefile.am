@@ -16,6 +16,7 @@ nobase_include_HEADERS = mrksvnup/svnc.h \
 			 mrksvnup/svnproto.h \
 			 mrksvnup/svnproto_bytes.h \
 			 mrksvnup/bytestream.h
+			 mrksvnup/version.h
 
 libmrksvnup_la_SOURCES = svnc.c \
 			 svncdir.c \

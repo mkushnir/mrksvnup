@@ -7,11 +7,11 @@
 
 #include "mrksvnup/bytestream.h"
 #include "mrksvnup/svnproto_bytes.h"
+#include "mrksvnup/version.h"
 
 #define SVN_DEFAULT_PORT 3690
 
-/* pretend to be official svn */
-#define RA_CLIENT "SVN/1.7.7"
+#define RA_CLIENT ("mrksvnup/" SVNUP_VERSION_STR)
 
 typedef struct _svnc_ctx {
     char *url;
