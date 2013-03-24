@@ -58,5 +58,5 @@ AC_CHECK_FUNCS([ftruncate])
 AC_CONFIG_FILES([Makefile src/Makefile src/test/Makefile man/Makefile])
 AC_CHECK_LIB(z, compress, [], [AC_MSG_FAILURE(libz.so is required.)]) 
 AC_CHECK_LIB(md, MD5Init, [], [AC_MSG_FAILURE(libmd.so is required.)]) 
-AC_CHECK_LIB(mrkcommon, _fini, [], [AC_MSG_FAILURE(libmrkcommon.so is required.)]) 
+AC_CHECK_LIB(mrkcommon, _fini, [], [AC_MSG_FAILURE(libmrkcommon.so is required. Please find it at git@github.com:mkushnir/mrkcommon.git)]) 
 AC_OUTPUT
