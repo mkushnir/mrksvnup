@@ -130,7 +130,7 @@ test_unpack(void)
         assert(0);
     }
 
-    if (svnproto_unpack(ctx, "nnn", &n1, &n2, &n3) != 0) {
+    if (svnproto_unpack(ctx, &ctx->in, "nnn", &n1, &n2, &n3) != 0) {
         assert(0);
     }
 
@@ -143,7 +143,7 @@ test_unpack(void)
         assert(0);
     }
 
-    if (svnproto_unpack(ctx, "n?n?n?n?n?", &n1, &n2, &n3, &n4, &n5) != 0) {
+    if (svnproto_unpack(ctx, &ctx->in, "n?n?n?n?n?", &n1, &n2, &n3, &n4, &n5) != 0) {
         assert(0);
     }
 
@@ -160,7 +160,7 @@ test_unpack(void)
         assert(0);
     }
 
-    if (svnproto_unpack(ctx, "n*", &ar) != 0) {
+    if (svnproto_unpack(ctx, &ctx->in, "n*", &ar) != 0) {
         assert(0);
     }
 
@@ -174,7 +174,7 @@ test_unpack(void)
         assert(0);
     }
 
-    if (svnproto_unpack(ctx, "wwwwwww",
+    if (svnproto_unpack(ctx, &ctx->in, "wwwwwww",
                         &s1, &s2, &s3, &s4, &s5, &s6, &s7, &s8) != 0) {
         assert(0);
     }
@@ -189,7 +189,7 @@ test_unpack(void)
         assert(0);
     }
 
-    if (svnproto_unpack(ctx, "wwwwwwww?",
+    if (svnproto_unpack(ctx, &ctx->in, "wwwwwwww?",
                         &s1, &s2, &s3, &s4, &s5, &s6, &s7, &s8) != 0) {
         assert(0);
     }
@@ -204,7 +204,7 @@ test_unpack(void)
         assert(0);
     }
 
-    if (svnproto_unpack(ctx, "wwwwwwww?n?",
+    if (svnproto_unpack(ctx, &ctx->in, "wwwwwwww?n?",
                         &s1, &s2, &s3, &s4, &s5, &s6, &s7, &s8, &n1) != 0) {
         assert(0);
     }
@@ -225,7 +225,7 @@ test_unpack(void)
         assert(0);
     }
 
-    if (svnproto_unpack(ctx, "w*n?",
+    if (svnproto_unpack(ctx, &ctx->in, "w*n?",
                         &ar, &n1) != 0) {
         assert(0);
     }
@@ -242,7 +242,7 @@ test_unpack(void)
     //}
 
     //svnproto_spec_t teststring_sp = {"sss", 0};
-    //if (svnproto_unpack(ctx, &teststring_sp) != 0) {
+    //if (svnproto_unpack(ctx, &ctx->in, &teststring_sp) != 0) {
     //    assert(0);
     //}
 
@@ -259,11 +259,14 @@ my_unpack_cb(svnc_ctx_t *ctx, UNUSED svnproto_state_t *st, UNUSED void *udata)
     array_t ar;
 
     svnproto_init_string_array(&ar);
-    res = svnproto_unpack(ctx, "(nw*)", &n1, &ar);
+    res = svnproto_unpack(ctx, &ctx->in, "(nw*)", &n1, &ar);
+    TRACE("n1=%ld", n1);
     svnproto_dump_string_array(&ar);
     array_fini(&ar);
-    TRACE("n1=%ld", n1);
 
+    if (res != 0) {
+        return PARSE_EOD;
+    }
     return res;
 }
 
@@ -285,7 +288,7 @@ test_unpack_cb(void)
     }
 
     svnproto_init_string_array(&ar);
-    if (svnproto_unpack(ctx,
+    if (svnproto_unpack(ctx, &ctx->in,
             "(n*)(n*)(n*)(n*)(n*)(n*)(n*)(n*)(n*)(n*)(w*s)((n?)r*)w*",
             NULL,
             NULL,
@@ -356,7 +359,10 @@ test_pack(void)
 }
 
 static int
-my_caps(svnc_ctx_t *ctx, UNUSED svnproto_state_t *st, UNUSED void *udata)
+my_caps(UNUSED svnc_ctx_t *ctx,
+        bytestream_t *out,
+        UNUSED svnproto_state_t *st,
+        UNUSED void *udata)
 {
     unsigned i;
     const char *words[] = {
@@ -370,7 +376,7 @@ my_caps(svnc_ctx_t *ctx, UNUSED svnproto_state_t *st, UNUSED void *udata)
     };
 
     for (i = 0; i < countof(words); ++i) {
-        if (pack_word(&ctx->out, strlen(words[i]), words[i]) != 0) {
+        if (pack_word(out, strlen(words[i]), words[i]) != 0) {
             assert(0);
         }
     }
@@ -379,25 +385,28 @@ my_caps(svnc_ctx_t *ctx, UNUSED svnproto_state_t *st, UNUSED void *udata)
 }
 
 static int
-my_response(svnc_ctx_t *ctx, UNUSED svnproto_state_t *st, UNUSED void *udata)
+my_response(UNUSED svnc_ctx_t *ctx,
+            bytestream_t *out,
+            UNUSED svnproto_state_t *st,
+            UNUSED void *udata)
 {
-    if (pack_number(&ctx->out, 2) != 0) {
+    if (pack_number(out, 2) != 0) {
         assert(0);
     }
 
-    if (pack_list(&ctx->out, my_caps, ctx, NULL) != 0) {
+    if (pack_list(out, my_caps, NULL, NULL) != 0) {
         assert(0);
     }
 
-    if (pack_string(&ctx->out, strlen("svn://test/"), "svn://test/") != 0) {
+    if (pack_string(out, strlen("svn://test/"), "svn://test/") != 0) {
         assert(0);
     }
 
-    if (pack_string(&ctx->out, strlen("SVN/9.8.7"), "SVN/9.8.7") != 0) {
+    if (pack_string(out, strlen("SVN/9.8.7"), "SVN/9.8.7") != 0) {
         assert(0);
     }
 
-    if (pack_list(&ctx->out, NULL, NULL, NULL) != 0) {
+    if (pack_list(out, NULL, NULL, NULL) != 0) {
         assert(0);
     }
 
@@ -433,7 +442,7 @@ test_packresponse(void)
         assert(0);
     }
 
-    if (pack_list(&ctx->out, my_response, ctx, NULL) != 0) {
+    if (pack_list(&ctx->out, my_response, NULL, NULL) != 0) {
         assert(0);
     }
 
@@ -516,72 +525,6 @@ test_simple(void)
     svnc_destroy(ctx);
 }
 
-UNUSED static void
-test_conn1(void)
-{
-    svnc_ctx_t *ctx;
-    long rev = 0;
-    int kind = -1;
-    array_t dirents;
-    array_iter_t it;
-    svnproto_dirent_t *de;
-    svnproto_fileent_t fe;
-
-    if ((ctx =
-            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup")) == NULL) {
-        assert(0);
-    }
-
-    if (svnc_connect(ctx) != 0) {
-        assert(0);
-    }
-
-    if (svnproto_get_latest_rev(ctx, &rev) != 0) {
-        assert(0);
-    }
-
-    TRACE("rev=%ld", rev);
-
-    if (svnproto_check_path(ctx, "", rev, &kind) != 0) {
-        assert(0);
-    }
-
-    TRACE("kind=%s", svnproto_kind2str(kind));
-
-    svnproto_init_dirent_array(&dirents);
-
-    if (svnproto_get_dir(ctx, "", rev, &dirents) != 0) {
-        assert(0);
-    }
-
-    svnproto_dump_dirent_array(&dirents);
-
-
-    for (de = array_first(&dirents, &it);
-         de != NULL;
-         de = array_next(&dirents, &it)) {
-        if (de->kind == SVNP_KIND_FILE) {
-            break;
-        }
-    }
-    if (de != NULL) {
-        svnproto_fileent_init(&fe);
-        if (svnproto_get_file(ctx, de->name->data, de->rev,
-                              GETFLAG_WANT_PROPS | GETFLAG_WANT_CONTENTS,
-                              &fe) != 0) {
-            assert(0);
-        }
-        svnproto_fileent_dump(&fe);
-        svnproto_fileent_fini(&fe);
-    }
-
-
-    array_fini(&dirents);
-
-    svnc_close(ctx);
-    svnc_destroy(ctx);
-}
-
 static int
 walk_cb(svnc_ctx_t *ctx,
         UNUSED const char *dir,
@@ -597,6 +540,7 @@ walk_cb(svnc_ctx_t *ctx,
     if ((localpath = path_join(localroot, path)) == NULL) {
         FAIL("path_join");
     }
+    TRACE("localpath %s", localpath);
 
     if (fe != NULL) {
         TRACE(FGREEN("FILE %s -> %s (%s)"), path, localpath, fe->checksum->data);
@@ -689,6 +633,8 @@ test_conn2(void)
         assert(0);
     }
 
+    mkdir(localroot, 0755);
+
     if (lstat(localroot, &sb) != 0) {
         assert(0);
     } else {
@@ -732,152 +678,17 @@ test_editor(void)
     svnc_destroy(ctx);
 }
 
-static int
-update_cb(svnc_ctx_t *ctx, UNUSED svnproto_state_t *st, void *udata)
-{
-    struct {
-        const char *path;
-        long source_rev;
-        long set_path_flags;
-    } *params = udata;
-
-    if (svnproto_set_path(ctx, params->path, params->source_rev,
-                          NULL, SVN_DEPTH_INFINITY,
-                          params->set_path_flags) != 0) {
-        assert(0);
-    }
-
-    TRACE("set-path OK");
-
-    if (svnproto_finish_report(ctx) != 0) {
-        assert(0);
-    }
-
-    TRACE("finish-report OK");
-
-    if (svnproto_editor(ctx) != 0) {
-        assert(0);
-    }
-
-    return 0;
-}
-
-UNUSED static void
-test_conn3(const char *localroot, long source_rev, long target_rev)
-{
-    svnc_ctx_t *ctx;
-    int kind = -1;
-    struct {
-        const char *path;
-        long source_rev;
-        long set_path_flags;
-    } update_params = {"", -1, 0};
-
-    if ((ctx =
-            svnc_new("svn://svn.FreeBSD.org/base/stable/9")) == NULL) {
-            //svnc_new("svn://svn.freebsd.org/base/user/des/svnsup")) == NULL) {
-            //svnc_new("svn://localhost/mysvn")) == NULL) {
-        assert(0);
-    }
-
-    ctx->localroot = strdup(localroot);
-
-    if (svnc_connect(ctx) != 0) {
-        assert(0);
-    }
-
-    /*
-     * main: <rev> = get-latest-rev checkout only (if update, pick saved rev)
-     * main: reparent svn://... checkout only
-     * main: check-path for dir checkout only
-     * main: update <rev> -> report / editor command set
-     *          if update, omit <rev>
-     * report: set-path <rev> + finish-report
-     * edit:
-     *  target-rev rev
-     *  open-root rev dir-token
-     *  change-dir-prop svn:entry:committed-rev
-     *  change-dir-prop svn:entry:committed-date
-     *  change-dir-prop svn:entry:last-author
-     *  change-dir-prop svn:entry:uuid
-     *  change-dir-prop svn:ignore
-     *  add-file fname fir-token file-token
-     *  change-file-prop svn:entry:committed-rev
-     *  change-file-prop svn:entry:committed-date
-     *  change-file-prop svn:entry:last-author
-     *  change-file-prop svn:entry:uuid
-     *  change-file-prop svn:eol-style
-     *  change-file-prop svn:keywords
-     *  apply-textdelta
-     *  textdelta-chunk
-     *  ...
-     *  textdelta-end
-     *  close-file
-     *
-     *  add-dir path parent-token child-token
-     *  change-dir-prop
-     *  ...
-     */
-
-
-    if (source_rev <= 0) {
-        /* check out */
-        if (target_rev <= 0) {
-            if (svnproto_get_latest_rev(ctx, &target_rev) != 0) {
-                assert(0);
-            }
-        }
-        source_rev = target_rev;
-
-        update_params.set_path_flags |= SETPFLAG_START_EMPTY;
-    } else {
-        /* update */
-        if (target_rev <= 0) {
-            if (target_rev <= 0) {
-                if (svnproto_get_latest_rev(ctx, &target_rev) != 0) {
-                    assert(0);
-                }
-            }
-        }
-    }
-
-    if (svnproto_check_path(ctx, update_params.path,
-                            target_rev, &kind) != 0) {
-        assert(0);
-    }
-    TRACE("check_path kind=%s", svnproto_kind2str(kind));
-
-    update_params.source_rev = source_rev;
-
-    if (target_rev > 0) {
-        assert(source_rev <= target_rev);
-    }
-
-    if (svnproto_update(ctx, target_rev, update_params.path, 0,
-                        UPFLAG_RECURSE, update_cb, &update_params) != 0) {
-        assert(0);
-    }
-
-    TRACE("update OK");
-
-    svnc_close(ctx);
-    svnc_destroy(ctx);
-}
-
-
 int
 main(void)
 {
-    //test_parse_url();
-    //test_unpack();
-    //test_unpack_cb();
-    //test_pack();
-    //test_packresponse();
+    test_parse_url();
+    test_unpack();
+    test_unpack_cb();
+    test_pack();
+    test_packresponse();
+    /* broken, need to fix test data */
     //test_simple();
+    //test_conn2();
     //test_editor();
-    test_conn3("./qwe", -1, -1);
-    //test_conn3("./qwe", -1, 2);
-    //test_conn3("./qwe", 2, 3);
-    //test_conn3("./qwe", 3, -1);
     return 0;
 }

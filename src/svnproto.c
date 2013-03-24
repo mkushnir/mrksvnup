@@ -92,7 +92,7 @@ svnproto_command_response(svnc_ctx_t *ctx,
 
     //TRACE("status=%s", status);
 
-    if (strcmp(status, "success") != 0) {
+    if (status == NULL || strcmp(status, "success") != 0) {
         res = SVNPROTO_COMMAND_RESPONSE + 2;
         goto TESTFAILURE;
     }
@@ -116,7 +116,7 @@ END:
 
 TESTFAILURE:
 
-    if (strcmp(status, "failure") != 0) {
+    if (status == NULL || strcmp(status, "failure") != 0) {
         res = SVNPROTO_COMMAND_RESPONSE + 5;
         goto END;
     }
