@@ -73,7 +73,7 @@ typedef enum _svn_depth {
      "unknown")
 
 int svn_url_parse(const char *, char **, int *, char **);
-svnc_ctx_t *svnc_new(const char *);
+svnc_ctx_t *svnc_new(const char *, const char *);
 int svnc_connect(svnc_ctx_t *);
 void svnc_clear_last_error(svnc_ctx_t *);
 int svnc_close(svnc_ctx_t *);

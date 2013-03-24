@@ -91,11 +91,9 @@ run(const char *url,
         }
     }
 
-    if ((ctx = svnc_new(url)) == NULL) {
+    if ((ctx = svnc_new(url, localroot)) == NULL) {
         errx(1, "svnc_new");
     }
-
-    ctx->localroot = strdup(localroot);
 
     if (svnc_connect(ctx) != 0) {
         errx(1, "svnc_connect");

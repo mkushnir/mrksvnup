@@ -83,7 +83,8 @@ svn_url_parse(const char *url, char **host, int *port, char **path)
 }
 
 svnc_ctx_t *
-svnc_new(const char *url)
+svnc_new(const char *url,
+         const char *localroot)
 {
     svnc_ctx_t *ctx;
     struct addrinfo hints;
@@ -110,13 +111,17 @@ svnc_new(const char *url)
         TRRETNULL(SVNC_NEW + 2);
     }
 
-    if (svn_url_parse(ctx->url, &ctx->host, &ctx->port, &ctx->path)) {
+    if ((ctx->localroot = strdup(localroot)) == NULL) {
         TRRETNULL(SVNC_NEW + 3);
+    }
+
+    if (svn_url_parse(ctx->url, &ctx->host, &ctx->port, &ctx->path)) {
+        TRRETNULL(SVNC_NEW + 4);
     }
 
     if (snprintf(portstr ,sizeof(portstr), "%d", ctx->port) <= 0) {
         svnc_destroy(ctx);
-        TRRETNULL(SVNC_NEW + 4);
+        TRRETNULL(SVNC_NEW + 5);
     }
 
     memset(&hints, '\0', sizeof(hints));
@@ -127,7 +132,7 @@ svnc_new(const char *url)
 
     if (getaddrinfo(ctx->host, portstr, &hints, &ctx->ai) != 0) {
         svnc_destroy(ctx);
-        TRRETNULL(SVNC_NEW + 5);
+        TRRETNULL(SVNC_NEW + 6);
     }
 
     return (ctx);

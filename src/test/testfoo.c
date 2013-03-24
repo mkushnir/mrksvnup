@@ -119,7 +119,7 @@ test_unpack(void)
          *s5 = NULL, *s6 = NULL, *s7 = NULL, *s8 = NULL;
     array_t ar;
 
-    if ((ctx = svnc_new("svn://svn.freebsd.org/base/user/des/svnsup"))
+    if ((ctx = svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", ""))
         == NULL) {
 
         assert(0);
@@ -276,7 +276,7 @@ test_unpack_cb(void)
     svnc_ctx_t *ctx;
     array_t ar;
 
-    if ((ctx = svnc_new("svn://svn.freebsd.org/base/user/des/svnsup"))
+    if ((ctx = svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", ""))
         == NULL) {
 
         assert(0);
@@ -321,7 +321,7 @@ test_pack(void)
     svnc_ctx_t *ctx;
 
     if ((ctx =
-            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup")) == NULL) {
+            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", "")) == NULL) {
 
         assert(0);
     }
@@ -433,7 +433,7 @@ test_packresponse(void)
     }
 
     if ((ctx =
-            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup")) == NULL) {
+            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", "")) == NULL) {
 
         assert(0);
     }
@@ -473,7 +473,7 @@ test_simple(void)
     svnproto_fileent_t fe;
 
     if ((ctx =
-            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup")) == NULL) {
+            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", "")) == NULL) {
 
         assert(0);
     }
@@ -625,7 +625,7 @@ test_conn2(void)
     const char *localroot = "qwe";
 
     if ((ctx =
-            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup")) == NULL) {
+            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", localroot)) == NULL) {
         assert(0);
     }
 
@@ -657,7 +657,7 @@ test_editor(void)
     svnc_ctx_t *ctx;
 
     if ((ctx =
-            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup")) == NULL) {
+            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", "")) == NULL) {
 
         assert(0);
     }
