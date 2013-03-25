@@ -6,6 +6,7 @@
 #else
 /* stub */
 #define PACKAGE_VERSION "0.0"
+#define PACKAGE_NAME "mrksvnup"
 #endif
 
 /*

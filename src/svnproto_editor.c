@@ -706,7 +706,7 @@ close_file(svnc_ctx_t *ctx,
             TRACE(FRED("Checksum mismatch (file will not be edited):"));
             svndiff_doc_dump(&doc);
             /* make it fatal */
-            res = CLOSE_FILE + 3;
+            //res = CLOSE_FILE + 3;
             goto END;
         }
     } else {

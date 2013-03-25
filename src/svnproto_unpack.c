@@ -317,10 +317,6 @@ svnproto_vunpack(svnc_ctx_t *ctx,
 
                 if (!(st.tokenizer_state & (TS_LIST_START | TS_IGNORE))) {
                     /* no match */
-                    TRACE("ch='%c' ch1='%c' st=%s res=%d st.i=%ld st.r=%s",
-                          ch, ch1,
-                          TSSTR(st.tokenizer_state),
-                          res, st.i, SDATA(in, st.r.start));
                     res = SVNPROTO_VUNPACK + 1;
                     goto END;
                 }
