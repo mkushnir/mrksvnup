@@ -17,11 +17,5 @@ typedef struct _svnproto_bytes {
 #   define BDATA(b) ((b) != NULL ? (b)->data : NULL)
 #endif
 
-/*
- * Helpers
- */
-void svnproto_init_bytes_array(array_t *ar);
-void svnproto_fini_bytes_array(array_t *ar);
-void svnproto_dump_bytes_array(array_t *ar);
 #endif
 

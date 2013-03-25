@@ -55,7 +55,7 @@ decode_number(const char *start, const char *end, long *val)
         }
         ++start;
     }
-    return start;
+    return NULL;
 }
 
 static const char *
@@ -90,6 +90,7 @@ decode_bytes(const char *start, const char *end,
     long orig_len;
     const char *savedstart = start;
 
+    //D8(start, 8);
     if ((start = decode_number(start, end, &orig_len)) == NULL) {
         TRRETNULL(DECODE_BYTES + 1);
 
@@ -100,8 +101,6 @@ decode_bytes(const char *start, const char *end,
         FAIL("malloc");
     }
     (*out)->sz = orig_len;
-
-    //TRACE("encoded_len=%ld orig_len=%ld", encoded_len, orig_len);
 
 
     if (encoded_len == (*out)->sz) {
@@ -115,9 +114,13 @@ decode_bytes(const char *start, const char *end,
 
             free(*out);
             *out = NULL;
+
+            //TRACE("encoded_len=%ld orig_len=%ld", encoded_len, orig_len);
+
             TRRETNULL(DECODE_BYTES + 2);
         }
     }
+    start += encoded_len;
 
     return start;
 }
@@ -129,85 +132,87 @@ svndiff_parse_doc(const char *start,
 {
     int res = 0;
 
-    //D64(start, MIN(64, end-start));
-
     while (res == 0 && start < end) {
 
-        if (doc->parse_state == SD_STATE_START) {
+        //TRACE("state=%d", doc->parse_state);
+        //D64(start, MIN(64, end-start));
+
+        if (doc->parse_state == SD_STATE_VERSION) {
             if ((start = decode_version(start,
                                         end, &doc->version)) == NULL) {
                 res = SVNDIFF_PARSE_DOC + 1;
             } else {
-                //TRACE("doc version:%d", doc->version);
-                doc->parse_state = SD_STATE_VERSION;
+                doc->parse_state = SD_STATE_NWND;
             }
 
-        } else if (doc->parse_state == SD_STATE_VERSION) {
-            if ((start = decode_number(start, end,
-                                       &doc->sview_offset)) == NULL) {
+        } else if (doc->parse_state == SD_STATE_NWND) {
 
-                res = SVNDIFF_PARSE_DOC + 2;
-            } else {
-                //TRACE("doc sview_offset:%ld", doc->sview_offset);
-                doc->parse_state = SD_STATE_SVO;
+            if ((doc->current_wnd = array_incr(&doc->wnd)) == NULL) {
+                FAIL("array_incr");
             }
+            doc->parse_state = SD_STATE_SVO;
 
         } else if (doc->parse_state == SD_STATE_SVO) {
             if ((start = decode_number(start, end,
-                                       &doc->sview_len)) == NULL) {
+                 &doc->current_wnd->sview_offset)) == NULL) {
 
-                res = SVNDIFF_PARSE_DOC + 3;
+                res = SVNDIFF_PARSE_DOC + 2;
             } else {
-                //TRACE("doc sview_len:%ld", doc->sview_len);
                 doc->parse_state = SD_STATE_SVL;
             }
 
         } else if (doc->parse_state == SD_STATE_SVL) {
             if ((start = decode_number(start, end,
-                                       &doc->tview_len)) == NULL) {
+                 &doc->current_wnd->sview_len)) == NULL) {
 
-                res = SVNDIFF_PARSE_DOC + 4;
+                res = SVNDIFF_PARSE_DOC + 3;
             } else {
-                //TRACE("doc tview_len:%ld", doc->tview_len);
                 doc->parse_state = SD_STATE_TVL;
             }
 
-
         } else if (doc->parse_state == SD_STATE_TVL) {
             if ((start = decode_number(start, end,
-                                       &doc->inslen)) == NULL) {
+                 &doc->current_wnd->tview_len)) == NULL) {
 
-                res = SVNDIFF_PARSE_DOC + 5;
+                res = SVNDIFF_PARSE_DOC + 4;
             } else {
-                doc->inslen_check = 0;
-                //TRACE("doc inslen:%ld", doc->inslen);
                 doc->parse_state = SD_STATE_INSL;
             }
 
+
         } else if (doc->parse_state == SD_STATE_INSL) {
             if ((start = decode_number(start, end,
-                                       &doc->newlen)) == NULL) {
+                 &doc->current_wnd->inslen)) == NULL) {
 
-                res = SVNDIFF_PARSE_DOC + 6;
+                res = SVNDIFF_PARSE_DOC + 5;
             } else {
-                //TRACE("doc newlen:%ld", doc->newlen);
+                doc->current_wnd->inslen_check = 0;
                 doc->parse_state = SD_STATE_NEWL;
             }
 
         } else if (doc->parse_state == SD_STATE_NEWL) {
+            if ((start = decode_number(start, end,
+                 &doc->current_wnd->newlen)) == NULL) {
+
+                res = SVNDIFF_PARSE_DOC + 6;
+            } else {
+                doc->parse_state = SD_STATE_INSNS;
+            }
+
+        } else if (doc->parse_state == SD_STATE_INSNS) {
             const char *saved_start;
 
             saved_start = start;
             if ((start = decode_number(start, end,
-                                       &doc->orig_inslen)) == NULL) {
+                 &doc->current_wnd->orig_inslen)) == NULL) {
+
                 res = SVNDIFF_PARSE_DOC + 7;
                 break;
             }
-            doc->inslen_check += start - saved_start;
+            doc->current_wnd->inslen_check += start - saved_start;
 
-            //TRACE("orig_inslen=%ld", doc->orig_inslen);
-
-            while (doc->inslen_check < doc->inslen) {
+            while (doc->current_wnd->inslen_check <
+                   doc->current_wnd->inslen) {
 
                 svndiff_insn_t probe = {-1, -1, -1}, *insn = NULL;
 
@@ -216,38 +221,36 @@ svndiff_parse_doc(const char *start,
                     break;
 
                 } else {
-                    if ((insn = array_incr(&doc->insns)) == NULL) {
+                    if ((insn = array_incr(&doc->current_wnd->insns))
+                         == NULL) {
+
                         FAIL("array_incr");
                     }
 
                     *insn = probe;
-                    doc->inslen_check += start - saved_start;
-                    //TRACE("insn added, inslen_check:%ld",
-                    //      doc->inslen_check);
+                    doc->current_wnd->inslen_check += start - saved_start;
                 }
             }
+
             /* end of insns ? */
-            if (doc->inslen_check >= doc->inslen) {
-                doc->parse_state = SD_STATE_INSNS;
+            if (doc->current_wnd->inslen_check >= doc->current_wnd->inslen) {
+                doc->parse_state = SD_STATE_BYTES;
             } else {
                 res = SVNDIFF_PARSE_DOC + 8;
             }
 
-        } else if (doc->parse_state == SD_STATE_INSNS) {
-            svnproto_bytes_t **b = NULL;
+        } else if (doc->parse_state == SD_STATE_BYTES) {
 
-            if ((b = array_incr(&doc->bytes)) == NULL) {
-                FAIL("array_incr");
-            }
-
+            //TRACE("start before decode_bytes: %p", start);
             if ((start = decode_bytes(start, end,
-                                      end - start, b)) == NULL) {
+                                      end - start,
+                                      &doc->current_wnd->bytes)) == NULL) {
 
-                array_decr(&doc->bytes);
                 res = SVNDIFF_PARSE_DOC + 9;
 
             } else {
-                doc->parse_state = SD_STATE_BYTES;
+                //TRACE("start after decode_bytes: %p", start);
+                doc->parse_state = SD_STATE_NWND;
             }
 
         } else {
@@ -271,7 +274,7 @@ init_insn(svndiff_insn_t *insn)
 static int
 dump_insn(svndiff_insn_t *insn, UNUSED void *udata)
 {
-    TRACE("code=%s offset=%ld len=%ld",
+    TRACE("from %s %ld/%ld",
           (insn->code == SVN_TXDELTA_SOURCE ? "source" :
            insn->code == SVN_TXDELTA_TARGET ? "target" :
            insn->code == SVN_TXDELTA_NEW ? "new" :
@@ -280,8 +283,8 @@ dump_insn(svndiff_insn_t *insn, UNUSED void *udata)
 }
 
 
-void
-svndiff_init_insn_array(array_t *ar)
+static void
+init_insn_array(array_t *ar)
 {
     if (array_init(ar, sizeof(svndiff_insn_t), 0,
                    (array_initializer_t)init_insn,
@@ -290,155 +293,216 @@ svndiff_init_insn_array(array_t *ar)
     }
 }
 
-void
-svndiff_fini_insn_array(array_t *ar)
+static void
+fini_insn_array(array_t *ar)
 {
     if (array_fini(ar) != 0) {
         FAIL("array_fini");
     }
 }
 
-void
-svndiff_dump_insn_array(array_t *ar)
+static void
+dump_insn_array(array_t *ar)
 {
     array_traverse(ar, (array_traverser_t)dump_insn, NULL);
 }
 
+static int
+init_wnd(svndiff_wnd_t *wnd)
+{
+    wnd->sview_offset = 0;
+    wnd->sview_len = 0;
+    wnd->tview_len = 0;
+    wnd->inslen = 0;
+    wnd->newlen = 0;
+    wnd->inslen_check = 0;
+    wnd->orig_inslen = 0;
+    init_insn_array(&wnd->insns);
+    wnd->bytes = NULL;
+    wnd->tview = NULL;
+    return 0;
+}
+
+static int
+fini_wnd(svndiff_wnd_t *wnd)
+{
+    wnd->sview_offset = 0;
+    wnd->sview_len = 0;
+    wnd->tview_len = 0;
+    wnd->inslen = 0;
+    wnd->newlen = 0;
+    wnd->inslen_check = 0;
+    wnd->orig_inslen = 0;
+    fini_insn_array(&wnd->insns);
+    if (wnd->bytes != NULL) {
+        free(wnd->bytes);
+        wnd->bytes = NULL;
+    }
+    if (wnd->tview != NULL) {
+        free(wnd->tview);
+        wnd->tview = NULL;
+    }
+    return 0;
+}
+
+static int
+dump_wnd(svndiff_wnd_t *wnd, UNUSED void *udata)
+{
+    TRACE("wnd sview_offset=%ld sview_len=%ld "
+          "tview_len=%ld inslen=%ld inslen_check=%ld "
+          "orig_inslen=%ld newlen=%ld ",
+          wnd->sview_offset,
+          wnd->sview_len,
+          wnd->tview_len,
+          wnd->inslen,
+          wnd->inslen_check,
+          wnd->orig_inslen,
+          wnd->newlen
+         );
+    dump_insn_array(&wnd->insns);
+    return 0;
+}
+
+static void
+init_wnd_array(array_t *ar)
+{
+    if (array_init(ar, sizeof(svndiff_wnd_t), 0,
+                   (array_initializer_t)init_wnd,
+                   (array_finalizer_t)fini_wnd) != 0) {
+        FAIL("array_init");
+    }
+}
+
+static void
+fini_wnd_array(array_t *ar)
+{
+    if (array_fini(ar) != 0) {
+        FAIL("array_fini");
+    }
+}
+
+static void
+dump_wnd_array(array_t *ar)
+{
+    array_traverse(ar, (array_traverser_t)dump_wnd, NULL);
+}
+
+
 int
-svndiff_doc_apply(svndiff_doc_t *doc)
+svndiff_build_tview(svndiff_doc_t *doc, svndiff_wnd_t *wnd)
 {
     int res = 0;
     array_iter_t it;
     svndiff_insn_t *insn;
-    char *tbuf = NULL, *ptbuf;
+    char *ptbuf;
     ssize_t navail;
-    svnproto_bytes_t **bytes;
     char *pbytes;
 
     /* Set up target */
-    if (doc->tview_len < 0) {
-        svndiff_doc_dump(doc);
-    }
-    if ((tbuf = malloc(doc->tview_len)) == NULL) {
+    if ((wnd->tview = malloc(wnd->tview_len)) == NULL) {
         FAIL("malloc");
     }
-    ptbuf = tbuf;
-    navail = doc->tview_len;
+    ptbuf = wnd->tview;
+    navail = wnd->tview_len;
 
-    /*
-     * Prepare new bytes. We assume we have a single chunk in doc->bytes.
-     * Might be worth of
-     * fixing it.
-     */
-    if ((bytes = array_first(&doc->bytes, &it)) != NULL) {
 
-        pbytes = (*bytes)->data;
+    pbytes = wnd->bytes->data;
 
-        /* Set up and verify source */
+    /* Set up and verify source */
 
-        if (doc->base_checksum != NULL) {
-            if (verify_checksum(doc->fd, doc->base_checksum->data) != 0) {
-                /* check it out clean? */
-                res = SVNPROTO_EDITOR + 31;
-                goto END;
-            }
-        } else {
-            /*
-             * It's come from an add-file command, fd must point at an empty
-             * file. If it's not empty, ...
-             */
-        }
-
-        //TRACE("+ %s", BDATA(doc->rp));
-
-        for (insn = array_first(&doc->insns, &it);
-             insn != NULL;
-             insn = array_next(&doc->insns, &it)) {
-
-            //TRACE("applying %d", insn->code);
-            if (insn->len > navail) {
-                res = SVNDIFF_DOC_APPLY + 1;
-                goto END;
-            }
-
-            if (insn->code == SVN_TXDELTA_SOURCE) {
-                ssize_t nread;
-
-                /* read len bytes from source at offset */
-                if ((nread = pread(doc->fd, ptbuf, insn->len,
-                                   insn->offset)) < 0) {
-                    perror("read");
-                    res = SVNDIFF_DOC_APPLY + 2;
-                    goto END;
-                }
-                if (nread < insn->len) {
-                    /* corrupt insn? */
-                    res = SVNDIFF_DOC_APPLY + 3;
-                    goto END;
-                }
-
-                ptbuf += insn->len;
-                navail -= insn->len;
-
-            } else if (insn->code == SVN_TXDELTA_NEW) {
-                /* read len bytes from new at offset */
-                if (((ssize_t)(*bytes)->sz) - (pbytes - (*bytes)->data) <
-                    insn->len) {
-
-                    /* corrupt insn? */
-                    res = SVNDIFF_DOC_APPLY + 4;
-                    goto END;
-                }
-
-                memcpy(ptbuf, pbytes, insn->len);
-                pbytes += insn->len;
-
-                ptbuf += insn->len;
-                navail -= insn->len;
-
-            } else if (insn->code == SVN_TXDELTA_TARGET) {
-                /* read len bytes from new at offset */
-                char *sbuf = tbuf + insn->offset;
-                char *sbuf_end = sbuf + insn->len;
-
-                /* XXX validation */
-
-                /* patterning copy in terms of libsvn_delta/text_delta.c */
-                for (; sbuf < sbuf_end; ++sbuf, ++ptbuf) {
-                    *ptbuf = *sbuf;
-                }
-
-                navail -= insn->len;
-
-            } else {
-                res = SVNDIFF_DOC_APPLY + 5;
-                goto END;
-            }
+    if (doc->base_checksum != NULL) {
+        if (verify_checksum_fd(doc->fd, doc->base_checksum->data) != 0) {
+            /* check it out clean? */
+            res = SVNPROTO_EDITOR + 31;
+            goto END;
         }
     } else {
-        /* zero-length file */
-        //svndiff_doc_dump(doc);
+        /*
+         * It's come from an add-file command, fd must point at an empty
+         * file. If it's not empty, ...
+         */
     }
 
-    if (lseek(doc->fd, 0, SEEK_SET) != 0) {
-        perror("lseek");
-        res = SVNDIFF_DOC_APPLY + 6;
-        goto END;
+    //TRACE("+ %s", BDATA(doc->rp));
+
+    for (insn = array_first(&wnd->insns, &it);
+         insn != NULL;
+         insn = array_next(&wnd->insns, &it)) {
+
+        if (insn->len > navail) {
+            res = SVNDIFF_BUILD_TVIEW + 1;
+            goto END;
+        }
+
+        if (insn->code == SVN_TXDELTA_SOURCE) {
+            ssize_t nread;
+
+            /* read len bytes from source at offset */
+            if ((nread = pread(doc->fd, ptbuf, insn->len,
+                               insn->offset + wnd->sview_offset)) < 0) {
+                perror("pread");
+                res = SVNDIFF_BUILD_TVIEW + 2;
+                goto END;
+            }
+            if (nread < insn->len) {
+                /* corrupt insn? */
+                res = SVNDIFF_BUILD_TVIEW + 3;
+                goto END;
+            }
+
+            //TRACE("Applied from source:");
+            //D32(ptbuf, MIN(insn->len, 64));
+            //if (insn->len > 64) {
+            //    D32(ptbuf + insn->len - 64, 64);
+            //}
+
+            ptbuf += insn->len;
+            navail -= insn->len;
+
+        } else if (insn->code == SVN_TXDELTA_NEW) {
+            /* read len bytes from new at offset */
+            if (((ssize_t)wnd->bytes->sz) - (pbytes - wnd->bytes->data) <
+                insn->len) {
+
+                /* corrupt insn? */
+                res = SVNDIFF_BUILD_TVIEW + 4;
+                goto END;
+            }
+
+            memcpy(ptbuf, pbytes, insn->len);
+            pbytes += insn->len;
+
+            //TRACE("Applied from new:");
+            //D32(ptbuf, MIN(insn->len, 64));
+            //if (insn->len > 64) {
+            //    D32(ptbuf + insn->len - 64, 64);
+            //}
+
+            ptbuf += insn->len;
+            navail -= insn->len;
+
+        } else if (insn->code == SVN_TXDELTA_TARGET) {
+            /* read len bytes from new at offset */
+            char *sbuf = wnd->tview + insn->offset;
+            char *sbuf_end = sbuf + insn->len;
+
+            /* XXX validation */
+
+            /* patterning copy in terms of libsvn_delta/text_delta.c */
+            for (; sbuf < sbuf_end; ++sbuf, ++ptbuf) {
+                *ptbuf = *sbuf;
+            }
+
+            navail -= insn->len;
+
+        } else {
+            res = SVNDIFF_BUILD_TVIEW + 5;
+            goto END;
+        }
     }
 
-    if (write(doc->fd, tbuf, doc->tview_len) < 0) {
-        FAIL("write");
-    }
-
-    if (ftruncate(doc->fd, doc->tview_len) < 0) {
-        FAIL("ftruncate");
-    }
 
 END:
-    if (tbuf != NULL) {
-        free(tbuf);
-        tbuf = NULL;
-    }
     TRRET(res);
 }
 
@@ -449,33 +513,20 @@ svndiff_doc_init(svndiff_doc_t *doc)
      * algorithm check: assume svndiff_doc_init() and svndiff_doc_fini()
      * are balanced.
      */
-    assert(!(doc->flags & SDFL_INITED));
-
     doc->version = -1;
-    doc->sview_offset = 0;
-    doc->sview_len = 0;
-    doc->tview_len = 0;
-    doc->inslen = 0;
-    doc->newlen = 0;
-    doc->parse_state = SD_STATE_START;
-    doc->inslen_check = 0;
-    doc->orig_inslen = 0;
-
-    svndiff_init_insn_array(&doc->insns);
-    svnproto_init_bytes_array(&doc->bytes);
+    doc->parse_state = SD_STATE_VERSION;
     doc->base_checksum = NULL;
     doc->rp = NULL;
     doc->lp = NULL;
     doc->rev = -1;
     doc->ft = NULL;
     doc->fd = -1;
-    doc->flags |= SDFL_INITED;
+    init_wnd_array(&doc->wnd);
     return 0;
 }
 
-
-void
-svndiff_clear_current_file(svndiff_doc_t *doc)
+static void
+clear_current_file(svndiff_doc_t *doc)
 {
     if (doc->rp != NULL) {
         free(doc->rp);
@@ -500,47 +551,29 @@ int
 svndiff_doc_fini(svndiff_doc_t *doc)
 {
     doc->version = -1;
-    doc->sview_offset = 0;
-    doc->sview_len = 0;
-    doc->tview_len = 0;
-    doc->inslen = 0;
-    doc->newlen = 0;
-    doc->parse_state = SD_STATE_START;
-    doc->inslen_check = 0;
-    doc->orig_inslen = 0;
-    svndiff_fini_insn_array(&doc->insns);
-    svnproto_fini_bytes_array(&doc->bytes);
+    doc->parse_state = SD_STATE_VERSION;
     if (doc->base_checksum != NULL) {
         free(doc->base_checksum);
         doc->base_checksum = NULL;
     }
-    svndiff_clear_current_file(doc);
-    doc->flags &= ~SDFL_INITED;
+    clear_current_file(doc);
+    fini_wnd_array(&doc->wnd);
     return 0;
 }
 
 int
 svndiff_doc_dump(svndiff_doc_t *doc)
 {
-    TRACE("doc version=%d sview_offset=%ld sview_len=%ld "
-          "tview_len=%ld inslen=%ld inslen_check=%ld "
-          "orig_inslen=%ld newlen=%ld base_checksum=%s rp=%s rev=%ld lp=%s fd=%d",
+    TRACE("doc version=%d "
+          "base_checksum=%s rp=%s rev=%ld lp=%s fd=%d",
           doc->version,
-          doc->sview_offset,
-          doc->sview_len,
-          doc->tview_len,
-          doc->inslen,
-          doc->inslen_check,
-          doc->orig_inslen,
-          doc->newlen,
           BDATA(doc->base_checksum),
           BDATA(doc->rp),
           doc->rev,
           doc->lp,
           doc->fd
          );
-    svndiff_dump_insn_array(&doc->insns);
-    svnproto_dump_bytes_array(&doc->bytes);
+    dump_wnd_array(&doc->wnd);
     return 0;
 }
 

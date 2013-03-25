@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <stdio.h>
 #include <unistd.h>
 
 #include "mrkcommon/array.h"
@@ -25,7 +26,7 @@
 static char *cmd = NULL;
 
 int
-verify_checksum(int fd, const char *cs)
+verify_checksum_fd(int fd, const char *cs)
 {
     int res = 0;
     char buf[VCBUFSZ];
@@ -37,7 +38,7 @@ verify_checksum(int fd, const char *cs)
 
     if (lseek(fd, 0, SEEK_SET) != 0) {
         perror("lseek");
-        res = VERIFY_CHECKSUM + 1;
+        res = VERIFY_CHECKSUM_FD + 1;
         goto END;
     }
 
@@ -47,20 +48,52 @@ verify_checksum(int fd, const char *cs)
 
     if (nread < 0) {
         perror("read");
-        res = VERIFY_CHECKSUM + 2;
+        res = VERIFY_CHECKSUM_FD + 2;
         goto END;
     }
 
     if ((s = MD5End(&ctx, NULL)) == NULL) {
         perror("ND5End");
-        res = VERIFY_CHECKSUM + 3;
+        res = VERIFY_CHECKSUM_FD + 3;
         goto END;
     }
 
     //TRACE("s=%s cs=%s", s, cs);
 
     if (strcmp(s, cs) != 0) {
-        res = VERIFY_CHECKSUM + 4;
+        res = VERIFY_CHECKSUM_FD + 4;
+        goto END;
+    }
+
+END:
+    if (s != NULL) {
+        free(s);
+        s = NULL;
+    }
+    return res;
+}
+
+int
+verify_checksum_buf(const char *buf, size_t sz, const char *cs)
+{
+    int res = 0;
+    MD5_CTX ctx;
+    char *s = NULL;
+
+    MD5Init(&ctx);
+
+    MD5Update(&ctx, buf, sz);
+
+    if ((s = MD5End(&ctx, NULL)) == NULL) {
+        perror("ND5End");
+        res = VERIFY_CHECKSUM_BUF + 1;
+        goto END;
+    }
+
+    //TRACE("s=%s cs=%s", s, cs);
+
+    if (strcmp(s, cs) != 0) {
+        res = VERIFY_CHECKSUM_BUF + 1;
         goto END;
     }
 
@@ -685,6 +718,8 @@ END:
     TRRET(res);
 }
 
+#define BACKUP_EXT ".bak.svnup"
+
 static int
 close_file(svnc_ctx_t *ctx,
            bytestream_t *in,
@@ -693,6 +728,12 @@ close_file(svnc_ctx_t *ctx,
     int res = 0;
     svnproto_bytes_t *file_token = NULL;
     svnproto_bytes_t *text_checksum = NULL;
+    svndiff_wnd_t *wnd;
+    array_iter_t it;
+    char *bak = NULL;
+    int bak_fd = -1;
+    ssize_t bak_sz = 0;
+    
 
     if (svnproto_unpack(ctx, in, "(s(s?))",
                         &file_token, &text_checksum) != 0) {
@@ -714,35 +755,73 @@ close_file(svnc_ctx_t *ctx,
         }
     }
 
-    if (svndiff_doc_apply(doc) != 0) {
-        LTRACE(1, FRED("C %s -> %s"), BDATA(doc->rp), doc->lp);
-    } else {
-        if (BDATA(doc->base_checksum) == NULL) {
-            LTRACE(1, FGREEN("+ %s -> %s"), BDATA(doc->rp), doc->lp);
+    if ((bak = malloc(strlen(doc->lp) + strlen(BACKUP_EXT))) == NULL) {
+        FAIL("malloc");
+    }
+    strcpy(bak, doc->lp);
+    strcat(bak, BACKUP_EXT);
+
+    if ((bak_fd = open(bak, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
+        FAIL("open");
+    }
+
+    for (wnd = array_first(&doc->wnd, &it);
+         wnd != NULL;
+         wnd = array_next(&doc->wnd, &it)) {
+
+        if (svndiff_build_tview(doc, wnd) != 0) {
+            res = CLOSE_FILE + 3;
+            goto END;
+
         } else {
-            LTRACE(1, FGREEN("~ %s -> %s"), BDATA(doc->rp), doc->lp);
+            ssize_t nwritten;
+
+            if ((nwritten = write(bak_fd, wnd->tview, wnd->tview_len)) < 0) {
+                FAIL("write");
+            }
+            bak_sz += nwritten;
         }
     }
 
-    if ((BDATA(doc->base_checksum) != NULL) &&
-        BDATA(text_checksum) != NULL &&
-        (verify_checksum(doc->fd, BDATA(text_checksum)) != 0)) {
+    if (BDATA(doc->base_checksum) == NULL) {
+        LTRACE(1, FGREEN("+ %s -> %s"), BDATA(doc->rp), doc->lp);
+    } else {
+        LTRACE(1, FGREEN("~ %s -> %s"), BDATA(doc->rp), doc->lp);
+    }
 
-        TRACE(FRED("checksum mismtach: expected %s over %s. Will ignore this file."),
-              BDATA(text_checksum), doc->lp);
-        //svndiff_doc_dump(doc);
+    if (BDATA(text_checksum) != NULL &&
+        verify_checksum_fd(bak_fd, BDATA(text_checksum)) != 0) {
+
+        TRACE(FRED("checksum mismtach: expected %s over %s . "
+                   "Will ignore this file. Backup was sav at %s"),
+                   BDATA(text_checksum), doc->lp, bak);
+        svndiff_doc_dump(doc);
+
+    } else {
+
+        close(bak_fd);
+        bak_fd = -1;
+
+        if (rename(bak, doc->lp) != 0) {
+            FAIL("rename");
+        }
     }
 
 END:
     if (svndiff_doc_fini(doc) != 0) {
         TRACE("svndiff_doc_fini() failure, ignoring");
     }
-
     if (file_token != NULL) {
         free(file_token);
     }
     if (text_checksum != NULL) {
         free(text_checksum);
+    }
+    if (bak != NULL) {
+        free(bak);
+    }
+    if (bak_fd >= 0) {
+        close(bak_fd);
     }
 
     TRRET(res);
@@ -969,7 +1048,6 @@ editor_cb0(svnc_ctx_t *ctx,
     int res = 0;
     svndiff_doc_t doc;
 
-    doc.flags = 0;
     res = svnproto_unpack(ctx, in, "(rr)",
                           editor_cb1, NULL,
                           editor_cb2, &doc);
