@@ -186,7 +186,6 @@ svndiff_parse_doc(const char *start,
 
                 res = SVNDIFF_PARSE_DOC + 5;
             } else {
-                doc->current_wnd->inslen_check = 0;
                 doc->parse_state = SD_STATE_NEWL;
             }
 
@@ -200,44 +199,44 @@ svndiff_parse_doc(const char *start,
             }
 
         } else if (doc->parse_state == SD_STATE_INSNS) {
-            const char *saved_start;
+            svnproto_bytes_t *b = NULL;
 
-            saved_start = start;
-            if ((start = decode_number(start, end,
-                 &doc->current_wnd->orig_inslen)) == NULL) {
+            if ((start = decode_bytes(start, end, end - start, &b)) == NULL) {
+                res = SVNDIFF_PARSE_DOC + 9;
 
-                res = SVNDIFF_PARSE_DOC + 7;
-                break;
-            }
-            doc->current_wnd->inslen_check += start - saved_start;
-
-            while (doc->current_wnd->inslen_check <
-                   doc->current_wnd->inslen) {
-
-                svndiff_insn_t probe = {-1, -1, -1}, *insn = NULL;
-
-                saved_start = start;
-                if ((start = decode_insn(start, end, &probe)) == NULL) {
-                    break;
-
-                } else {
-                    if ((insn = array_incr(&doc->current_wnd->insns))
-                         == NULL) {
-
-                        FAIL("array_incr");
-                    }
-
-                    *insn = probe;
-                    doc->current_wnd->inslen_check += start - saved_start;
-                }
-            }
-
-            /* end of insns ? */
-            if (doc->current_wnd->inslen_check >= doc->current_wnd->inslen) {
-                doc->parse_state = SD_STATE_BYTES;
             } else {
-                res = SVNDIFF_PARSE_DOC + 8;
+                const char *instart = b->data;
+                const char *insend = instart + b->sz;
+
+                //D8(instart, b->sz);
+
+                while (instart < insend) {
+
+                    svndiff_insn_t probe = {-1, -1, -1}, *insn = NULL;
+
+                    if ((instart = decode_insn(instart,
+                                               insend,
+                                               &probe)) == NULL) {
+                        break;
+
+                    } else {
+                        if ((insn = array_incr(&doc->current_wnd->insns))
+                             == NULL) {
+                            FAIL("array_incr");
+                        }
+
+                        *insn = probe;
+                    }
+                }
+                /* check */
+
+                free(b);
+                b = NULL;
             }
+
+
+            //TRACE("start after decode_bytes: %p", start);
+            doc->parse_state = SD_STATE_BYTES;
 
         } else if (doc->parse_state == SD_STATE_BYTES) {
 
@@ -315,7 +314,6 @@ init_wnd(svndiff_wnd_t *wnd)
     wnd->tview_len = 0;
     wnd->inslen = 0;
     wnd->newlen = 0;
-    wnd->inslen_check = 0;
     wnd->orig_inslen = 0;
     init_insn_array(&wnd->insns);
     wnd->bytes = NULL;
@@ -331,7 +329,6 @@ fini_wnd(svndiff_wnd_t *wnd)
     wnd->tview_len = 0;
     wnd->inslen = 0;
     wnd->newlen = 0;
-    wnd->inslen_check = 0;
     wnd->orig_inslen = 0;
     fini_insn_array(&wnd->insns);
     if (wnd->bytes != NULL) {
@@ -349,13 +346,12 @@ static int
 dump_wnd(svndiff_wnd_t *wnd, UNUSED void *udata)
 {
     TRACE("wnd sview_offset=%ld sview_len=%ld "
-          "tview_len=%ld inslen=%ld inslen_check=%ld "
+          "tview_len=%ld inslen=%ld "
           "orig_inslen=%ld newlen=%ld ",
           wnd->sview_offset,
           wnd->sview_len,
           wnd->tview_len,
           wnd->inslen,
-          wnd->inslen_check,
           wnd->orig_inslen,
           wnd->newlen
          );
@@ -496,6 +492,7 @@ svndiff_build_tview(svndiff_wnd_t *wnd, svndiff_doc_t *doc)
 
         } else {
             res = SVNDIFF_BUILD_TVIEW + 5;
+            svndiff_doc_dump(doc);
             goto END;
         }
     }
