@@ -159,8 +159,6 @@ int svnproto_finish_report(svnc_ctx_t *);
 int svnproto_abort_report(svnc_ctx_t *);
 
 /* Editor */
-int verify_checksum_buf(const char *, size_t, const char *);
-int verify_checksum_fd(int, const char *);
 int svnproto_editor(svnc_ctx_t *);
 
 #endif

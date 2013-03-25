@@ -29,7 +29,7 @@ svndiff_doc_t doc;
 #define SVNPE_CLOSING 0x01
 static int flags = 0;
 
-int
+static int
 verify_checksum_fd(int fd, const char *cs)
 {
     int res = 0;
@@ -66,38 +66,6 @@ verify_checksum_fd(int fd, const char *cs)
 
     if (strcmp(s, cs) != 0) {
         res = VERIFY_CHECKSUM_FD + 4;
-        goto END;
-    }
-
-END:
-    if (s != NULL) {
-        free(s);
-        s = NULL;
-    }
-    return res;
-}
-
-int
-verify_checksum_buf(const char *buf, size_t sz, const char *cs)
-{
-    int res = 0;
-    MD5_CTX ctx;
-    char *s = NULL;
-
-    MD5Init(&ctx);
-
-    MD5Update(&ctx, buf, sz);
-
-    if ((s = MD5End(&ctx, NULL)) == NULL) {
-        perror("ND5End");
-        res = VERIFY_CHECKSUM_BUF + 1;
-        goto END;
-    }
-
-    //TRACE("s=%s cs=%s", s, cs);
-
-    if (strcmp(s, cs) != 0) {
-        res = VERIFY_CHECKSUM_BUF + 1;
         goto END;
     }
 
@@ -572,6 +540,8 @@ open_file(svnc_ctx_t *ctx,
     }
 
     if ((doc.fd = open(doc.lp, O_RDWR)) < 0) {
+        perror("open");
+        TRACE(FRED("Failed to open %s"), doc.lp);
         res = OPEN_FILE + 5;
         goto END;
     }
@@ -708,6 +678,7 @@ close_file(svnc_ctx_t *ctx,
     array_iter_t it;
     MD5_CTX mctx;
     char *checksum = NULL;
+    ssize_t total_len;
 
     if (svnproto_unpack(ctx, in, "(s(s?))",
                         &file_token, &text_checksum) != 0) {
@@ -729,82 +700,118 @@ close_file(svnc_ctx_t *ctx,
         }
     }
 
-    /* first build tview */
-    if (array_traverse(&doc.wnd,
-                      (array_traverser_t)svndiff_build_tview, &doc) != 0)  {
-        res = CLOSE_FILE + 3;
-        goto END;
+    if (doc.base_checksum != NULL && doc.fd != -1) {
+        if (verify_checksum_fd(doc.fd, doc.base_checksum->data) != 0) {
+            /* check it out clean? */
+            TRACE(FRED("Checksum mismatch (file will not be edited):"));
+            svndiff_doc_dump(&doc);
+            /* make it fatal */
+            res = CLOSE_FILE + 3;
+            goto END;
+        }
+    } else {
+        /*
+         * It's come from an add-file command ...
+         */
     }
 
-    if (BDATA(text_checksum) != NULL) {
-
-        MD5Init(&mctx);
-        array_traverse(&doc.wnd, (array_traverser_t)checksum_cb, &mctx);
-
-        if ((checksum = MD5End(&mctx, NULL)) == NULL) {
-            perror("ND5End");
+    /* Are there any wnd to work with? */
+    if (doc.wnd.elnum != 0) {
+        /* first build tview */
+        if (array_traverse(&doc.wnd,
+                          (array_traverser_t)svndiff_build_tview, &doc) != 0)  {
             res = CLOSE_FILE + 4;
             goto END;
         }
 
-        if (strcmp(checksum, BDATA(text_checksum)) != 0) {
-            char *bak = NULL;
+        if (BDATA(text_checksum) != NULL) {
 
-            if ((bak = malloc(strlen(doc.lp) + strlen(BACKUP_EXT))) == NULL) {
-                FAIL("malloc");
+            MD5Init(&mctx);
+            array_traverse(&doc.wnd, (array_traverser_t)checksum_cb, &mctx);
+
+            if ((checksum = MD5End(&mctx, NULL)) == NULL) {
+                perror("ND5End");
+                res = CLOSE_FILE + 5;
+                goto END;
             }
 
-            strcpy(bak, doc.lp);
-            strcat(bak, BACKUP_EXT);
+            if (strcmp(checksum, BDATA(text_checksum)) != 0) {
+                char *bak = NULL;
 
-            TRACE(FRED("checksum mismtach: expected %s over %s . "
-                       "Will ignore this file. Backup was sav at %s"),
-                       BDATA(text_checksum), doc.lp, bak);
-            svndiff_doc_dump(&doc);
+                /*
+                 * We are 
+                 */
+                if ((bak = malloc(strlen(doc.lp) + strlen(BACKUP_EXT))) == NULL) {
+                    FAIL("malloc");
+                }
 
-            if (doc.fd != -1) {
-                /* file was open, now close it */
-                close(doc.fd);
+                strcpy(bak, doc.lp);
+                strcat(bak, BACKUP_EXT);
 
+                TRACE(FRED("checksum mismtach: expected %s over %s . "
+                           "Will ignore this file. Backup was saved at %s"),
+                           BDATA(text_checksum), doc.lp, bak);
+                svndiff_doc_dump(&doc);
+
+                if (doc.fd != -1) {
+                    /* file was open, now close it */
+                    close(doc.fd);
+
+                }
+
+                if ((doc.fd = open(bak, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
+                    FAIL("open");
+                }
+                free(bak);
+                bak = NULL;
             }
-
-            if ((doc.fd = open(bak, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
-                FAIL("open");
-            }
-            free(bak);
-            bak = NULL;
         }
+
+    } else {
+        /*
+         * Again, must have come from add-file, or open-file with no
+         * text-delta chunks (weird) ...
+         */
     }
 
     if (doc.fd == -1) {
-        /* file was added */
+        /* add-file ? */
         if ((doc.fd = open(doc.lp, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
 
-            res = CLOSE_FILE + 5;
+            res = CLOSE_FILE + 6;
             goto END;
         }
 
     }
 
     //svndiff_doc_dump(&doc);
-    if (lseek(doc.fd, 0, SEEK_SET) != 0) {
-        FAIL("lseek");
-    }
+    if (doc.wnd.elnum != 0) {
+        if (lseek(doc.fd, 0, SEEK_SET) != 0) {
+            FAIL("lseek");
+        }
 
-    for (wnd = array_first(&doc.wnd, &it);
-         wnd != NULL;
-         wnd = array_next(&doc.wnd, &it)) {
+        total_len = 0;
 
-        if (write(doc.fd, wnd->tview, wnd->tview_len) < 0) {
-            FAIL("write");
+        for (wnd = array_first(&doc.wnd, &it);
+             wnd != NULL;
+             wnd = array_next(&doc.wnd, &it)) {
+
+            if (write(doc.fd, wnd->tview, wnd->tview_len) < 0) {
+                FAIL("write");
+            }
+            total_len += wnd->tview_len;
+        }
+
+        if (ftruncate(doc.fd, total_len) != 0) {
+            FAIL("ftruncate");
         }
     }
 
-    //if (BDATA(doc.base_checksum) == NULL) {
-    //    LTRACE(1, FGREEN("+ %s -> %s"), BDATA(doc.rp), doc.lp);
-    //} else {
-    //    LTRACE(1, FGREEN("~ %s -> %s"), BDATA(doc.rp), doc.lp);
-    //}
+    if (BDATA(doc.base_checksum) == NULL) {
+        LTRACE(1, FGREEN("+ %s -> %s"), BDATA(doc.rp), doc.lp);
+    } else {
+        LTRACE(1, FGREEN("~ %s -> %s"), BDATA(doc.rp), doc.lp);
+    }
 
 
 END:
@@ -962,7 +969,7 @@ editor_cb2(svnc_ctx_t *ctx,
         }
 
         flags |= SVNPE_CLOSING;
-        TRACE("%s END", cmd);
+        //TRACE("%s END", cmd);
         //res = PARSE_EOD;
         //goto END;
 

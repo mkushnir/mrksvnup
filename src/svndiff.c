@@ -406,18 +406,6 @@ svndiff_build_tview(svndiff_wnd_t *wnd, svndiff_doc_t *doc)
 
     /* Set up and verify source */
 
-    if (doc->base_checksum != NULL && doc->fd != -1) {
-        if (verify_checksum_fd(doc->fd, doc->base_checksum->data) != 0) {
-            /* check it out clean? */
-            res = SVNPROTO_EDITOR + 31;
-            goto END;
-        }
-    } else {
-        /*
-         * It's come from an add-file command ...
-         */
-    }
-
     //TRACE("+ %s", BDATA(doc->rp));
 
     for (insn = array_first(&wnd->insns, &it);
