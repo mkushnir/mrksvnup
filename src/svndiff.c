@@ -481,7 +481,14 @@ svndiff_build_tview(svndiff_wnd_t *wnd, svndiff_doc_t *doc)
             char *sbuf = wnd->tview + insn->offset;
             char *sbuf_end = sbuf + insn->len;
 
-            /* XXX validation */
+            /* validation */
+
+            if ((insn->offset + insn->len) >= wnd->tview_len) {
+                TRACE("insn->offset + insn->len=%ld >= wnd->tview_len=%ld",
+                       (insn->offset + insn->len), wnd->tview_len);
+                res = SVNDIFF_BUILD_TVIEW + 6;
+                goto END;
+            }
 
             /* patterning copy in terms of libsvn_delta/text_delta.c */
             for (; sbuf < sbuf_end; ++sbuf, ++ptbuf) {
@@ -491,7 +498,7 @@ svndiff_build_tview(svndiff_wnd_t *wnd, svndiff_doc_t *doc)
             navail -= insn->len;
 
         } else {
-            res = SVNDIFF_BUILD_TVIEW + 5;
+            res = SVNDIFF_BUILD_TVIEW + 7;
             svndiff_doc_dump(doc);
             goto END;
         }

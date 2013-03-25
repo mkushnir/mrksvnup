@@ -242,10 +242,6 @@ read_one_value(int fd, bytestream_t *in, svnproto_state_t *st)
                 break;
             }
 
-        } else if (res == PARSE_EOD) {
-            /* this must be treated as EOF condition */
-            break;
-
         } else {
             /* error */
             //SPOS(in) = savedpos;
@@ -315,22 +311,30 @@ svnproto_vunpack(svnc_ctx_t *ctx,
 
             if (ch == '(') {
                 if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
-                    break;
+                    /* read error */
+                    goto END;
                 }
 
                 if (!(st.tokenizer_state & (TS_LIST_START | TS_IGNORE))) {
+                    /* no match */
+                    TRACE("ch='%c' ch1='%c' st=%s res=%d st.i=%ld st.r=%s",
+                          ch, ch1,
+                          TSSTR(st.tokenizer_state),
+                          res, st.i, SDATA(in, st.r.start));
                     res = SVNPROTO_VUNPACK + 1;
                     goto END;
                 }
 
-                /* no variable */
+                /* no variable to pick */
 
             } else if (ch == ')') {
                 if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
-                    break;
+                    /* read error */
+                    goto END;
                 }
 
                 if (!(st.tokenizer_state & (TS_LIST_END | TS_IGNORE))) {
+                    /* no match */
                     res = SVNPROTO_VUNPACK + 2;
                     goto END;
                 }
@@ -342,7 +346,8 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 long *pv;
 
                 if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
-                    break;
+                    /* read error */
+                    goto END;
                 }
 
                 if (ch1 == '*') {
@@ -358,17 +363,21 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                             *pv = st.i;
 
                             if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                                /* read error */
                                 goto END;
                             }
                         }
+                        /* no match continue */
 
                     } else {
                         while (st.tokenizer_state == TS_NUM_OUT) {
 
                             if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                                /* read error */
                                 goto END;
                             }
                         }
+                        /* no match continue */
                     }
 
                     st.next_read = 0;
@@ -381,6 +390,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                             *pv = st.i;
                         }
                     } else {
+                        /* no match continue */
                         if (pv != NULL) {
                             *pv = 0L;
                         }
@@ -395,6 +405,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                         }
 
                     } else {
+                        /* no match, error  */
                         res = SVNPROTO_VUNPACK + 3;
                         goto END;
                     }
@@ -405,7 +416,8 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 char **pv;
 
                 if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
-                    break;
+                    /* read error */
+                    goto END;
                 }
 
                 if (ch1 == '*') {
@@ -421,17 +433,21 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                             *pv = strdup(SDATA(in, st.r.start));
 
                             if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                                /* read error */
                                 goto END;
                             }
                         }
+                        /* no match continue */
 
                     } else {
                         while (st.tokenizer_state == TS_TOK_OUT) {
 
                             if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                                /* read error */
                                 goto END;
                             }
                         }
+                        /* no match continue */
                     }
 
                     st.next_read = 0;
@@ -444,6 +460,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                             *pv = strdup(SDATA(in, st.r.start));
                         }
                     } else {
+                        /* no match continue */
                         if (pv != NULL) {
                             *pv = NULL;
                         }
@@ -459,6 +476,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                         }
 
                     } else {
+                        /* no match error */
                         res = SVNPROTO_VUNPACK + 4;
                         goto END;
                     }
@@ -469,7 +487,8 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 svnproto_bytes_t **pv;
 
                 if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
-                    break;
+                    /* read error */
+                    goto END;
                 }
 
                 if (ch1 == '*') {
@@ -488,14 +507,17 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                                 goto END;
                             }
                         }
+                        /* no match continue */
 
                     } else {
                         while (st.tokenizer_state == TS_STRING_OUT) {
 
                             if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                                /* read error */
                                 goto END;
                             }
                         }
+                        /* no match continue */
                     }
 
                     st.next_read = 0;
@@ -511,6 +533,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                         if (pv != NULL) {
                             *pv = NULL;
                         }
+                        /* no match continue */
                         st.next_read = 0;
                     }
 
@@ -523,6 +546,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                         }
 
                     } else {
+                        /* no match error */
                         res = SVNPROTO_VUNPACK + 5;
                         goto END;
                     }
@@ -537,7 +561,8 @@ svnproto_vunpack(svnc_ctx_t *ctx,
 
 
                 if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
-                    break;
+                    /* read error */
+                    goto END;
                 }
 
                 if (ch1 == '*') {
@@ -545,10 +570,15 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                     if (cb != NULL) {
                         while (st.tokenizer_state == TS_STRING_OUT) {
                             if (cb(ctx, in, &st, udata) != 0) {
+                                /*
+                                 * user-level no-match, continue (with the
+                                 * next ofrmat character)
+                                 */
                                 break;
                             }
 
                             if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                                /* read error */
                                 goto END;
                             }
                         }
@@ -557,6 +587,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                         while (st.tokenizer_state == TS_STRING_OUT) {
 
                             if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                                /* read error */
                                 goto END;
                             }
                         }
@@ -568,8 +599,12 @@ svnproto_vunpack(svnc_ctx_t *ctx,
 
                     if (st.tokenizer_state == TS_STRING_OUT) {
                         if (cb != NULL) {
-                            if ((res = cb(ctx, in, &st, udata)) != 0) {
-                                goto END;
+                            if (cb(ctx, in, &st, udata) != 0) {
+                                /*
+                                 * user-level no-math, continue with the
+                                 * next character (that is ignore this
+                                 * result).
+                                 */
                             }
                         }
 
@@ -581,12 +616,17 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                     if (st.tokenizer_state == TS_STRING_OUT) {
 
                         if (cb != NULL) {
-                            if ((res = cb(ctx, in, &st, udata)) != 0) {
-                                goto END;
+                            if (cb(ctx, in, &st, udata) != 0) {
+                                /*
+                                 * user-level no-match. Ignore this result
+                                 * adn continue with the next format
+                                 * character.
+                                 */
                             }
                         }
 
                     } else {
+                        /* no match error */
                         res = SVNPROTO_VUNPACK + 6;
                         goto END;
                     }
@@ -599,39 +639,78 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 cb = va_arg(ap, svnproto_cb_t);
                 udata = va_arg(ap, void *);
 
+                /*
+                 * XXX we don't ready any values here. The values are
+                 * supposed to be read in the callback.
+                 *
+                 * Return values:
+                 *      * return 0 - loop
+                 *      * return PARSE_EOD - no-match continue with the
+                 *          next format chracter
+                 *      * return other - read error
+                 */
+
                 if (ch1 == '*') {
 
                     if (cb != NULL) {
                         while ((res = cb(ctx, in, &st, udata)) == 0) {
                             ;
                         }
-                    }
+                        if (res == PARSE_EOD) {
+                            /*
+                             * user-level interrupt, means no-match, reset
+                             * next_read and continue.
+                             */
 
+                        } else {
+                            /* read error */
+                            res = SVNPROTO_VUNPACK + 7;
+                            goto END;
+                        }
+
+                    } else {
+                        /* weird */
+                        /* noop */
+                    }
                     svnproto_state_init(&st);
                     st.next_read = 0;
-
-                    if (res != PARSE_EOD) {
-                        goto END;
-                    }
 
                 } else if (ch1 == '?') {
 
                     if (cb != NULL) {
                         if ((res = cb(ctx, in, &st, udata)) != 0) {
+                            if (res == PARSE_EOD) {
+                                /*
+                                 * user-level interrupt, no match, reset
+                                 * next read and continue
+                                 */
+                                svnproto_state_init(&st);
+                                st.next_read = 0;
+
+                            } else {
+                                /* read error */
+                                res = SVNPROTO_VUNPACK + 8;
+                                goto END;
+                            }
+
+                        } else {
+                            /* continue with the next format character */
                             svnproto_state_init(&st);
-                            st.next_read = 0;
                         }
-                    }
-                    if (res != PARSE_EOD) {
-                        goto END;
+
+                    } else {
+                        /* noop */
                     }
 
                 } else {
                     if (cb != NULL) {
                         if ((res = cb(ctx, in, &st, udata)) != 0) {
+                            /* read error, no choice  */
+                            res = SVNPROTO_VUNPACK + 9;
                             goto END;
                         }
                     }
+                    /* continue with the next format character */
                     svnproto_state_init(&st);
                 }
 
@@ -640,7 +719,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 bytestream_recycle(in);
 
             } else {
-                res = SVNPROTO_VUNPACK + 7;
+                res = SVNPROTO_VUNPACK + 10;
                 goto END;
             }
 
@@ -656,9 +735,6 @@ svnproto_vunpack(svnc_ctx_t *ctx,
 
 
 END:
-    if (res == PARSE_EOD) {
-        res = 0;
-    }
     return res;
 }
 

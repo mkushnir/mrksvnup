@@ -67,7 +67,6 @@ typedef struct _svndiff_doc {
     int fd;
     array_t wnd;
 } svndiff_doc_t;
-#endif
 
 int svndiff_parse_doc(const char *, const char *, svndiff_doc_t *);
 
@@ -76,4 +75,6 @@ int svndiff_doc_fini(svndiff_doc_t *);
 int svndiff_doc_dump(svndiff_doc_t *);
 
 int svndiff_build_tview(svndiff_wnd_t *, svndiff_doc_t *);
+
+#endif
 
