@@ -73,5 +73,7 @@ int svndiff_parse_doc(const char *, const char *, svndiff_doc_t *);
 
 int svndiff_doc_init(svndiff_doc_t *);
 int svndiff_doc_fini(svndiff_doc_t *);
-int svndiff_build_tview(svndiff_doc_t *, svndiff_wnd_t *);
 int svndiff_doc_dump(svndiff_doc_t *);
+
+int svndiff_build_tview(svndiff_wnd_t *, svndiff_doc_t *);
+

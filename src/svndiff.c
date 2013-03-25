@@ -389,7 +389,7 @@ dump_wnd_array(array_t *ar)
 
 
 int
-svndiff_build_tview(svndiff_doc_t *doc, svndiff_wnd_t *wnd)
+svndiff_build_tview(svndiff_wnd_t *wnd, svndiff_doc_t *doc)
 {
     int res = 0;
     array_iter_t it;
@@ -410,7 +410,7 @@ svndiff_build_tview(svndiff_doc_t *doc, svndiff_wnd_t *wnd)
 
     /* Set up and verify source */
 
-    if (doc->base_checksum != NULL) {
+    if (doc->base_checksum != NULL && doc->fd != -1) {
         if (verify_checksum_fd(doc->fd, doc->base_checksum->data) != 0) {
             /* check it out clean? */
             res = SVNPROTO_EDITOR + 31;
@@ -418,8 +418,7 @@ svndiff_build_tview(svndiff_doc_t *doc, svndiff_wnd_t *wnd)
         }
     } else {
         /*
-         * It's come from an add-file command, fd must point at an empty
-         * file. If it's not empty, ...
+         * It's come from an add-file command ...
          */
     }
 

@@ -524,19 +524,6 @@ add_file(svnc_ctx_t *ctx,
         /* The file exists. If it's not empty, will skip it. */
     }
 
-    if ((doc->fd =
-         open(doc->lp, O_RDWR|O_CREAT, 0644)) < 0) {
-         //open(doc->lp, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
-
-        res = ADD_FILE + 5;
-        goto END;
-    }
-    if (fchmod(doc->fd, 0644) != 0) {
-        res = ADD_FILE + 6;
-        goto END;
-    }
-    lseek(doc->fd, 0, SEEK_SET);
-
 END:
     if (dir_token != NULL) {
         free(dir_token);
@@ -591,14 +578,8 @@ open_file(svnc_ctx_t *ctx,
         /* tell the svndiff that it needs checking out */
     }
 
-    if ((doc->fd =
-         open(doc->lp, O_RDWR|O_CREAT, 0644)) < 0) {
-
+    if ((doc->fd = open(doc->lp, O_RDWR)) < 0) {
         res = OPEN_FILE + 5;
-        goto END;
-    }
-    if (fchmod(doc->fd, 0644) != 0) {
-        res = OPEN_FILE + 6;
         goto END;
     }
 
@@ -721,6 +702,13 @@ END:
 #define BACKUP_EXT ".bak.svnup"
 
 static int
+checksum_cb(svndiff_wnd_t *wnd, MD5_CTX *ctx)
+{
+    MD5Update(ctx, wnd->tview, wnd->tview_len);
+    return 0;
+}
+
+static int
 close_file(svnc_ctx_t *ctx,
            bytestream_t *in,
            UNUSED svndiff_doc_t *doc)
@@ -730,10 +718,8 @@ close_file(svnc_ctx_t *ctx,
     svnproto_bytes_t *text_checksum = NULL;
     svndiff_wnd_t *wnd;
     array_iter_t it;
-    char *bak = NULL;
-    int bak_fd = -1;
-    ssize_t bak_sz = 0;
-    
+    MD5_CTX mctx;
+    char *checksum = NULL;
 
     if (svnproto_unpack(ctx, in, "(s(s?))",
                         &file_token, &text_checksum) != 0) {
@@ -755,31 +741,74 @@ close_file(svnc_ctx_t *ctx,
         }
     }
 
-    if ((bak = malloc(strlen(doc->lp) + strlen(BACKUP_EXT))) == NULL) {
-        FAIL("malloc");
+    /* first bild tview */
+    if (array_traverse(&doc->wnd,
+                      (array_traverser_t)svndiff_build_tview, doc) != 0)  {
+        res = CLOSE_FILE + 3;
+        goto END;
     }
-    strcpy(bak, doc->lp);
-    strcat(bak, BACKUP_EXT);
 
-    if ((bak_fd = open(bak, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
-        FAIL("open");
+    if (BDATA(text_checksum) != NULL) {
+
+        MD5Init(&mctx);
+        array_traverse(&doc->wnd, (array_traverser_t)checksum_cb, &mctx);
+
+        if ((checksum = MD5End(&mctx, NULL)) == NULL) {
+            perror("ND5End");
+            res = CLOSE_FILE + 4;
+            goto END;
+        }
+
+        if (strcmp(checksum, BDATA(text_checksum)) != 0) {
+            char *bak = NULL;
+
+            TRACE(FRED("checksum mismtach: expected %s over %s . "
+                       "Will ignore this file. Backup was sav at %s"),
+                       BDATA(text_checksum), doc->lp, bak);
+            svndiff_doc_dump(doc);
+
+            if ((bak = malloc(strlen(doc->lp) + strlen(BACKUP_EXT))) == NULL) {
+                FAIL("malloc");
+            }
+
+            strcpy(bak, doc->lp);
+            strcat(bak, BACKUP_EXT);
+
+            if (doc->fd != -1) {
+                /* file was open, now close it */
+                close(doc->fd);
+
+            }
+
+            if ((doc->fd = open(bak, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
+                FAIL("open");
+            }
+            free(bak);
+            bak = NULL;
+        }
+    }
+
+    if (doc->fd == -1) {
+        /* file was added */
+        if ((doc->fd = open(doc->lp, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
+
+            res = CLOSE_FILE + 5;
+            goto END;
+        }
+
+    }
+
+    //svndiff_doc_dump(doc);
+    if (lseek(doc->fd, 0, SEEK_SET) != 0) {
+        FAIL("lseek");
     }
 
     for (wnd = array_first(&doc->wnd, &it);
          wnd != NULL;
          wnd = array_next(&doc->wnd, &it)) {
 
-        if (svndiff_build_tview(doc, wnd) != 0) {
-            res = CLOSE_FILE + 3;
-            goto END;
-
-        } else {
-            ssize_t nwritten;
-
-            if ((nwritten = write(bak_fd, wnd->tview, wnd->tview_len)) < 0) {
-                FAIL("write");
-            }
-            bak_sz += nwritten;
+        if (write(doc->fd, wnd->tview, wnd->tview_len) < 0) {
+            FAIL("write");
         }
     }
 
@@ -789,23 +818,6 @@ close_file(svnc_ctx_t *ctx,
         LTRACE(1, FGREEN("~ %s -> %s"), BDATA(doc->rp), doc->lp);
     }
 
-    if (BDATA(text_checksum) != NULL &&
-        verify_checksum_fd(bak_fd, BDATA(text_checksum)) != 0) {
-
-        TRACE(FRED("checksum mismtach: expected %s over %s . "
-                   "Will ignore this file. Backup was sav at %s"),
-                   BDATA(text_checksum), doc->lp, bak);
-        svndiff_doc_dump(doc);
-
-    } else {
-
-        close(bak_fd);
-        bak_fd = -1;
-
-        if (rename(bak, doc->lp) != 0) {
-            FAIL("rename");
-        }
-    }
 
 END:
     if (svndiff_doc_fini(doc) != 0) {
@@ -816,12 +828,6 @@ END:
     }
     if (text_checksum != NULL) {
         free(text_checksum);
-    }
-    if (bak != NULL) {
-        free(bak);
-    }
-    if (bak_fd >= 0) {
-        close(bak_fd);
     }
 
     TRRET(res);
