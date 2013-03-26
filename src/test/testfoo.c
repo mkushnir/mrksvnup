@@ -119,7 +119,7 @@ test_unpack(void)
          *s5 = NULL, *s6 = NULL, *s7 = NULL, *s8 = NULL;
     array_t ar;
 
-    if ((ctx = svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", ""))
+    if ((ctx = svnc_new("svn://localhost/mysan", "", 0))
         == NULL) {
 
         assert(0);
@@ -143,7 +143,8 @@ test_unpack(void)
         assert(0);
     }
 
-    if (svnproto_unpack(ctx, &ctx->in, "n?n?n?n?n?", &n1, &n2, &n3, &n4, &n5) != 0) {
+    if (svnproto_unpack(ctx, &ctx->in, "n?n?n?n?n?",
+                        &n1, &n2, &n3, &n4, &n5) != 0) {
         assert(0);
     }
 
@@ -249,6 +250,7 @@ test_unpack(void)
     //svnc_close(ctx);
 
     svnc_destroy(ctx);
+    free(ctx);
 }
 
 static int
@@ -276,7 +278,7 @@ test_unpack_cb(void)
     svnc_ctx_t *ctx;
     array_t ar;
 
-    if ((ctx = svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", ""))
+    if ((ctx = svnc_new("svn://localhost/mysvn", "", 0))
         == NULL) {
 
         assert(0);
@@ -313,6 +315,7 @@ test_unpack_cb(void)
     svnc_close(ctx);
 
     svnc_destroy(ctx);
+    free(ctx);
 }
 
 UNUSED static void
@@ -321,7 +324,7 @@ test_pack(void)
     svnc_ctx_t *ctx;
 
     if ((ctx =
-            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", "")) == NULL) {
+            svnc_new("svn://localhost/mysvn", "", 0)) == NULL) {
 
         assert(0);
     }
@@ -356,6 +359,7 @@ test_pack(void)
     svnc_close(ctx);
 
     svnc_destroy(ctx);
+    free(ctx);
 }
 
 static int
@@ -433,7 +437,7 @@ test_packresponse(void)
     }
 
     if ((ctx =
-            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", "")) == NULL) {
+            svnc_new("svn://localhost/mysvn", "", 0)) == NULL) {
 
         assert(0);
     }
@@ -459,6 +463,7 @@ test_packresponse(void)
     svnc_close(ctx);
 
     svnc_destroy(ctx);
+    free(ctx);
 }
 
 UNUSED static void
@@ -473,7 +478,7 @@ test_simple(void)
     svnproto_fileent_t fe;
 
     if ((ctx =
-            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", "")) == NULL) {
+            svnc_new("svn://localhsot/mysvn", "", 0)) == NULL) {
 
         assert(0);
     }
@@ -523,6 +528,7 @@ test_simple(void)
 
     svnc_close(ctx);
     svnc_destroy(ctx);
+    free(ctx);
 }
 
 static int
@@ -540,10 +546,12 @@ walk_cb(svnc_ctx_t *ctx,
     if ((localpath = path_join(localroot, path)) == NULL) {
         FAIL("path_join");
     }
-    TRACE("localpath %s", localpath);
 
     if (fe != NULL) {
-        TRACE(FGREEN("FILE %s -> %s (%s)"), path, localpath, fe->checksum->data);
+        LTRACE(1, FGREEN("FILE %s -> %s (%s)"),
+                     path, localpath, fe->checksum->data);
+
+        svnc_save_checksum(ctx, path, fe->checksum);
 
         if (lstat(localpath, &sb) != 0) {
             int fd;
@@ -589,7 +597,7 @@ walk_cb(svnc_ctx_t *ctx,
         }
     } else {
 
-        TRACE(FYELLOW("DIR %s"), path);
+        LTRACE(1, FYELLOW("DIR %s"), path);
 
         if (lstat(localpath, &sb) != 0) {
             if (mkdir(localpath, 0755) != 0) {
@@ -603,29 +611,22 @@ walk_cb(svnc_ctx_t *ctx,
             }
         }
     }
-    //svnproto_fileent_dump(fe);
-    /* directory exists */
-    /* no, create directory */
-
-    /* file exists */
-    /* no, get-file */
-
-    /* calc md5 over the file */
-    /* md5 == fe->checksum */
-    /* no, get-file */
-
     return 0;
 }
 
 UNUSED static void
 test_conn2(void)
 {
+    UNUSED int res;
     svnc_ctx_t *ctx;
     struct stat sb;
     const char *localroot = "qwe";
+    char *p = NULL;
+    svnproto_bytes_t *c = NULL;
+    int i;
 
     if ((ctx =
-            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", localroot)) == NULL) {
+            svnc_new("svn://localhost/mysvn", localroot, 0)) == NULL) {
         assert(0);
     }
 
@@ -647,8 +648,26 @@ test_conn2(void)
         assert(0);
     }
 
+    for (i = svnc_first_checksum(ctx, &p, &c);
+         i == 0;
+         i = svnc_next_checksum(ctx, &p, &c)) {
+
+        TRACE("deleting %s %s", p, BDATA(c));
+
+        if ((res = svnc_delete_checksum(ctx, p)) != 0) {
+            TRACE("res=%s", diag_str(res));
+        }
+
+        free(p);
+        p = NULL;
+        free(c);
+        c = NULL;
+
+    }
+
     svnc_close(ctx);
     svnc_destroy(ctx);
+    free(ctx);
 }
 
 UNUSED static void
@@ -657,7 +676,7 @@ test_editor(void)
     svnc_ctx_t *ctx;
 
     if ((ctx =
-            svnc_new("svn://svn.freebsd.org/base/user/des/svnsup", "")) == NULL) {
+            svnc_new("svn://localhost/mysvn", "", 0)) == NULL) {
 
         assert(0);
     }
@@ -676,19 +695,54 @@ test_editor(void)
 
     svnc_close(ctx);
     svnc_destroy(ctx);
+    free(ctx);
+}
+
+UNUSED static void
+test_mkdirs(void)
+{
+    //svncdir_mkdirs("");
+    //svncdir_mkdirs(".");
+    //svncdir_mkdirs("./.");
+    //svncdir_mkdirs(".//.");
+    //svncdir_mkdirs("..//..");
+    //svncdir_mkdirs("/..//..");
+    //svncdir_mkdirs("/..//../");
+    //svncdir_mkdirs("a");
+    //svncdir_mkdirs("a/b");
+    //svncdir_mkdirs("a/b/c");
+    //svncdir_mkdirs("a//b");
+    //svncdir_mkdirs("a//b//c");
+    //svncdir_mkdirs(".a//.b");
+    //svncdir_mkdirs(".a//.b//.c");
+    //svncdir_mkdirs("/home/mkushnir/tmp/aa//bb");
+    //svncdir_mkdirs("/aa//bb//c");
+    //svncdir_mkdirs("/aa//bb/");
+    //svncdir_mkdirs("/aa//bb/c");
+    //svncdir_mkdirs("/aa//bb/cc//");
+    //svncdir_mkdirs("/aa/bb/cc/");
+}
+
+UNUSED static void
+test_cache(void)
+{
+
 }
 
 int
 main(void)
 {
-    test_parse_url();
-    test_unpack();
-    test_unpack_cb();
-    test_pack();
-    test_packresponse();
+    //test_parse_url();
+    //test_unpack();
+    //test_unpack_cb();
+    //test_pack();
+    //test_packresponse();
+    test_cache();
+
+    test_conn2();
+
     /* broken, need to fix test data */
     //test_simple();
-    //test_conn2();
     //test_editor();
     return 0;
 }

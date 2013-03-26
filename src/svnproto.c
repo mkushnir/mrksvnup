@@ -47,7 +47,6 @@ svnproto_kind2str(int kind)
  *                   | ( failure ( err:error ... ) )
  *                   | ( step [ token:string ] )
  * error: ( apr-err:number message:string file:string line:number )
- * spec (w%s)
  */
 
 static int
@@ -72,6 +71,9 @@ unpack1(svnc_ctx_t *ctx,
                    BDATA(ctx->last_error.file),
                    ctx->last_error.line
                    );
+    }
+    if (res != 0) {
+        res = PARSE_EOD;
     }
     TRRET(res);
 }

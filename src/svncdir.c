@@ -1,5 +1,8 @@
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
+//#define TRRET_DEBUG
 #include "diag.h"
 #include "mrkcommon/util.h"
 #include "mrkcommon/dumpm.h"
@@ -8,6 +11,79 @@
 #include "mrksvnup/svnc.h"
 #include "mrksvnup/svnproto.h"
 #include "mrksvnup/svncdir.h"
+
+/* another recursive mkdir */
+
+static int
+make_one_dir(const char *path, const char *last)
+{
+    struct stat sb;
+
+    //TRACE("path '%s' last '%s'", path, last);
+
+    if (*path == '\0') {
+        return 0;
+    }
+
+    if (strcmp(last, "..") == 0) {
+        TRRET(SVNCDIR_MKDIRS + 1);
+    }
+
+    if (lstat(path, &sb) != 0) {
+        if (mkdir(path, 0755) != 0) {
+            TRRET(SVNCDIR_MKDIRS + 2);
+        }
+    } else {
+        if (!(S_ISDIR(sb.st_mode) || S_ISLNK(sb.st_mode))) {
+            TRRET(SVNCDIR_MKDIRS + 3);
+        }
+    }
+    return 0;
+}
+
+int
+svncdir_mkdirs(const char *path)
+{
+    int res = 0;
+    char *buf, *pbuf0, *pbuf1;
+
+    if ((buf = strdup(path)) == NULL) {
+        FAIL("strdup");
+    }
+    pbuf0 = buf;
+
+    //TRACE("path=%s", path);
+
+    for (pbuf1 = strchr(pbuf0, '/');
+         pbuf1 != NULL;
+         pbuf1 = strchr(pbuf0, '/')) {
+
+        /* tempararily terminate */
+        *pbuf1 = '\0';
+
+        if (make_one_dir(buf, pbuf0)) {
+            res = SVNCDIR_MKDIRS + 4;
+            goto END;
+        }
+
+        /*restore separator */
+        *pbuf1 = '/';
+
+        ++pbuf1;
+        pbuf0 = pbuf1;
+    }
+
+    if (make_one_dir(buf, pbuf0)) {
+        res = SVNCDIR_MKDIRS + 5;
+        goto END;
+    }
+
+
+END:
+    free(buf);
+    buf = NULL;
+    TRRET(res);
+}
 
 int
 svncdir_path_walk(UNUSED const char *path)

@@ -30,8 +30,8 @@ svndiff_doc_t doc;
 static int flags = 0;
 svnc_ctx_t *shadow_ctx;
 
-static int
-verify_checksum_fd(int fd, const char *cs)
+int
+svnproto_editor_verify_checksum(int fd, const svnproto_bytes_t *cs)
 {
     int res = 0;
     char buf[VCBUFSZ];
@@ -65,7 +65,7 @@ verify_checksum_fd(int fd, const char *cs)
 
     //TRACE("s=%s cs=%s", s, cs);
 
-    if (strcmp(s, cs) != 0) {
+    if (strncmp(s, cs->data, cs->sz) != 0) {
         res = VERIFY_CHECKSUM_FD + 4;
         goto END;
     }
@@ -218,6 +218,11 @@ delete_entry(svnc_ctx_t *ctx,
         }
     } else {
         LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
+    }
+
+    if (svnc_delete_checksum(ctx, localpath) != 0) {
+        LTRACE(1, FYELLOW("Failed to delete checksum for %s (ignoring)"),
+               localpath);
     }
 
 
@@ -749,12 +754,6 @@ close_file(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s file_token=%s text_checksum=%s",
-    //      cmd, BDATA(file_token),
-    //      BDATA(text_checksum));
-
-    //svndiff_doc_dump(&doc);
-
     if (BDATA(file_token) && BDATA(doc.ft)) {
         if (strcmp(file_token->data,
                    doc.ft->data) != 0) {
@@ -764,12 +763,11 @@ close_file(svnc_ctx_t *ctx,
     }
 
     if (doc.base_checksum != NULL && doc.fd != -1) {
-        if (verify_checksum_fd(doc.fd, doc.base_checksum->data) != 0) {
+        if (svnproto_editor_verify_checksum(doc.fd,
+                doc.base_checksum) != 0) {
             /* check it out clean? */
-            LTRACE(1, FRED("Checksum mismtach: expected %s over %s"),
-                       BDATA(text_checksum), doc.lp);
-            //svndiff_doc_dump(&doc);
-            /* make it fatal */
+            LTRACE(1, FRED("Base checksum mismtach: expected %s over %s"),
+                       BDATA(doc.base_checksum), doc.lp);
             close(doc.fd);
             doc.fd = -1;
             if (checkout_file(&doc) != 0) {
@@ -785,6 +783,7 @@ close_file(svnc_ctx_t *ctx,
 
     /* Are there any wnd to work with? */
     if (doc.wnd.elnum != 0) {
+
         /* first build tview */
         if (array_traverse(&doc.wnd,
                           (array_traverser_t)svndiff_build_tview, &doc) != 0)  {
@@ -806,9 +805,6 @@ close_file(svnc_ctx_t *ctx,
             if (strcmp(checksum, BDATA(text_checksum)) != 0) {
                 char *bak = NULL;
 
-                /*
-                 * We are 
-                 */
                 if ((bak = malloc(strlen(doc.lp) + strlen(BACKUP_EXT))) == NULL) {
                     FAIL("malloc");
                 }
@@ -816,10 +812,9 @@ close_file(svnc_ctx_t *ctx,
                 strcpy(bak, doc.lp);
                 strcat(bak, BACKUP_EXT);
 
-                LTRACE(1, FRED("Checksum mismtach: expected %s over %s . "
+                LTRACE(1, FRED("Target checksum mismtach: expected %s over %s . "
                            "Will ignore this file. Backup was saved at %s"),
                            BDATA(text_checksum), doc.lp, bak);
-                //svndiff_doc_dump(&doc);
 
                 if (doc.fd != -1) {
                     /* file was open, now close it */
@@ -845,15 +840,15 @@ close_file(svnc_ctx_t *ctx,
     if (doc.fd == -1) {
         /* add-file ? */
         if ((doc.fd = open(doc.lp, O_RDWR|O_CREAT|O_TRUNC, doc.mod)) < 0) {
-
             res = CLOSE_FILE + 6;
             goto END;
         }
 
     }
 
-    //svndiff_doc_dump(&doc);
+    /* Write it down */
     if (doc.wnd.elnum != 0) {
+
         if (lseek(doc.fd, 0, SEEK_SET) != 0) {
             FAIL("lseek");
         }
@@ -877,6 +872,11 @@ close_file(svnc_ctx_t *ctx,
 
     if (fchmod(doc.fd, doc.mod) != 0) {
         FAIL("fchmod");
+    }
+
+    if (svnc_save_checksum(ctx, BDATA(doc.rp), text_checksum) != 0) {
+        res = CLOSE_FILE + 7;
+        goto END;
     }
 
     if (BDATA(doc.base_checksum) == NULL) {
@@ -1105,7 +1105,7 @@ END:
     TRRET(res);
 }
 
-static int
+UNUSED static int
 editor_cb1(svnc_ctx_t *ctx,
            bytestream_t *in,
            UNUSED svnproto_state_t *st,
@@ -1130,8 +1130,8 @@ editor_cb0(svnc_ctx_t *ctx,
         res = PARSE_EOD;
 
     } else {
-        res = svnproto_unpack(ctx, in, "(rr)",
-                              editor_cb1, NULL,
+        res = svnproto_unpack(ctx, in, "(wr)",
+                              &cmd,
                               editor_cb2, udata);
     }
 
@@ -1151,7 +1151,7 @@ svnproto_editor(svnc_ctx_t *ctx)
 
     flags = 0;
 
-    if ((shadow_ctx = svnc_new(ctx->url, ctx->localroot)) == NULL) {
+    if ((shadow_ctx = svnc_new(ctx->url, ctx->localroot, SVNC_NNOCACHE)) == NULL) {
         TRRET(SVNPROTO_EDITOR + 25);
     }
 
@@ -1172,6 +1172,7 @@ svnproto_editor(svnc_ctx_t *ctx)
 
     svnc_close(shadow_ctx);
     svnc_destroy(shadow_ctx);
+    free(shadow_ctx);
 
     return 0;
 }

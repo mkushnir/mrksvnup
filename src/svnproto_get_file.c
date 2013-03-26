@@ -129,7 +129,10 @@ unpack1(svnc_ctx_t *ctx,
         p->value = value;
     }
 
-    TRRET(PARSE_EOD);
+    if (res != 0) {
+        res = PARSE_EOD;
+    }
+    TRRET(res);
 }
 
 static int

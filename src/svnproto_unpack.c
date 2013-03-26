@@ -249,6 +249,11 @@ read_one_value(int fd, bytestream_t *in, svnproto_state_t *st)
         }
     }
 
+    //TRACE("read value: st->i=%ld", st->i);
+    //if ((st->r.end - st->r.start) > 0) {
+    //    D16(SDATA(in, st->r.start), MIN(st->r.end - st->r.start, 64));
+    //}
+
     return res;
 }
 

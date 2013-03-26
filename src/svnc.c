@@ -13,10 +13,13 @@
 
 #include "diag.h"
 #include "mrkcommon/util.h"
+//#define TRRET_DEBUG
 #include "mrkcommon/dumpm.h"
+#include "mrkcommon/traversedir.h"
 
-#include "mrksvnup/svnproto.h"
 #include "mrksvnup/svnc.h"
+#include "mrksvnup/svncdir.h"
+#include "mrksvnup/svnproto.h"
 
 /* keep it in sync with enum _svn_depth */
 UNUSED static const char *svn_depth_str[] = {
@@ -82,9 +85,105 @@ svn_url_parse(const char *url, char **host, int *port, char **path)
     return (0);
 }
 
+int
+svnc_save_checksum(svnc_ctx_t *ctx,
+                   const char *path,
+                   svnproto_bytes_t *checksum)
+{
+    int res = 0;
+    DBT k, v;
+    k.size = strlen(path);
+    k.data = (void *)path;
+    v.size = checksum->sz;
+    v.data = checksum->data;
+
+    if (ctx->cachedb->put(ctx->cachedb, &k, &v, 0) != 0) {
+        res = SVNC_SAVE_CHECKSUM + 1;
+    }
+    TRRET(res);
+}
+
+int
+svnc_delete_checksum(svnc_ctx_t *ctx,
+                   const char *path)
+{
+    int res = 0;
+    DBT k;
+    k.size = strlen(path);
+    k.data = (void *)path;
+
+    if (ctx->cachedb->del(ctx->cachedb, &k, 0) != 0) {
+        res = SVNC_DELETE_CHECKSUM + 1;
+    }
+    TRRET(res);
+}
+
+int
+svnc_first_checksum(svnc_ctx_t *ctx,
+                     char **path,
+                     svnproto_bytes_t **checksum)
+{
+    int res = 0;
+    DBT k, v;
+    k.size = 0;
+    k.data = NULL;
+    v.size = 0;
+    v.data = NULL;
+
+    if (ctx->cachedb->seq(ctx->cachedb, &k, &v, R_FIRST) != 0) {
+        res = SVNC_FIRST_CHECKSUM + 1;
+    }
+
+    if ((*path = malloc(k.size + 1)) == NULL) {
+        FAIL("malloc");
+    }
+    memcpy(*path, k.data, k.size);
+    *((*path) + k.size) = '\0';
+
+    if ((*checksum = malloc(sizeof(svnproto_bytes_t) + v.size)) == NULL) {
+        FAIL("malloc");
+    }
+    (*checksum)->sz = v.size;
+    memcpy((*checksum)->data, v.data, v.size);
+
+    TRRET(res);
+}
+
+int
+svnc_next_checksum(svnc_ctx_t *ctx,
+                   char **path,
+                   svnproto_bytes_t **checksum)
+{
+    int res = 0;
+    DBT k, v;
+    k.size = 0;
+    k.data = NULL;
+    v.size = 0;
+    v.data = NULL;
+
+    if (ctx->cachedb->seq(ctx->cachedb, &k, &v, R_NEXT) != 0) {
+        res = SVNC_NEXT_CHECKSUM + 1;
+    }
+
+    if ((*path = malloc(k.size + 1)) == NULL) {
+        FAIL("malloc");
+    }
+    memcpy(*path, k.data, k.size);
+    *((*path) + k.size) = '\0';
+
+    if ((*checksum = malloc(sizeof(svnproto_bytes_t) + v.size)) == NULL) {
+        FAIL("malloc");
+    }
+    (*checksum)->sz = v.size;
+    memcpy((*checksum)->data, v.data, v.size);
+
+    TRRET(res);
+}
+
 svnc_ctx_t *
 svnc_new(const char *url,
-         const char *localroot)
+         const char *localroot,
+         unsigned flags)
 {
     svnc_ctx_t *ctx;
     struct addrinfo hints;
@@ -106,6 +205,9 @@ svnc_new(const char *url,
     ctx->last_error.file = NULL;
     ctx->last_error.line = -1;
     ctx->ai = NULL;
+    ctx->cacheroot = NULL;
+    ctx->cachepath = NULL;
+    ctx->cachedb = NULL;
 
     if ((ctx->url = strdup(url)) == NULL) {
         TRRETNULL(SVNC_NEW + 2);
@@ -121,6 +223,7 @@ svnc_new(const char *url,
 
     if (snprintf(portstr ,sizeof(portstr), "%d", ctx->port) <= 0) {
         svnc_destroy(ctx);
+        free(ctx);
         TRRETNULL(SVNC_NEW + 5);
     }
 
@@ -132,7 +235,39 @@ svnc_new(const char *url,
 
     if (getaddrinfo(ctx->host, portstr, &hints, &ctx->ai) != 0) {
         svnc_destroy(ctx);
+        free(ctx);
         TRRETNULL(SVNC_NEW + 6);
+    }
+
+    if (!flags & SVNC_NNOCACHE) {
+        if ((ctx->cacheroot = path_join(SVNC_CACHE_ROOT,
+                                        ctx->localroot)) == NULL) {
+            svnc_destroy(ctx);
+            free(ctx);
+            TRRETNULL(SVNC_NEW + 7);
+        }
+
+        if (svncdir_mkdirs(ctx->cacheroot) != 0) {
+            svnc_destroy(ctx);
+            free(ctx);
+            TRRETNULL(SVNC_NEW + 8);
+        }
+
+        if ((ctx->cachepath = path_join(ctx->cacheroot, CACHEFILE)) == NULL) {
+            svnc_destroy(ctx);
+            free(ctx);
+            TRRETNULL(SVNC_NEW + 7);
+        }
+
+        if ((ctx->cachedb = dbopen(ctx->cachepath,
+                                   O_RDWR|O_CREAT|O_EXLOCK,
+                                   0644,
+                                   DB_HASH,
+                                   NULL)) == NULL) {
+            svnc_destroy(ctx);
+            free(ctx);
+            TRRETNULL(SVNC_NEW + 9);
+        }
     }
 
     return (ctx);
@@ -216,7 +351,7 @@ int
 svnc_destroy(svnc_ctx_t *ctx)
 {
     if (svnc_close(ctx) != 0) {
-        TRRET(SVNC_DESTROY + 1);
+        TRACE("svnc_close issue");
     }
 
     if (ctx->ai != NULL) {
@@ -244,6 +379,20 @@ svnc_destroy(svnc_ctx_t *ctx)
         ctx->localroot = NULL;
     }
 
+    if (ctx->cachedb != NULL) {
+        if (ctx->cachedb->close(ctx->cachedb) != 0) {
+            TRACE("cachedb->close issue");
+        }
+        ctx->cachedb = NULL;
+    }
+    if (ctx->cachepath != NULL) {
+        free(ctx->cachepath);
+        ctx->cachepath = NULL;
+    }
+    if (ctx->cacheroot != NULL) {
+        free(ctx->cacheroot);
+        ctx->cacheroot = NULL;
+    }
 
     svnc_clear_last_error(ctx);
 
