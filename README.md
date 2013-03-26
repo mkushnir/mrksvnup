@@ -49,7 +49,7 @@ autotools][4].
 TODO
 ====
 
-* Cache file checksums locally (/var/run/svnup/<localpath>).
+* Cache file checksums locally (/var/run/svnup/\<localpath\>).
 * Strict (the -f option) and loose (default) update semantics.
 * Diagnostics, verbosity, etc.
 * Support of different transports: http://, https:// svn+ssh://.
