@@ -31,14 +31,19 @@ from the server. It doesn't delete the files not being tracked on the
 remote side (for example, it won't wipe out custom kernel confurations
 during update).
 
-One of its current limitations is that unlike the traditional svn client,
-it doesn't yet track each insividual file's state. This is one of my
-TODO's. Without this function (at least caching the file checksum) the
-utility won't be able to detect a locally modified file that was not
-remotely modified between revisions, and thus was not included in the
-svndiff document. An alternative solution is to query each file's checksum
-on the server. It would slow down updating large repositories and is not
-considered for now. That's why I consider caching.
+The _mrksvnup_ utility keeps some  minimal state about each tracked file:
+its remote path and the checksum as a key/value pair in a local database.
+An update procedure is carried out in two stages: first an _svndiff_
+document is obtained given the source and target revisions, and the files
+are edited along with this document.  During this stage each file's remote
+path and checksum is saved in the database. When someting goes wrong,
+a full copy of an individual file is checked out from the server using the
+_get-file_ svn command.
+
+The next stage is checking local tree against the full database. During
+this stage the known tracked files that might possibly be deleted/modified
+locally, but not listed remotely in the svndiff document (because they
+wouldn't change) are restored using the _get-file_ command.
 
 This program was first written as a proof of concept, mostly in order to
 explore the design decision. It can, however, be used in real world tasks.
@@ -49,7 +54,7 @@ autotools][4].
 TODO
 ====
 
-* Cache file checksums locally (/var/run/svnup/\<localpath\>).
+* Cache file checksums locally (/var/run/svnup/\[localpath\]).
 * Strict (the -f option) and loose (default) update semantics.
 * Diagnostics, verbosity, etc.
 * Support of different transports: http://, https:// svn+ssh://.
