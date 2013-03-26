@@ -512,7 +512,9 @@ svndiff_doc_init(svndiff_doc_t *doc)
     doc->rev = -1;
     doc->ft = NULL;
     doc->fd = -1;
+    doc->mod = 0644;
     init_wnd_array(&doc->wnd);
+    doc->flags = 0;
     return 0;
 }
 
@@ -548,7 +550,9 @@ svndiff_doc_fini(svndiff_doc_t *doc)
         doc->base_checksum = NULL;
     }
     clear_current_file(doc);
+    doc->mod = 0644;
     fini_wnd_array(&doc->wnd);
+    doc->flags = 0;
     return 0;
 }
 
@@ -556,13 +560,14 @@ int
 svndiff_doc_dump(svndiff_doc_t *doc)
 {
     TRACE("doc version=%d "
-          "base_checksum=%s rp=%s rev=%ld lp=%s fd=%d",
+          "base_checksum=%s rp=%s rev=%ld lp=%s fd=%d mod=%04o",
           doc->version,
           BDATA(doc->base_checksum),
           BDATA(doc->rp),
           doc->rev,
           doc->lp,
-          doc->fd
+          doc->fd,
+          doc->mod
          );
     dump_wnd_array(&doc->wnd);
     return 0;

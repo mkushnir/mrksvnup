@@ -34,13 +34,13 @@ update_cb(svnc_ctx_t *ctx,
         errx(1, "svnproto_set_path");
     }
 
-    TRACE("set-path OK");
+    LTRACE(0, "set-path OK");
 
     if (svnproto_finish_report(ctx) != 0) {
         errx(1, "svnproto_finish_report");
     }
 
-    TRACE("finish-report OK");
+    LTRACE(0, "finish-report OK");
 
     if (svnproto_editor(ctx) != 0) {
         errx(1, "svnproto_editor");
@@ -79,7 +79,7 @@ run(const char *url,
                 source_rev = strtol(buf, NULL, 10);
             }
             close(fd);
-            TRACE("Found saved source revision: %ld", source_rev);
+            LTRACE(0, "Found saved source revision: %ld", source_rev);
         }
     }
 
@@ -122,23 +122,16 @@ run(const char *url,
                             target_rev, &kind) != 0) {
         errx(1, "svnproto_check_path");
     }
-    TRACE("check_path kind=%s", svnproto_kind2str(kind));
+    //TRACE("check_path kind=%s", svnproto_kind2str(kind));
 
     update_params.source_rev = source_rev;
-
-    if (target_rev > 0) {
-        if (source_rev >target_rev) {
-            errx(1, "Source revision found greater that the target one: "
-                "%ld > %ld", source_rev, target_rev);
-        }
-    }
 
     if (svnproto_update(ctx, target_rev, update_params.path, 0,
                         UPFLAG_RECURSE, update_cb, &update_params) != 0) {
         errx(1, "svnproto_update");
     }
 
-    TRACE("source %ld target %ld", source_rev, target_rev);
+    LTRACE(0, "Update path: source %ld target %ld", source_rev, target_rev);
     if ((fd = open(dotfile, O_RDWR|O_CREAT|O_TRUNC, 0644)) >= 0) {
         char buf[64];
         int sz = snprintf(buf, sizeof(buf), "%ld", target_rev);
@@ -146,11 +139,11 @@ run(const char *url,
             err(1, "write");
         }
         close(fd);
-        TRACE("Saved revision: %ld", target_rev);
+        LTRACE(0, "Saved revision: %ld", target_rev);
     } else {
         err(1, "open");
     }
-    TRACE("OK");
+    LTRACE(0, "OK");
 
     svnc_close(ctx);
     svnc_destroy(ctx);

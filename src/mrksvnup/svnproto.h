@@ -19,13 +19,13 @@ typedef struct _svnrange {
 /*
  * n    long
  * n?   long
- * n*   array_t
+ * n*   array_t of long
  * s    char *
  * s?   char *
- * s*   array_t
+ * s*   array_t of svnproto_bytes_t *
  * w    char *
  * w?   char *
- * w*   array_t
+ * w*   array_t of char *
  * r    cb, udata
  * r?   cb, udata
  * r*   cb, udata

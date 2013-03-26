@@ -297,7 +297,6 @@ svnproto_vunpack(svnc_ctx_t *ctx,
 
         /* check spec */
         ch = *ps;
-        //TRACE("ch='%c'", ch);
 
         if (ch == '\0') {
             res = 0;
@@ -305,6 +304,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
 
         } else {
             ch1 = *(ps + 1);
+
             if (ch1 == '?' || ch1 == '*') {
                 ++ps;
             }
@@ -721,16 +721,23 @@ svnproto_vunpack(svnc_ctx_t *ctx,
 
         }
 
-        //TRACE("ch='%c' ch1='%c' st=%s res=%d st.i=%ld st.r=%s",
-        //      ch, ch1,
-        //      TSSTR(st.tokenizer_state),
-        //      res, st.i, SDATA(in, st.r.start));
+        //TRACE("ch='%c' ch1='%c' st=%s res=%d st.i=%ld st.r:",
+        //      ch, ch1, TSSTR(st.tokenizer_state), res, st.i);
+        //if ((st.r.end - st.r.start) > 0) {
+        //    D16(SDATA(in, st.r.start), MIN(st.r.end - st.r.start, 64));
+        //}
+
     }
 
-    //TRACE("<<<spec=%s", spec);
-
-
 END:
+    //if (res != 0) {
+    //    TRACE("ch='%c' ch1='%c' st=%s res=%d st.i=%ld st.r:",
+    //          ch, ch1, TSSTR(st.tokenizer_state), res, st.i);
+    //    if ((st.r.end - st.r.start) > 0) {
+    //        D16(SDATA(in, st.r.start), MIN(st.r.end - st.r.start, 64));
+    //    }
+    //}
+    //TRACE("<<<spec=%s", spec);
     return res;
 }
 

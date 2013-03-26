@@ -62,10 +62,13 @@ typedef struct _svndiff_doc {
      */
     svnproto_bytes_t *rp;
     long rev;
+    unsigned int mod;
     char *lp;
     svnproto_bytes_t *ft;
     int fd;
     array_t wnd;
+#define SD_FLAG_MOD_SET 0x01
+    unsigned flags;
 } svndiff_doc_t;
 
 int svndiff_parse_doc(const char *, const char *, svndiff_doc_t *);

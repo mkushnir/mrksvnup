@@ -28,6 +28,7 @@ static char *cmd = NULL;
 svndiff_doc_t doc;
 #define SVNPE_CLOSING 0x01
 static int flags = 0;
+svnc_ctx_t *shadow_ctx;
 
 static int
 verify_checksum_fd(int fd, const char *cs)
@@ -121,7 +122,6 @@ delete_entry_cb(const char *path,
             res = 1;
         }
 
-        LTRACE(1, FGREEN("- %s"), fname);
         free(fname);
 
     } else {
@@ -131,8 +131,6 @@ delete_entry_cb(const char *path,
             perror("rmdir");
             res = 2;
         }
-        LTRACE(1, FGREEN("- %s"), path);
-
     }
     return res;
 }
@@ -184,7 +182,7 @@ delete_entry(svnc_ctx_t *ctx,
     char *localpath = NULL;
     UNUSED struct stat sb;
 
-    if (svnproto_unpack(ctx, in, "(s(n)s)", &path, &rev, &token) != 0) {
+    if (svnproto_unpack(ctx, in, "(s(n?)s)", &path, &rev, &token) != 0) {
         res = DELETE_ENTRY + 1;
         goto END;
     }
@@ -201,25 +199,27 @@ delete_entry(svnc_ctx_t *ctx,
     if (traverse_dir(localpath, delete_entry_cb, NULL) != 0) {
         /* Is this a file in first place? */
         if (lstat(localpath, &sb) != 0) {
-            TRACE(FRED("Failed to fully delete %s"), localpath);
+            //LTRACE(1, FYELLOW("Failed to fully delete %s"), localpath);
+            LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
 
         } else {
             if (S_ISREG(sb.st_mode)) {
-
-                LTRACE(1, FGREEN("- %s"), localpath);
 
                 if (unlink(localpath) != 0) {
                     perror("unlink");
                     res = DELETE_ENTRY + 3;
                     goto END;
                 }
+                LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
 
             } else {
-                TRACE("Failed to fully delete %s", localpath);
+                LTRACE(1, FYELLOW("Failed to fully delete %s"), localpath);
             }
         }
-
+    } else {
+        LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
     }
+
 
 END:
     if (path != NULL) {
@@ -501,6 +501,59 @@ END:
 }
 
 static int
+checkout_file(svndiff_doc_t *doc)
+{
+    int res = 0;
+    svnproto_fileent_t fe;
+    svnproto_bytes_t **s;
+    array_iter_t it;
+    ssize_t total_len = 0;
+
+    svnproto_fileent_init(&fe);
+
+    LTRACE(1, FYELLOW("! %s,%ld ->%s"), BDATA(doc->rp), doc->rev, doc->lp);
+
+    if (svnproto_get_file(shadow_ctx, BDATA(doc->rp), doc->rev,
+                          GETFLAG_WANT_CONTENTS, &fe) != 0) {
+        res = CHECKOUT_FILE + 1;
+        goto END;
+    }
+
+    if ((doc->fd = open(doc->lp, O_RDWR|O_CREAT|O_TRUNC, doc->mod)) < 0) {
+        perror("open");
+        TRACE(FRED("Failed to open %s"), doc->lp);
+        res = CHECKOUT_FILE + 2;
+        goto END;
+    }
+
+    if (lseek(doc->fd, 0, SEEK_SET) != 0) {
+        FAIL("lseek");
+    }
+
+    for (s = array_first(&fe.contents, &it);
+         s != NULL;
+         s = array_next(&fe.contents, &it)) {
+
+        if (write(doc->fd, (*s)->data, (*s)->sz) < 0) {
+            FAIL("write");
+        }
+        total_len += (*s)->sz;
+    }
+
+    if (ftruncate(doc->fd, total_len) != 0) {
+        FAIL("ftruncate");
+    }
+
+    if (lseek(doc->fd, 0, SEEK_SET) != 0) {
+        FAIL("lseek");
+    }
+
+END:
+    svnproto_fileent_fini(&fe);
+    TRRET(res);
+}
+
+static int
 open_file(svnc_ctx_t *ctx,
           bytestream_t *in)
 {
@@ -536,14 +589,19 @@ open_file(svnc_ctx_t *ctx,
         }
         /* The file exists. */
     } else {
-        /* tell the svndiff that it needs checking out */
+        if (checkout_file(&doc) != 0) {
+            res = OPEN_FILE + 5;
+            goto END;
+        }
     }
 
-    if ((doc.fd = open(doc.lp, O_RDWR)) < 0) {
-        perror("open");
-        TRACE(FRED("Failed to open %s"), doc.lp);
-        res = OPEN_FILE + 5;
-        goto END;
+    if (doc.fd == -1) {
+        if ((doc.fd = open(doc.lp, O_RDWR)) < 0) {
+            perror("open");
+            TRACE(FRED("Failed to open %s"), doc.lp);
+            res = OPEN_FILE + 6;
+            goto END;
+        }
     }
 
 END:
@@ -644,6 +702,11 @@ change_file_prop(svnc_ctx_t *ctx,
     //      cmd, BDATA(file_token), BDATA(name),
     //      BDATA(value));
 
+    if (strcmp(BDATA(name), "svn:executable") == 0) {
+        doc.mod = 0755;
+        doc.flags |= SD_FLAG_MOD_SET;
+    }
+
 END:
     if (file_token != NULL) {
         free(file_token);
@@ -703,11 +766,16 @@ close_file(svnc_ctx_t *ctx,
     if (doc.base_checksum != NULL && doc.fd != -1) {
         if (verify_checksum_fd(doc.fd, doc.base_checksum->data) != 0) {
             /* check it out clean? */
-            TRACE(FRED("Checksum mismatch (file will not be edited):"));
-            svndiff_doc_dump(&doc);
+            LTRACE(1, FRED("Checksum mismtach: expected %s over %s"),
+                       BDATA(text_checksum), doc.lp);
+            //svndiff_doc_dump(&doc);
             /* make it fatal */
-            //res = CLOSE_FILE + 3;
-            goto END;
+            close(doc.fd);
+            doc.fd = -1;
+            if (checkout_file(&doc) != 0) {
+                res = CLOSE_FILE + 3;
+                goto END;
+            }
         }
     } else {
         /*
@@ -748,10 +816,10 @@ close_file(svnc_ctx_t *ctx,
                 strcpy(bak, doc.lp);
                 strcat(bak, BACKUP_EXT);
 
-                TRACE(FRED("checksum mismtach: expected %s over %s . "
+                LTRACE(1, FRED("Checksum mismtach: expected %s over %s . "
                            "Will ignore this file. Backup was saved at %s"),
                            BDATA(text_checksum), doc.lp, bak);
-                svndiff_doc_dump(&doc);
+                //svndiff_doc_dump(&doc);
 
                 if (doc.fd != -1) {
                     /* file was open, now close it */
@@ -759,7 +827,7 @@ close_file(svnc_ctx_t *ctx,
 
                 }
 
-                if ((doc.fd = open(bak, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
+                if ((doc.fd = open(bak, O_RDWR|O_CREAT|O_TRUNC, doc.mod)) < 0) {
                     FAIL("open");
                 }
                 free(bak);
@@ -776,7 +844,7 @@ close_file(svnc_ctx_t *ctx,
 
     if (doc.fd == -1) {
         /* add-file ? */
-        if ((doc.fd = open(doc.lp, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
+        if ((doc.fd = open(doc.lp, O_RDWR|O_CREAT|O_TRUNC, doc.mod)) < 0) {
 
             res = CLOSE_FILE + 6;
             goto END;
@@ -807,8 +875,17 @@ close_file(svnc_ctx_t *ctx,
         }
     }
 
+    if (fchmod(doc.fd, doc.mod) != 0) {
+        FAIL("fchmod");
+    }
+
     if (BDATA(doc.base_checksum) == NULL) {
-        LTRACE(1, FGREEN("+ %s -> %s"), BDATA(doc.rp), doc.lp);
+        /* this is for "presentation" purposes */
+        if (doc.flags & SD_FLAG_MOD_SET) {
+            LTRACE(1, FGREEN("~ %s -> %s (%04o)"), BDATA(doc.rp), doc.lp, doc.mod);
+        } else {
+            LTRACE(1, FGREEN("+ %s -> %s"), BDATA(doc.rp), doc.lp);
+        }
     } else {
         LTRACE(1, FGREEN("~ %s -> %s"), BDATA(doc.rp), doc.lp);
     }
@@ -1071,11 +1148,19 @@ svnproto_editor(svnc_ctx_t *ctx)
     }
 
     cmd = NULL;
+
     flags = 0;
 
+    if ((shadow_ctx = svnc_new(ctx->url, ctx->localroot)) == NULL) {
+        TRRET(SVNPROTO_EDITOR + 25);
+    }
+
+    if (svnc_connect(shadow_ctx) != 0) {
+        TRRET(SVNPROTO_EDITOR + 26);
+    }
 
     if (svnproto_unpack(ctx, &ctx->in, "r*", editor_cb0, &doc) != 0) {
-        TRRET(SVNPROTO_EDITOR + 25);
+        TRRET(SVNPROTO_EDITOR + 27);
     }
 
     //TRACE("consumed %ld", ctx->in.pos - saved_pos);
@@ -1084,6 +1169,9 @@ svnproto_editor(svnc_ctx_t *ctx)
         free(cmd);
         cmd = NULL;
     }
+
+    svnc_close(shadow_ctx);
+    svnc_destroy(shadow_ctx);
 
     return 0;
 }

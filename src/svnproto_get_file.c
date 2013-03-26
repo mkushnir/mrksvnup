@@ -105,7 +105,7 @@ unpack2(svnc_ctx_t *ctx,
     int res;
 
     res = svnproto_unpack(ctx, in, "()");
-    TRRET(res);
+    TRRET(PARSE_EOD);
 }
 
 static int
@@ -129,7 +129,7 @@ unpack1(svnc_ctx_t *ctx,
         p->value = value;
     }
 
-    TRRET(res);
+    TRRET(PARSE_EOD);
 }
 
 static int
