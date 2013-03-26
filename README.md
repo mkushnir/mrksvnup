@@ -39,10 +39,9 @@ updating large repositories and is not considered for now.
 
 This program was first written as a proof of concept, mostly in order to
 explore the design decision. It can, however, be used in real world tasks.
-
-The program supports the _svn://_ protocol only. Since this is my
-homework, I made no provision for distributing it through ports, or other
-packaging systems. It can be built using basic [GNU autotools][4].
+Since this is my homework, I made no provision for distributing it through
+ports, or other packaging systems. It can be built using basic [GNU
+autotools][4].
 
 TODO
 ====
