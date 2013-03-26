@@ -22,20 +22,23 @@ updating between _source_ and _target_ revisions. The solution I think was
 in the direction of Dag-Erling's experiment.
 
 _mrksvnup_ includes a simplified (and limited) implementation of the [SVN
-RA protocol][1], and the [svndiff1][2] editor. The supported protocols are
+RA protocol][1], and the [svndiff1][2] editor. The supported transports are
 currently restricted to the _svn://_ only. The utility behaves more
 like a traditional svn client.  It tracks the latest checked out revision
 in a dotfile in the root directory.  It then can update to a different
 revision _relative to the curernt one_ using svndiff documents downloaded
 from the server. It doesn't delete the files not being tracked on the
 remote side (for example, it won't wipe out custom kernel confurations
-during update).  However, unlike the traditional svn client, it doesn't
-track each insividual file's state which is one of my TODO's. Without this
-function (at least caching the file checksum) the utility won't be able to
-determine a locally modified file that was not modified between revisions,
-and thus was not included in the svndiff document. An alternative solution
-is to query each file's checksum on the server. It would slow down
-updating large repositories and is not considered for now.
+during update).
+
+One of its current limitations is that unlike the traditional svn client,
+it doesn't yet track each insividual file's state. This is one of my
+TODO's. Without this function (at least caching the file checksum) the
+utility won't be able to detect a locally modified file that was not
+remotely modified between revisions, and thus was not included in the
+svndiff document. An alternative solution is to query each file's checksum
+on the server. It would slow down updating large repositories and is not
+considered for now. That's why I consider caching.
 
 This program was first written as a proof of concept, mostly in order to
 explore the design decision. It can, however, be used in real world tasks.
