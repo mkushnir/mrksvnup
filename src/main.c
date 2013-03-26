@@ -15,6 +15,7 @@
 
 const char *_malloc_options = "J";
 #define DOTFILE ".svnup"
+#define FORCE_UPDATE 0x01
 
 static int
 update_cb(svnc_ctx_t *ctx,
@@ -52,7 +53,8 @@ update_cb(svnc_ctx_t *ctx,
 static void
 run(const char *url,
     long target_rev,
-    const char *localroot)
+    const char *localroot,
+    unsigned int flags)
 {
     long source_rev = -1;
     svnc_ctx_t *ctx;
@@ -70,16 +72,23 @@ run(const char *url,
     if ((dotfile = path_join(localroot, DOTFILE)) == NULL) {
         errx(1, "path_join() issue");
     }
-    if (lstat(dotfile, &sb) == 0 && S_ISREG(sb.st_mode)) {
-        if ((fd = open(dotfile, O_RDONLY)) >= 0) {
-            char buf[64];
-            ssize_t nread;
-            if ((nread = read(fd, buf, 64)) > 0) {
-                buf[nread] = '\0';
-                source_rev = strtol(buf, NULL, 10);
+
+    if (flags & FORCE_UPDATE) {
+        if (unlink(dotfile) != 0) {
+            errx(1, "unlink");
+        }
+    } else {
+        if (lstat(dotfile, &sb) == 0 && S_ISREG(sb.st_mode)) {
+            if ((fd = open(dotfile, O_RDONLY)) >= 0) {
+                char buf[64];
+                ssize_t nread;
+                if ((nread = read(fd, buf, 64)) > 0) {
+                    buf[nread] = '\0';
+                    source_rev = strtol(buf, NULL, 10);
+                }
+                close(fd);
+                LTRACE(0, "Found saved source revision: %ld", source_rev);
             }
-            close(fd);
-            LTRACE(0, "Found saved source revision: %ld", source_rev);
         }
     }
 
@@ -163,24 +172,29 @@ main(int argc, char *argv[])
     char *url = NULL;
     long target_rev = -1;
     char *localroot = NULL;
+    unsigned int flags = 0;
 
-    while ((ch = getopt(argc, argv, "u:r:l:hvV")) != -1) {
+    while ((ch = getopt(argc, argv, "fhl:r:u:vV")) != -1) {
         switch (ch) {
-        case 'u':
-            url = optarg;
+        case 'f':
+            flags |= FORCE_UPDATE;
             break;
 
-        case 'r':
-            target_rev = strtol(optarg, NULL, 10);
+        case 'h':
+            usage(argv[0]);
+            exit(0);
             break;
 
         case 'l':
             localroot = optarg;
             break;
 
-        case 'h':
-            usage(argv[0]);
-            exit(0);
+        case 'r':
+            target_rev = strtol(optarg, NULL, 10);
+            break;
+
+        case 'u':
+            url = optarg;
             break;
 
         case 'V':
@@ -207,7 +221,7 @@ main(int argc, char *argv[])
 
     //TRACE("command-line arguments: %s %ld %s", url, target_rev, localroot);
 
-    run(url, target_rev, localroot);
+    run(url, target_rev, localroot, flags);
 
     return res;
 }
