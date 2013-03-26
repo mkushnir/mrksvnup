@@ -34,12 +34,11 @@ packaging systems. It can be built using basic [GNU autotools][4].
 TODO
 ====
 
-1. cmod on files (change-file-prop)
-2. Key word expansion (after target view checksum check)
-3. Strict and loose update semantics.
-4. Diagnostics, verbosity, etc.
-5. Support of alternative transports.
-6. Portability.
+* Key word expansion (after target view checksum check)
+* Strict and loose update semantics.
+* Diagnostics, verbosity, etc.
+* Support of alternative transports.
+* Portability.
 
 
 [1]: http://svn.apache.org/repos/asf/subversion/trunk/subversion/libsvn_ra_svn/protocol "RA SVN Protocol Specification"
