@@ -29,7 +29,7 @@ in a dotfile in the root directory.  It then can update to a different
 revision _relative to the curernt one_ using svndiff documents downloaded
 from the server. It doesn't delete the files not being tracked on the
 remote side (for example, it won't wipe out custom kernel confurations
-during update).
+during update) unless the containing directory was removed on the server.
 
 The _mrksvnup_ utility keeps some  minimal state about each tracked file:
 its remote path and the checksum as a key/value pair in a local database.
