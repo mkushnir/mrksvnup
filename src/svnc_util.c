@@ -97,27 +97,32 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
         char *lp;
         int fd = -1;
         svnproto_fileent_t fe;
-        char *dirname_terminator;
+        struct stat sb;
+        int need_file = 0;
 
         if ((lp = path_join(ctx->localroot, rp)) == NULL) {
             errx(1, "path_join");
         }
 
-        /* # mkdir -p `basename $lp` */
-        if ((dirname_terminator = strrchr(lp, '/')) != NULL) {
-            *dirname_terminator = '\0';
-            if (svncdir_mkdirs(lp) != 0) {
-                errx(1, "svncdir_mkdirs");
+        /* exists? */
+
+        if (lstat(lp, &sb) == 0) {
+            if (S_ISREG(sb.st_mode)) {
+                if ((fd = open(lp, O_RDWR)) < 0) {
+                    errx(1, "open");
+                }
+                if (svnproto_editor_verify_checksum(fd, cs) != 0) {
+                    need_file = 1;
+                }
+            } else {
+                /* checksum for directory? weird */
             }
-            *dirname_terminator = '/';
+
+        } else {
+            need_file = 1;
         }
 
-        if ((fd = open(lp, O_RDWR|O_CREAT, 0644)) < 0) {
-            errx(1, "open");
-        }
-
-        if (svnproto_editor_verify_checksum(fd, cs) != 0) {
-
+        if (need_file) {
             svnproto_fileent_init(&fe);
 
             if (svnproto_get_file(ctx,
@@ -138,12 +143,28 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
                     /* ignore */
                     ;
                 }
-
             } else {
                 array_iter_t it;
                 svnproto_bytes_t **s;
                 svnproto_prop_t *prop;
                 ssize_t total_len = 0;
+
+                if (fd == -1) {
+                    char *dirname_terminator;
+
+                    /* # mkdir -p `basename $lp` */
+                    if ((dirname_terminator = strrchr(lp, '/')) != NULL) {
+                        *dirname_terminator = '\0';
+                        if (svncdir_mkdirs(lp) != 0) {
+                            errx(1, "svncdir_mkdirs");
+                        }
+                        *dirname_terminator = '/';
+                    }
+
+                    if ((fd = open(lp, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
+                        errx(1, "open");
+                    }
+                }
 
                 /* contents */
                 if (lseek(fd, 0, SEEK_SET) != 0) {

@@ -150,7 +150,9 @@ open_root(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s rev=%ld token=%s", cmd, rev, BDATA(token));
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "%s rev=%ld token=%s", cmd, rev, BDATA(token));
+    }
 
     if (lstat(ctx->localroot, &sb) != 0) {
         if (mkdir(ctx->localroot, 0755) != 0) {
@@ -188,8 +190,10 @@ delete_entry(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s path=%s rev=%ld token=%s",
-    //      cmd, BDATA(path), rev, BDATA(token));
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "%s path=%s rev=%ld token=%s",
+               cmd, BDATA(path), rev, BDATA(token));
+    }
 
     if ((localpath = path_join(ctx->localroot,
                                BDATA(path))) == NULL) {
@@ -200,7 +204,7 @@ delete_entry(svnc_ctx_t *ctx,
     if (traverse_dir(localpath, delete_entry_cb, NULL) != 0) {
         /* Is this a file in first place? */
         if (lstat(localpath, &sb) != 0) {
-            if (ctx->debug_level > 1) {
+            if (ctx->debug_level > 0) {
                 LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
             }
 
@@ -212,7 +216,7 @@ delete_entry(svnc_ctx_t *ctx,
                     res = DELETE_ENTRY + 3;
                     goto END;
                 }
-                if (ctx->debug_level > 1) {
+                if (ctx->debug_level > 0) {
                     LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
                 }
 
@@ -223,7 +227,7 @@ delete_entry(svnc_ctx_t *ctx,
             }
         }
     } else {
-        if (ctx->debug_level > 1) {
+        if (ctx->debug_level > 0) {
             LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
         }
     }
@@ -272,11 +276,12 @@ add_dir(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s path=%s parent_token=%s child_token=%s "
-    //      "copy_path=%s copy_rev=%ld",
-    //      cmd, BDATA(path), BDATA(parent_token), BDATA(child_token),
-    //      copy_path != NULL ? BDATA(copy_path) : NULL, copy_rev);
-
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "%s path=%s parent_token=%s child_token=%s "
+               "copy_path=%s copy_rev=%ld",
+               cmd, BDATA(path), BDATA(parent_token), BDATA(child_token),
+               copy_path != NULL ? BDATA(copy_path) : NULL, copy_rev);
+    }
 
     if ((localpath = path_join(ctx->localroot,
                                BDATA(path))) == NULL) {
@@ -296,6 +301,9 @@ add_dir(svnc_ctx_t *ctx,
         }
     }
 
+    if (ctx->debug_level > 0) {
+        LTRACE(1, FGREEN("+ %s -> %s"), BDATA(path), localpath);
+    }
 END:
     if (path != NULL) {
         free(path);
@@ -334,8 +342,10 @@ open_dir(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s path=%s parent_token=%s child_token=%s rev=%ld",
-    //    cmd, BDATA(path), BDATA(parent_token), BDATAchild_token), rev);
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "%s path=%s parent_token=%s child_token=%s rev=%ld",
+               cmd, BDATA(path), BDATA(parent_token), BDATA(child_token), rev);
+    }
 
     if ((localpath = path_join(ctx->localroot,
                                BDATA(path))) == NULL) {
@@ -390,9 +400,11 @@ change_dir_prop(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("[not implemented] %s token=%s name=%s value=%s",
-    //      cmd, BDATA(token), BDATA(name),
-    //      value != NULL ? BDATA(value) : NULL);
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "[not implemented] %s token=%s name=%s value=%s",
+               cmd, BDATA(token), BDATA(name),
+               value != NULL ? BDATA(value) : NULL);
+    }
 
 END:
     if (token != NULL) {
@@ -420,7 +432,9 @@ close_dir(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("[not implemented] %s token=%s", cmd, BDATA(token));
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "[not implemented] %s token=%s", cmd, BDATA(token));
+    }
 
 END:
     if (token != NULL) {
@@ -443,8 +457,10 @@ absent_dir(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("[not implemented] %s path=%s parent_token=%s",
-    //      cmd, BDATA(path), BDATA(parent_token));
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "[not implemented] %s path=%s parent_token=%s",
+               cmd, BDATA(path), BDATA(parent_token));
+    }
 
 END:
     if (path != NULL) {
@@ -483,12 +499,13 @@ add_file(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s path=%s dir_token=%s file_token=%s copy_path=%s "
-    //      "copy_rev=%ld",
-    //      cmd, BDATA(doc.rp), BDATA(dir_token),
-    //      BDATA(doc.ft),
-    //      BDATA(copy_path), copy_rev);
-
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "%s path=%s dir_token=%s file_token=%s copy_path=%s "
+               "copy_rev=%ld",
+               cmd, BDATA(doc.rp), BDATA(dir_token),
+               BDATA(doc.ft),
+               BDATA(copy_path), copy_rev);
+    }
 
     if ((doc.lp = path_join(ctx->localroot,
                                BDATA(doc.rp))) == NULL) {
@@ -589,9 +606,11 @@ open_file(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s path=%s dir_token=%s file_token=%s rev=%ld",
-    //      cmd, BDATA(doc.rp), BDATA(dir_token),
-    //      BDATA(doc.ft), doc.rev);
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "%s path=%s dir_token=%s file_token=%s rev=%ld",
+               cmd, BDATA(doc.rp), BDATA(dir_token),
+               BDATA(doc.ft), doc.rev);
+    }
 
     if ((doc.lp = path_join(ctx->localroot,
                                BDATA(doc.rp))) == NULL) {
@@ -643,9 +662,11 @@ apply_textdelta(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s file_token=%s base_checksum=%s", cmd, BDATA(file_token),
-    //      BDATA(doc.base_checksum),
-    //      NULL);
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "%s file_token=%s base_checksum=%s",
+               cmd, BDATA(file_token),
+               BDATA(doc.base_checksum));
+    }
 
 END:
     if (file_token != NULL) {
@@ -668,7 +689,9 @@ textdelta_chunk(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s file_token=%s", cmd, BDATA(file_token));
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "%s file_token=%s", cmd, BDATA(file_token));
+    }
 
 END:
     if (file_token != NULL) {
@@ -690,7 +713,9 @@ textdelta_end(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("[not implemented] %s file_token=%s", cmd, BDATA(file_token));
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "[not implemented] %s file_token=%s", cmd, BDATA(file_token));
+    }
 
 END:
     if (file_token != NULL) {
@@ -715,9 +740,11 @@ change_file_prop(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s token=%s name=%s value=%s",
-    //      cmd, BDATA(file_token), BDATA(name),
-    //      BDATA(value));
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "%s token=%s name=%s value=%s",
+               cmd, BDATA(file_token), BDATA(name),
+               BDATA(value));
+    }
 
     if (strcmp(BDATA(name), "svn:executable") == 0) {
         doc.mod = 0755;
@@ -764,6 +791,11 @@ close_file(svnc_ctx_t *ctx,
                         &file_token, &text_checksum) != 0) {
         res = CLOSE_FILE + 1;
         goto END;
+    }
+
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "%s file_token=%s text_checksum=%s",
+               cmd, BDATA(file_token), BDATA(text_checksum));
     }
 
     if (BDATA(file_token) && BDATA(doc.ft)) {
@@ -945,8 +977,10 @@ absent_file(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("[not implemented] %s path=%s parent_token=%s",
-    //      cmd, BDATA(path), BDATA(parent_token));
+    if (ctx->debug_level > 3) {
+        LTRACE(1, "[not implemented] %s path=%s parent_token=%s",
+               cmd, BDATA(path), BDATA(parent_token));
+    }
 
 END:
     if (path != NULL) {
@@ -973,7 +1007,10 @@ editor_cb2(svnc_ctx_t *ctx,
             res = SVNPROTO_EDITOR + 2;
             goto END;
         }
-        //TRACE("%s rev=%ld", cmd, rev);
+
+        if (ctx->debug_level > 3) {
+            LTRACE(1, "%s rev=%ld", cmd, target_rev);
+        }
 
     } else if (strcmp(cmd, "open-root") == 0) {
         if (open_root(ctx, in) != 0) {
@@ -1071,10 +1108,10 @@ editor_cb2(svnc_ctx_t *ctx,
             goto END;
         }
 
+        if (ctx->debug_level > 3) {
+            LTRACE(1, "%s", cmd);
+        }
         flags |= SVNPE_CLOSING;
-        //TRACE("%s END", cmd);
-        //res = PARSE_EOD;
-        //goto END;
 
     } else if (strcmp(cmd, "abort-edit") == 0) {
         if (svnproto_unpack(ctx, in, "()") != 0) {
@@ -1082,10 +1119,10 @@ editor_cb2(svnc_ctx_t *ctx,
             goto END;
         }
 
+        if (ctx->debug_level > 3) {
+            LTRACE(1, "[not implemented] %s", cmd);
+        }
         flags |= SVNPE_CLOSING;
-        //TRACE("%s END", cmd);
-        res = PARSE_EOD;
-        goto END;
 
     } else if (strcmp(cmd, "finish-replay") == 0) {
         if (svnproto_unpack(ctx, in, "()") != 0) {
@@ -1093,10 +1130,10 @@ editor_cb2(svnc_ctx_t *ctx,
             goto END;
         }
 
+        if (ctx->debug_level > 3) {
+            LTRACE(1, "[not implemented] %s", cmd);
+        }
         flags |= SVNPE_CLOSING;
-        //TRACE("%s END", cmd);
-        //res = PARSE_EOD;
-        goto END;
 
 
     } else if (strcmp(cmd, "failure") == 0) {
