@@ -125,12 +125,17 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
                                   target_rev,
                                   GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS,
                                   &fe) != 0) {
-                //LTRACE(1, FRED("Failed to get remote file: %s (ignoring)"),
-                //       rp);
+
+                if (ctx->debug_level > 2) {
+                    LTRACE(1, FYELLOW("Failed to get remote file: %s "
+                           "(forgetting)"), rp);
+                }
+
                 svnc_delete_checksum(ctx, rp);
                 close(fd);
                 fd = -1;
                 if (unlink(lp) != 0) {
+                    /* ignore */
                     ;
                 }
 
