@@ -39,6 +39,7 @@ check_integrity(svnc_ctx_t *ctx, long target_rev)
             errx(1, "path_join");
         }
 
+        /* # mkdir -p `basename $lp` */
         if ((dirname_terminator = strrchr(lp, '/')) != NULL) {
             *dirname_terminator = '\0';
             if (svncdir_mkdirs(lp) != 0) {
@@ -63,6 +64,12 @@ check_integrity(svnc_ctx_t *ctx, long target_rev)
                 //LTRACE(1, FRED("Failed to get remote file: %s (ignoring)"),
                 //       rp);
                 svnc_delete_checksum(ctx, rp);
+                close(fd);
+                fd = -1;
+                if (unlink(lp) != 0) {
+                    ;
+                }
+
             } else {
                 array_iter_t it;
                 svnproto_bytes_t **s;
@@ -103,8 +110,8 @@ check_integrity(svnc_ctx_t *ctx, long target_rev)
             }
         }
 
-        if (close(fd) != 0) {
-            errx(1, "close");
+        if (fd != -1) {
+            close(fd);
         }
         if (rp != NULL) {
             free(rp);
