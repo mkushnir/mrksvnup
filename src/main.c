@@ -17,7 +17,6 @@
 #include "mrksvnup/svnproto.h"
 
 const char *_malloc_options = "J";
-#define FORCE_UPDATE 0x01
 
 static void
 check_integrity(svnc_ctx_t *ctx, long target_rev)
@@ -25,6 +24,7 @@ check_integrity(svnc_ctx_t *ctx, long target_rev)
     char *rp = NULL;
     svnproto_bytes_t *cs = NULL;
     int i;
+    size_t counter = 0;
 
     for (i = svnc_first_checksum(ctx, &rp, &cs);
          i == 0;
@@ -48,7 +48,6 @@ check_integrity(svnc_ctx_t *ctx, long target_rev)
         }
 
         if ((fd = open(lp, O_RDWR|O_CREAT, 0644)) < 0) {
-            TRACE("lp=%s", lp);
             errx(1, "open");
         }
 
@@ -61,8 +60,9 @@ check_integrity(svnc_ctx_t *ctx, long target_rev)
                                   target_rev,
                                   GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS,
                                   &fe) != 0) {
-                LTRACE(1, FRED("Failed to get remote file: %s (ignoring)"),
-                       rp);
+                //LTRACE(1, FRED("Failed to get remote file: %s (ignoring)"),
+                //       rp);
+                svnc_delete_checksum(ctx, rp);
             } else {
                 array_iter_t it;
                 svnproto_bytes_t **s;
@@ -99,7 +99,7 @@ check_integrity(svnc_ctx_t *ctx, long target_rev)
                         }
                     }
                 }
-                LTRACE(1, FGREEN("+ %s -> %s"), rp, lp);
+                //LTRACE(1, FGREEN("+ %s -> %s"), rp, lp);
             }
         }
 
@@ -118,7 +118,14 @@ check_integrity(svnc_ctx_t *ctx, long target_rev)
             free(lp);
             lp = NULL;
         }
+        if ((counter % 1000) == 0) {
+            fprintf(stderr, FGREEN("."));
+            fflush(stderr);
+        }
+        ++counter;
     }
+    fprintf(stderr, ("\n"));
+    fflush(stderr);
 }
 
 static int
@@ -211,10 +218,10 @@ run(const char *url,
         errx(1, "path_join() issue");
     }
 
-    if (flags & FORCE_UPDATE) {
+    if (flags & SVNC_NFLUSHCACHE) {
         /* forget about source revision */
         if (unlink(dotfile) != 0) {
-            errx(1, "unlink");
+            ;
         }
     } else {
         if (lstat(dotfile, &sb) == 0 && S_ISREG(sb.st_mode)) {
@@ -283,6 +290,8 @@ run(const char *url,
      * 2. Check local integrity and possibly check out corrupt files.
      */
 
+    LTRACE(0, "Checking integrity ...");
+
     check_integrity(ctx, target_rev);
 
     /*
@@ -330,7 +339,7 @@ main(int argc, char *argv[])
     while ((ch = getopt(argc, argv, "fhl:r:u:vV")) != -1) {
         switch (ch) {
         case 'f':
-            flags |= FORCE_UPDATE;
+            flags |= SVNC_NFLUSHCACHE;
             break;
 
         case 'h':

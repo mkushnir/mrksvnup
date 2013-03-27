@@ -10,7 +10,7 @@
 
 # At each reconfiguration:
 #
-#make distclean
-#autoreconf
-#./configure --prefix=$HOME
-#make
+make distclean
+autoreconf
+./configure --prefix=$HOME
+make

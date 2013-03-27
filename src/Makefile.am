@@ -39,7 +39,7 @@ libmrksvnup_la_SOURCES = svnc.c \
 			 bytestream.c
 
 nodist_libmrksvnup_la_SOURCES = diag.c
-libmrksvnup_la_CFLAGS = -Wall -Wextra -Werror -g -std=c99 -I$(includedir)
+libmrksvnup_la_CFLAGS = -Wall -Wextra -Werror -g -std=c99 -I$(includedir) -O0 -ftrapv -fcatch-undefined-behavior
 libmrksvnup_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon -lz -lmd
 
 bin_PROGRAMS = svnup

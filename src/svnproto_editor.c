@@ -25,10 +25,11 @@
 
 /* global editor context */
 static char *cmd = NULL;
-svndiff_doc_t doc;
+static svndiff_doc_t doc;
 #define SVNPE_CLOSING 0x01
 static int flags = 0;
-svnc_ctx_t *shadow_ctx;
+static svnc_ctx_t *shadow_ctx;
+static long target_rev;
 
 int
 svnproto_editor_verify_checksum(int fd, const svnproto_bytes_t *cs)
@@ -220,9 +221,9 @@ delete_entry(svnc_ctx_t *ctx,
         LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
     }
 
-    if (svnc_delete_checksum(ctx, localpath) != 0) {
-        LTRACE(1, FYELLOW("Failed to delete checksum for %s (ignoring)"),
-               localpath);
+    if (svnc_delete_checksum(ctx, BDATA(path)) != 0) {
+        //LTRACE(1, FYELLOW("Failed to delete checksum for %s (ignoring)"),
+        //       BDATA(path));
     }
 
 
@@ -506,7 +507,7 @@ END:
 }
 
 static int
-checkout_file(svndiff_doc_t *doc)
+checkout_file(svndiff_doc_t *doc, long rev)
 {
     int res = 0;
     svnproto_fileent_t fe;
@@ -516,9 +517,9 @@ checkout_file(svndiff_doc_t *doc)
 
     svnproto_fileent_init(&fe);
 
-    LTRACE(1, FYELLOW("! %s,%ld ->%s"), BDATA(doc->rp), doc->rev, doc->lp);
+    LTRACE(1, FYELLOW("! %s,%ld ->%s"), BDATA(doc->rp), rev, doc->lp);
 
-    if (svnproto_get_file(shadow_ctx, BDATA(doc->rp), doc->rev,
+    if (svnproto_get_file(shadow_ctx, BDATA(doc->rp), rev,
                           GETFLAG_WANT_CONTENTS, &fe) != 0) {
         res = CHECKOUT_FILE + 1;
         goto END;
@@ -594,7 +595,7 @@ open_file(svnc_ctx_t *ctx,
         }
         /* The file exists. */
     } else {
-        if (checkout_file(&doc) != 0) {
+        if (checkout_file(&doc, doc.rev) != 0) {
             res = OPEN_FILE + 5;
             goto END;
         }
@@ -770,10 +771,11 @@ close_file(svnc_ctx_t *ctx,
                        BDATA(doc.base_checksum), doc.lp);
             close(doc.fd);
             doc.fd = -1;
-            if (checkout_file(&doc) != 0) {
+            if (checkout_file(&doc, target_rev) != 0) {
                 res = CLOSE_FILE + 3;
                 goto END;
             }
+            goto EDIT_COMPLETE;
         }
     } else {
         /*
@@ -805,16 +807,18 @@ close_file(svnc_ctx_t *ctx,
             if (strcmp(checksum, BDATA(text_checksum)) != 0) {
                 char *bak = NULL;
 
-                if ((bak = malloc(strlen(doc.lp) + strlen(BACKUP_EXT))) == NULL) {
+                if ((bak = malloc(strlen(doc.lp) +
+                                  strlen(BACKUP_EXT))) == NULL) {
                     FAIL("malloc");
                 }
 
                 strcpy(bak, doc.lp);
                 strcat(bak, BACKUP_EXT);
 
-                LTRACE(1, FRED("Target checksum mismtach: expected %s over %s . "
-                           "Will ignore this file. Backup was saved at %s"),
-                           BDATA(text_checksum), doc.lp, bak);
+                LTRACE(1, FRED("Target checksum mismtach: expected "
+                               "%s over %s . Will ignore this file. "
+                               "Backup was saved at %s"),
+                       BDATA(text_checksum), doc.lp, bak);
 
                 if (doc.fd != -1) {
                     /* file was open, now close it */
@@ -870,6 +874,7 @@ close_file(svnc_ctx_t *ctx,
         }
     }
 
+EDIT_COMPLETE:
     if (fchmod(doc.fd, doc.mod) != 0) {
         FAIL("fchmod");
     }
@@ -882,7 +887,8 @@ close_file(svnc_ctx_t *ctx,
     if (BDATA(doc.base_checksum) == NULL) {
         /* this is for "presentation" purposes */
         if (doc.flags & SD_FLAG_MOD_SET) {
-            LTRACE(1, FGREEN("~ %s -> %s (%04o)"), BDATA(doc.rp), doc.lp, doc.mod);
+            LTRACE(1, FGREEN("~ %s -> %s (%04o)"),
+                   BDATA(doc.rp), doc.lp, doc.mod);
         } else {
             LTRACE(1, FGREEN("+ %s -> %s"), BDATA(doc.rp), doc.lp);
         }
@@ -941,9 +947,8 @@ editor_cb2(svnc_ctx_t *ctx,
     int res = 0;
 
     if (strcmp(cmd, "target-rev") == 0) {
-        long rev = -1;
 
-        if (svnproto_unpack(ctx, in, "(n)", &rev) != 0) {
+        if (svnproto_unpack(ctx, in, "(n)", &target_rev) != 0) {
             res = SVNPROTO_EDITOR + 2;
             goto END;
         }

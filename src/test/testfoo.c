@@ -724,8 +724,30 @@ test_mkdirs(void)
 }
 
 UNUSED static void
-test_cache(void)
+test_get_file(void)
 {
+    svnc_ctx_t *ctx;
+    svnproto_fileent_t fe;
+
+    if ((ctx =
+            svnc_new("svn://localhost/mysvn", "qwe", 0)) == NULL) {
+        assert(0);
+    }
+
+    if (svnc_connect(ctx) != 0) {
+        assert(0);
+    }
+
+    svnproto_fileent_init(&fe);
+    svnproto_get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
+    svnproto_get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
+    svnproto_get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
+    svnproto_get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
+    svnproto_fileent_fini(&fe);
+
+    svnc_close(ctx);
+    svnc_destroy(ctx);
+    free(ctx);
 
 }
 
@@ -737,9 +759,10 @@ main(void)
     //test_unpack_cb();
     //test_pack();
     //test_packresponse();
-    test_cache();
+    //test_cache();
 
-    test_conn2();
+    //test_conn2();
+    test_get_file();
 
     /* broken, need to fix test data */
     //test_simple();

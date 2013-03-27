@@ -57,7 +57,6 @@ unpack1(svnc_ctx_t *ctx,
 {
     int res;
 
-    svnc_clear_last_error(ctx);
     res = svnproto_unpack(ctx, in, "(nssn)",
                           &ctx->last_error.apr_error,
                           &ctx->last_error.message,
@@ -65,12 +64,12 @@ unpack1(svnc_ctx_t *ctx,
                           &ctx->last_error.line);
 
     if (BDATA(ctx->last_error.message) != NULL) {
-        TRACE(FRED("E %s (code %ld file '%s' line %ld)"),
-                   BDATA(ctx->last_error.message),
-                   ctx->last_error.apr_error,
-                   BDATA(ctx->last_error.file),
-                   ctx->last_error.line
-                   );
+        //TRACE(FRED("E %s (code %ld file '%s' line %ld)"),
+        //           BDATA(ctx->last_error.message),
+        //           ctx->last_error.apr_error,
+        //           BDATA(ctx->last_error.file),
+        //           ctx->last_error.line
+        //           );
     }
     if (res != 0) {
         res = PARSE_EOD;
@@ -86,6 +85,8 @@ svnproto_command_response(svnc_ctx_t *ctx,
     va_list ap;
     int res = 0;
     char *status = NULL;
+
+    svnc_clear_last_error(ctx);
 
     if ((res = svnproto_unpack(ctx, &ctx->in, "(w", &status)) != 0) {
         res = SVNPROTO_COMMAND_RESPONSE + 1;
@@ -114,23 +115,25 @@ END:
     if (status != NULL) {
         free(status);
     }
+    if (ctx->last_error.apr_error != -1) {
+        res = SVNPROTO_COMMAND_RESPONSE + 5;
+    }
     TRRET(res);
 
 TESTFAILURE:
 
     if (status == NULL || strcmp(status, "failure") != 0) {
-        res = SVNPROTO_COMMAND_RESPONSE + 5;
-        goto END;
-    }
-
-    if ((res = svnproto_unpack(ctx, &ctx->in, "(r*)", unpack1, NULL)) != 0) {
         res = SVNPROTO_COMMAND_RESPONSE + 6;
         goto END;
     }
-    TRACE();
+
+    if ((res = svnproto_unpack(ctx, &ctx->in, "(r)", unpack1, NULL)) != 0) {
+        res = SVNPROTO_COMMAND_RESPONSE + 7;
+        goto END;
+    }
 
     if ((res = svnproto_unpack(ctx, &ctx->in, ")")) != 0) {
-        res = SVNPROTO_COMMAND_RESPONSE + 7;
+        res = SVNPROTO_COMMAND_RESPONSE + 8;
         goto END;
     }
 

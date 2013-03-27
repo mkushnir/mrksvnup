@@ -240,6 +240,8 @@ svnc_new(const char *url,
     }
 
     if (!flags & SVNC_NNOCACHE) {
+        int dbopen_flags = O_RDWR|O_CREAT|O_EXLOCK;
+
         if ((ctx->cacheroot = path_join(SVNC_CACHE_ROOT,
                                         ctx->localroot)) == NULL) {
             svnc_destroy(ctx);
@@ -259,9 +261,12 @@ svnc_new(const char *url,
             TRRETNULL(SVNC_NEW + 7);
         }
 
+        if (flags & SVNC_NFLUSHCACHE) {
+            dbopen_flags |= O_TRUNC;
+        }
         if ((ctx->cachedb = dbopen(ctx->cachepath,
-                                   O_RDWR|O_CREAT|O_EXLOCK,
-                                   0644,
+                                   dbopen_flags,
+                                   0600,
                                    DB_HASH,
                                    NULL)) == NULL) {
             svnc_destroy(ctx);
