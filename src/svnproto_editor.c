@@ -204,7 +204,7 @@ delete_entry(svnc_ctx_t *ctx,
     if (traverse_dir(localpath, delete_entry_cb, NULL) != 0) {
         /* Is this a file in first place? */
         if (lstat(localpath, &sb) != 0) {
-            if (ctx->debug_level > 0) {
+            if (ctx->debug_level > 1) {
                 LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
             }
 
@@ -216,7 +216,7 @@ delete_entry(svnc_ctx_t *ctx,
                     res = DELETE_ENTRY + 3;
                     goto END;
                 }
-                if (ctx->debug_level > 0) {
+                if (ctx->debug_level > 1) {
                     LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
                 }
 
@@ -227,7 +227,7 @@ delete_entry(svnc_ctx_t *ctx,
             }
         }
     } else {
-        if (ctx->debug_level > 0) {
+        if (ctx->debug_level > 1) {
             LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
         }
     }
@@ -828,101 +828,68 @@ close_file(svnc_ctx_t *ctx,
          */
     }
 
-    /* Are there any wnd to work with? */
-    if (doc.wnd.elnum != 0) {
+    /* first build tview */
+    if (array_traverse(&doc.wnd,
+                      (array_traverser_t)svndiff_build_tview,
+                      &doc) != 0)  {
 
-        /* first build tview */
-        if (array_traverse(&doc.wnd,
-                          (array_traverser_t)svndiff_build_tview,
-                          &doc) != 0)  {
+        res = CLOSE_FILE + 4;
+        goto END;
+    }
 
-            res = CLOSE_FILE + 4;
+    if (BDATA(text_checksum) != NULL) {
+
+        MD5Init(&mctx);
+        array_traverse(&doc.wnd, (array_traverser_t)checksum_cb, &mctx);
+
+        if ((checksum = MD5End(&mctx, NULL)) == NULL) {
+            perror("ND5End");
+            res = CLOSE_FILE + 5;
             goto END;
         }
 
-        if (BDATA(text_checksum) != NULL) {
-
-            MD5Init(&mctx);
-            array_traverse(&doc.wnd, (array_traverser_t)checksum_cb, &mctx);
-
-            if ((checksum = MD5End(&mctx, NULL)) == NULL) {
-                perror("ND5End");
-                res = CLOSE_FILE + 5;
+        if (strcmp(checksum, BDATA(text_checksum)) != 0) {
+            if (ctx->debug_level > 2) {
+                LTRACE(1, FRED("Target checksum mismtach: expected %s over %s"),
+                       BDATA(text_checksum), doc.lp);
+            }
+            close(doc.fd);
+            doc.fd = -1;
+            if (checkout_file(&doc, target_rev) != 0) {
+                res = CLOSE_FILE + 6;
                 goto END;
             }
-
-            if (strcmp(checksum, BDATA(text_checksum)) != 0) {
-                char *bak = NULL;
-
-                if ((bak = malloc(strlen(doc.lp) +
-                                  strlen(BACKUP_EXT))) == NULL) {
-                    FAIL("malloc");
-                }
-
-                strcpy(bak, doc.lp);
-                strcat(bak, BACKUP_EXT);
-
-                if (ctx->debug_level > 2) {
-                    LTRACE(1, FRED("Target checksum mismtach: expected "
-                                   "%s over %s . Will ignore this file. "
-                                   "Backup was saved at %s"),
-                           BDATA(text_checksum), doc.lp, bak);
-                }
-
-                if (doc.fd != -1) {
-                    /* file was open, now close it */
-                    close(doc.fd);
-
-                }
-
-                if ((doc.fd = open(bak,
-                                   O_RDWR|O_CREAT|O_TRUNC,
-                                   doc.mod)) < 0) {
-                    FAIL("open");
-                }
-                free(bak);
-                bak = NULL;
-            }
+            goto EDIT_COMPLETE;
         }
-
-    } else {
-        /*
-         * Again, must have come from add-file, or open-file with no
-         * text-delta chunks (weird) ...
-         */
     }
 
     if (doc.fd == -1) {
         /* add-file ? */
         if ((doc.fd = open(doc.lp, O_RDWR|O_CREAT|O_TRUNC, doc.mod)) < 0) {
-            res = CLOSE_FILE + 6;
+            res = CLOSE_FILE + 7;
             goto END;
         }
 
     }
 
-    /* Write it down */
-    if (doc.wnd.elnum != 0) {
+    if (lseek(doc.fd, 0, SEEK_SET) != 0) {
+        FAIL("lseek");
+    }
 
-        if (lseek(doc.fd, 0, SEEK_SET) != 0) {
-            FAIL("lseek");
+    total_len = 0;
+
+    for (wnd = array_first(&doc.wnd, &it);
+         wnd != NULL;
+         wnd = array_next(&doc.wnd, &it)) {
+
+        if (write(doc.fd, wnd->tview, wnd->tview_len) < 0) {
+            FAIL("write");
         }
+        total_len += wnd->tview_len;
+    }
 
-        total_len = 0;
-
-        for (wnd = array_first(&doc.wnd, &it);
-             wnd != NULL;
-             wnd = array_next(&doc.wnd, &it)) {
-
-            if (write(doc.fd, wnd->tview, wnd->tview_len) < 0) {
-                FAIL("write");
-            }
-            total_len += wnd->tview_len;
-        }
-
-        if (ftruncate(doc.fd, total_len) != 0) {
-            FAIL("ftruncate");
-        }
+    if (ftruncate(doc.fd, total_len) != 0) {
+        FAIL("ftruncate");
     }
 
 EDIT_COMPLETE:
@@ -931,7 +898,7 @@ EDIT_COMPLETE:
     }
 
     if (svnc_save_checksum(ctx, BDATA(doc.rp), text_checksum) != 0) {
-        res = CLOSE_FILE + 7;
+        res = CLOSE_FILE + 8;
         goto END;
     }
 

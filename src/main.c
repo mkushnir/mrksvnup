@@ -250,10 +250,10 @@ main(int argc, char *argv[])
     char *url = NULL;
     long target_rev = -1;
     char *localroot = NULL;
-    unsigned int flags = 0;
+    unsigned int flags = SVNC_NNOCHECK;
     int debug_level = 1;
 
-    while ((ch = getopt(argc, argv, "fhl:r:Lu:v:V")) != -1) {
+    while ((ch = getopt(argc, argv, "fhl:r:su:v:V")) != -1) {
         switch (ch) {
         case 'f':
             /* flush cache */
@@ -273,9 +273,9 @@ main(int argc, char *argv[])
             target_rev = strtol(optarg, NULL, 10);
             break;
 
-        case 'L':
-            /* Lazy or Lose */
-            flags |= SVNC_NNOCHECK;
+        case 's':
+            /* strict */
+            flags &= ~SVNC_NNOCHECK;
             break;
 
         case 'u':
