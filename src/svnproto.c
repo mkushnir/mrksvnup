@@ -63,14 +63,6 @@ unpack1(svnc_ctx_t *ctx,
                           &ctx->last_error.file,
                           &ctx->last_error.line);
 
-    if (BDATA(ctx->last_error.message) != NULL) {
-        //TRACE(FRED("E %s (code %ld file '%s' line %ld)"),
-        //           BDATA(ctx->last_error.message),
-        //           ctx->last_error.apr_error,
-        //           BDATA(ctx->last_error.file),
-        //           ctx->last_error.line
-        //           );
-    }
     if (res != 0) {
         res = PARSE_EOD;
     }

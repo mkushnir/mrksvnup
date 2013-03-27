@@ -5,8 +5,6 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <stdlib.h>
-#include <limits.h>
-#include <inttypes.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -28,62 +26,6 @@ UNUSED static const char *svn_depth_str[] = {
     "immediates",
     "infinity",
 };
-
-int
-svn_url_parse(const char *url, char **host, int *port, char **path)
-{
-    char *p0, *p1, *p2;
-    size_t sz;
-
-    assert(*host == NULL && *path == NULL);
-
-    sz = strlen(url);
-
-    if ((p0 = strnstr(url, "svn://", sz)) != url) {
-        TRRET(SVN_URL_PARSE + 1);
-    }
-
-    p0 += 6;
-    sz -= 6;
-
-    if ((p1 = strchr(p0, '/')) == NULL) {
-        TRRET(SVN_URL_PARSE + 2);
-    }
-
-    sz -= (p1 - p0);
-
-    if ((*host = malloc(p1 - p0 + 1)) == NULL) {
-        TRRET(SVN_URL_PARSE + 3);
-    }
-
-    memcpy(*host, p0, p1 - p0);
-    (*host)[p1 - p0] = '\0';
-
-    if ((p2 = strstr(*host, ":")) != NULL) {
-        char *endptr = NULL;
-
-        *p2 = '\0';
-        ++p2;
-
-        *port = strtoimax(p2, &endptr, 10);
-        if ((*port) == 0) {
-            if (p2 == endptr || errno == ERANGE || errno == EINVAL) {
-                TRRET(SVN_URL_PARSE + 4);
-            }
-        }
-    } else {
-        *port = SVN_DEFAULT_PORT;
-    }
-
-    if ((*path = malloc(sz + 1)) == NULL) {
-        TRRET(SVN_URL_PARSE + 5);
-    }
-
-    memcpy(*path, p1, sz);
-    (*path)[sz] = '\0';
-
-    return (0);
-}
 
 int
 svnc_save_checksum(svnc_ctx_t *ctx,
@@ -183,7 +125,8 @@ svnc_next_checksum(svnc_ctx_t *ctx,
 svnc_ctx_t *
 svnc_new(const char *url,
          const char *localroot,
-         unsigned flags)
+         unsigned flags,
+         int debug_level)
 {
     svnc_ctx_t *ctx;
     struct addrinfo hints;
@@ -208,6 +151,7 @@ svnc_new(const char *url,
     ctx->cacheroot = NULL;
     ctx->cachepath = NULL;
     ctx->cachedb = NULL;
+    ctx->debug_level = debug_level;
 
     if ((ctx->url = strdup(url)) == NULL) {
         TRRETNULL(SVNC_NEW + 2);
@@ -239,31 +183,34 @@ svnc_new(const char *url,
         TRRETNULL(SVNC_NEW + 6);
     }
 
-    if (!flags & SVNC_NNOCACHE) {
+    if (!(flags & SVNC_NNOCACHE)) {
         int dbopen_flags = O_RDWR|O_CREAT|O_EXLOCK;
 
-        if ((ctx->cacheroot = path_join(SVNC_CACHE_ROOT,
-                                        ctx->localroot)) == NULL) {
-            svnc_destroy(ctx);
-            free(ctx);
-            TRRETNULL(SVNC_NEW + 7);
+        if ((ctx->cacheroot = strdup(ctx->localroot)) == NULL) {
+            FAIL("strdup");
         }
 
         if (svncdir_mkdirs(ctx->cacheroot) != 0) {
             svnc_destroy(ctx);
             free(ctx);
-            TRRETNULL(SVNC_NEW + 8);
+            TRRETNULL(SVNC_NEW + 7);
         }
 
         if ((ctx->cachepath = path_join(ctx->cacheroot, CACHEFILE)) == NULL) {
             svnc_destroy(ctx);
             free(ctx);
-            TRRETNULL(SVNC_NEW + 7);
+            TRRETNULL(SVNC_NEW + 8);
         }
 
         if (flags & SVNC_NFLUSHCACHE) {
             dbopen_flags |= O_TRUNC;
+            ctx->flags |= SVNC_NO_CHECK_INTEGRITY;
         }
+
+        if (flags & SVNC_NNOCHECK) {
+            ctx->flags |= SVNC_NO_CHECK_INTEGRITY;
+        }
+
         if ((ctx->cachedb = dbopen(ctx->cachepath,
                                    dbopen_flags,
                                    0600,
@@ -350,6 +297,19 @@ svnc_clear_last_error(svnc_ctx_t *ctx)
     }
     ctx->last_error.apr_error = -1;
     ctx->last_error.line = -1;
+}
+
+void
+svnc_print_last_error(svnc_ctx_t *ctx)
+{
+    if (BDATA(ctx->last_error.message) != NULL) {
+        TRACE(FRED("E %s (code %ld file '%s' line %ld)"),
+                   BDATA(ctx->last_error.message),
+                   ctx->last_error.apr_error,
+                   BDATA(ctx->last_error.file),
+                   ctx->last_error.line
+                   );
+    }
 }
 
 int

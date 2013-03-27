@@ -18,123 +18,6 @@
 
 const char *_malloc_options = "J";
 
-static void
-check_integrity(svnc_ctx_t *ctx, long target_rev)
-{
-    char *rp = NULL;
-    svnproto_bytes_t *cs = NULL;
-    int i;
-    size_t counter = 0;
-
-    for (i = svnc_first_checksum(ctx, &rp, &cs);
-         i == 0;
-         i = svnc_next_checksum(ctx, &rp, &cs)) {
-
-        char *lp;
-        int fd = -1;
-        svnproto_fileent_t fe;
-        char *dirname_terminator;
-
-        if ((lp = path_join(ctx->localroot, rp)) == NULL) {
-            errx(1, "path_join");
-        }
-
-        /* # mkdir -p `basename $lp` */
-        if ((dirname_terminator = strrchr(lp, '/')) != NULL) {
-            *dirname_terminator = '\0';
-            if (svncdir_mkdirs(lp) != 0) {
-                errx(1, "svncdir_mkdirs");
-            }
-            *dirname_terminator = '/';
-        }
-
-        if ((fd = open(lp, O_RDWR|O_CREAT, 0644)) < 0) {
-            errx(1, "open");
-        }
-
-        if (svnproto_editor_verify_checksum(fd, cs) != 0) {
-
-            svnproto_fileent_init(&fe);
-
-            if (svnproto_get_file(ctx,
-                                  rp,
-                                  target_rev,
-                                  GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS,
-                                  &fe) != 0) {
-                //LTRACE(1, FRED("Failed to get remote file: %s (ignoring)"),
-                //       rp);
-                svnc_delete_checksum(ctx, rp);
-                close(fd);
-                fd = -1;
-                if (unlink(lp) != 0) {
-                    ;
-                }
-
-            } else {
-                array_iter_t it;
-                svnproto_bytes_t **s;
-                svnproto_prop_t *prop;
-                ssize_t total_len = 0;
-
-                /* contents */
-                if (lseek(fd, 0, SEEK_SET) != 0) {
-                    errx(1, "lssek");
-                }
-
-                for (s = array_first(&fe.contents, &it);
-                     s != NULL;
-                     s = array_next(&fe.contents, &it)) {
-
-                    if (write(fd, (*s)->data, (*s)->sz) < 0) {
-                        FAIL("write");
-                    }
-                    total_len += (*s)->sz;
-                }
-
-                if (ftruncate(fd, total_len) != 0) {
-                    FAIL("ftruncate");
-                }
-
-                /* props */
-                for (prop = array_first(&fe.props, &it);
-                     prop != NULL;
-                     prop = array_next(&fe.props, &it)) {
-
-                    if (strcmp(BDATA(prop->name), "svn:executable") == 0) {
-                        if (fchmod(fd, 0755) != 0) {
-                            errx(1, "fchmod");
-                        }
-                    }
-                }
-                //LTRACE(1, FGREEN("+ %s -> %s"), rp, lp);
-            }
-        }
-
-        if (fd != -1) {
-            close(fd);
-        }
-        if (rp != NULL) {
-            free(rp);
-            rp = NULL;
-        }
-        if (lp != NULL) {
-            free(lp);
-            lp = NULL;
-        }
-        if (cs != NULL) {
-            free(lp);
-            lp = NULL;
-        }
-        if ((counter % 1000) == 0) {
-            fprintf(stderr, FGREEN("."));
-            fflush(stderr);
-        }
-        ++counter;
-    }
-    fprintf(stderr, ("\n"));
-    fflush(stderr);
-}
-
 static int
 update_cb(svnc_ctx_t *ctx,
           UNUSED bytestream_t *stream,
@@ -153,15 +36,20 @@ update_cb(svnc_ctx_t *ctx,
         errx(1, "svnproto_set_path");
     }
 
-    LTRACE(0, "set-path OK");
+    if (ctx->debug_level > 0) {
+        LTRACE(0, "set-path OK");
+    }
 
     if (svnproto_finish_report(ctx) != 0) {
         errx(1, "svnproto_finish_report");
     }
 
-    LTRACE(0, "finish-report OK");
+    if (ctx->debug_level > 0) {
+        LTRACE(0, "finish-report OK");
+    }
 
     if (svnproto_editor(ctx) != 0) {
+        svnc_print_last_error(ctx);
         errx(1, "svnproto_editor");
     }
 
@@ -193,7 +81,8 @@ static void
 run(const char *url,
     long target_rev,
     const char *localroot,
-    unsigned int flags)
+    unsigned int flags,
+    int debug_level)
 {
     char *absroot;
     char *dotfile = NULL;
@@ -240,12 +129,17 @@ run(const char *url,
                     source_rev = strtol(buf, NULL, 10);
                 }
                 close(fd);
-                LTRACE(0, "Found saved source revision: %ld", source_rev);
+                if (debug_level > 0) {
+                    LTRACE(0, "Found saved source revision: %ld", source_rev);
+                }
             }
+        } else {
+            /* forget about old db, and don't do integrity check this time */
+            flags |= SVNC_NFLUSHCACHE;
         }
     }
 
-    if ((ctx = svnc_new(url, absroot, 0)) == NULL) {
+    if ((ctx = svnc_new(url, absroot, flags, debug_level)) == NULL) {
         errx(1, "svnc_new");
     }
 
@@ -296,16 +190,19 @@ run(const char *url,
     /*
      * 2. Check local integrity and possibly check out corrupt files.
      */
+    if (debug_level > 0) {
+        LTRACE(0, "Checking integrity ...");
+    }
 
-    LTRACE(0, "Checking integrity ...");
-
-    check_integrity(ctx, target_rev);
+    svnc_check_integrity(ctx, target_rev);
 
     /*
      * 3. Save target revsion as a current revision.
      */
 
-    LTRACE(0, "Update path: source %ld target %ld", source_rev, target_rev);
+    if (debug_level > 0) {
+        LTRACE(0, "Update path: source %ld target %ld", source_rev, target_rev);
+    }
     if ((fd = open(dotfile, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
         err(1, "open");
     }
@@ -317,9 +214,12 @@ run(const char *url,
     }
 
     close(fd);
-    LTRACE(0, "Saved revision: %ld", target_rev);
 
-    LTRACE(0, "OK");
+    if (debug_level > 0) {
+        LTRACE(0, "Saved revision: %ld", target_rev);
+        LTRACE(0, "OK");
+    }
+
 
     svnc_close(ctx);
     svnc_destroy(ctx);
@@ -330,7 +230,16 @@ run(const char *url,
 static void
 usage(const char *progname)
 {
-    printf("Usage: %s -u URL [ -r REV ] -l PATH\n\n", basename(progname));
+    printf("Usage: %s -u URL -l PATH "
+           "[ -r REV ] [ -f ] [ -L ] [ -v LEVEL ]\n\n", basename(progname));
+    printf("Usage: %s -h\n\n", basename(progname));
+    printf("Usage: %s -V\n\n", basename(progname));
+}
+
+static void
+version(UNUSED const char *progname)
+{
+    printf("%s\n", RA_CLIENT);
 }
 
 int
@@ -342,10 +251,12 @@ main(int argc, char *argv[])
     long target_rev = -1;
     char *localroot = NULL;
     unsigned int flags = 0;
+    int debug_level = 1;
 
-    while ((ch = getopt(argc, argv, "fhl:r:u:vV")) != -1) {
+    while ((ch = getopt(argc, argv, "fhl:r:Lu:v:V")) != -1) {
         switch (ch) {
         case 'f':
+            /* flush cache */
             flags |= SVNC_NFLUSHCACHE;
             break;
 
@@ -362,12 +273,22 @@ main(int argc, char *argv[])
             target_rev = strtol(optarg, NULL, 10);
             break;
 
+        case 'L':
+            /* Lazy or Lose */
+            flags |= SVNC_NNOCHECK;
+            break;
+
         case 'u':
             url = optarg;
             break;
 
+        case 'v':
+            /* not yet implemented */
+            debug_level = strtol(optarg, NULL, 10);
+            break;
+
         case 'V':
-            usage(argv[0]);
+            version(argv[0]);
             break;
 
         default:
@@ -390,7 +311,7 @@ main(int argc, char *argv[])
 
     //TRACE("command-line arguments: %s %ld %s", url, target_rev, localroot);
 
-    run(url, target_rev, localroot, flags);
+    run(url, target_rev, localroot, flags, debug_level);
 
     return res;
 }

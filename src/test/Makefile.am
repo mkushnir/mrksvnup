@@ -14,6 +14,7 @@ LDFLAGS += -L$(libdir) -lmrkcommon -lz -lmd
 
 nodist_testfoo_SOURCES = ../diag.c
 testfoo_SOURCES = ../svnc.c \
+		  ../svnc_util.c \
 		  ../svncdir.c \
 		  ../svndiff.c \
 		  ../svnproto.c \

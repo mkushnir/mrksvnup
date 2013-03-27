@@ -119,7 +119,7 @@ test_unpack(void)
          *s5 = NULL, *s6 = NULL, *s7 = NULL, *s8 = NULL;
     array_t ar;
 
-    if ((ctx = svnc_new("svn://localhost/mysan", "", 0))
+    if ((ctx = svnc_new("svn://localhost/mysan", "", 0, 0))
         == NULL) {
 
         assert(0);
@@ -278,7 +278,7 @@ test_unpack_cb(void)
     svnc_ctx_t *ctx;
     array_t ar;
 
-    if ((ctx = svnc_new("svn://localhost/mysvn", "", 0))
+    if ((ctx = svnc_new("svn://localhost/mysvn", "", 0, 0))
         == NULL) {
 
         assert(0);
@@ -324,7 +324,7 @@ test_pack(void)
     svnc_ctx_t *ctx;
 
     if ((ctx =
-            svnc_new("svn://localhost/mysvn", "", 0)) == NULL) {
+            svnc_new("svn://localhost/mysvn", "", 0, 0)) == NULL) {
 
         assert(0);
     }
@@ -437,7 +437,7 @@ test_packresponse(void)
     }
 
     if ((ctx =
-            svnc_new("svn://localhost/mysvn", "", 0)) == NULL) {
+            svnc_new("svn://localhost/mysvn", "", 0, 0)) == NULL) {
 
         assert(0);
     }
@@ -478,7 +478,7 @@ test_simple(void)
     svnproto_fileent_t fe;
 
     if ((ctx =
-            svnc_new("svn://localhsot/mysvn", "", 0)) == NULL) {
+            svnc_new("svn://localhsot/mysvn", "", 0, 0)) == NULL) {
 
         assert(0);
     }
@@ -626,7 +626,7 @@ test_conn2(void)
     int i;
 
     if ((ctx =
-            svnc_new("svn://localhost/mysvn", localroot, 0)) == NULL) {
+            svnc_new("svn://localhost/mysvn", localroot, 0, 0)) == NULL) {
         assert(0);
     }
 
@@ -676,7 +676,7 @@ test_editor(void)
     svnc_ctx_t *ctx;
 
     if ((ctx =
-            svnc_new("svn://localhost/mysvn", "", 0)) == NULL) {
+            svnc_new("svn://localhost/mysvn", "", 0, 0)) == NULL) {
 
         assert(0);
     }
@@ -730,7 +730,7 @@ test_get_file(void)
     svnproto_fileent_t fe;
 
     if ((ctx =
-            svnc_new("svn://localhost/mysvn", "qwe", 0)) == NULL) {
+            svnc_new("svn://localhost/mysvn", "qwe", 0, 0)) == NULL) {
         assert(0);
     }
 

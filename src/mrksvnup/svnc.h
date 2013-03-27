@@ -16,9 +16,8 @@
 
 #define RA_CLIENT (PACKAGE_NAME "/" PACKAGE_VERSION)
 
-#define SVNC_CACHE_ROOT "./var/db/svnup"
 #define DOTFILE ".svnup"
-#define CACHEFILE "cache"
+#define CACHEFILE ".svnup.cache"
 
 typedef struct _svnc_ctx {
     char *url;
@@ -35,7 +34,9 @@ typedef struct _svnc_ctx {
     /* output buffer */
     bytestream_t out;
 #define SVNC_AUTH_MECH_OK 0x01
-    uint64_t flags;
+#define SVNC_NO_CHECK_INTEGRITY 0x02
+    unsigned int flags;
+    int debug_level;
 
     /*
      * Local directory that corresponds to the remote root
@@ -84,12 +85,14 @@ typedef enum _svn_depth {
      (d) == SVN_DEPTH_INFINITY ? "infinity" : \
      "unknown")
 
-int svn_url_parse(const char *, char **, int *, char **);
 #define SVNC_NNOCACHE 0x01
 #define SVNC_NFLUSHCACHE 0x02
-svnc_ctx_t *svnc_new(const char *, const char *, unsigned);
+#define SVNC_NNOCHECK 0x04
+#define SVNC_NVERBOSE 0x08
+svnc_ctx_t *svnc_new(const char *, const char *, unsigned int, int);
 int svnc_connect(svnc_ctx_t *);
 void svnc_clear_last_error(svnc_ctx_t *);
+void svnc_print_last_error(svnc_ctx_t *);
 int svnc_close(svnc_ctx_t *);
 int svnc_destroy(svnc_ctx_t *);
 int svnc_save_checksum(svnc_ctx_t *, const char *, svnproto_bytes_t *);
@@ -97,5 +100,9 @@ int svnc_delete_checksum(svnc_ctx_t *, const char *);
 int svnc_first_checksum(svnc_ctx_t *, char **, svnproto_bytes_t **);
 int svnc_next_checksum(svnc_ctx_t *, char **, svnproto_bytes_t **);
 int svnc_debug_open(svnc_ctx_t *, const char *);
+
+/* Utilities */
+int svn_url_parse(const char *, char **, int *, char **);
+void svnc_check_integrity(svnc_ctx_t *, long);
 
 #endif

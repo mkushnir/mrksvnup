@@ -200,8 +200,9 @@ delete_entry(svnc_ctx_t *ctx,
     if (traverse_dir(localpath, delete_entry_cb, NULL) != 0) {
         /* Is this a file in first place? */
         if (lstat(localpath, &sb) != 0) {
-            //LTRACE(1, FYELLOW("Failed to fully delete %s"), localpath);
-            LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
+            if (ctx->debug_level > 1) {
+                LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
+            }
 
         } else {
             if (S_ISREG(sb.st_mode)) {
@@ -211,19 +212,27 @@ delete_entry(svnc_ctx_t *ctx,
                     res = DELETE_ENTRY + 3;
                     goto END;
                 }
-                LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
+                if (ctx->debug_level > 1) {
+                    LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
+                }
 
             } else {
-                LTRACE(1, FYELLOW("Failed to fully delete %s"), localpath);
+                if (ctx->debug_level > 2) {
+                    LTRACE(1, FYELLOW("Failed to fully delete %s"), localpath);
+                }
             }
         }
     } else {
-        LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
+        if (ctx->debug_level > 1) {
+            LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
+        }
     }
 
     if (svnc_delete_checksum(ctx, BDATA(path)) != 0) {
-        //LTRACE(1, FYELLOW("Failed to delete checksum for %s (ignoring)"),
-        //       BDATA(path));
+        if (ctx->debug_level > 2) {
+            LTRACE(1, FYELLOW("Failed to delete checksum for %s (ignoring)"),
+                   BDATA(path));
+        }
     }
 
 
@@ -381,7 +390,7 @@ change_dir_prop(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s token=%s name=%s value=%s",
+    //TRACE("[not implemented] %s token=%s name=%s value=%s",
     //      cmd, BDATA(token), BDATA(name),
     //      value != NULL ? BDATA(value) : NULL);
 
@@ -411,7 +420,7 @@ close_dir(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s token=%s", cmd, BDATA(token));
+    //TRACE("[not implemented] %s token=%s", cmd, BDATA(token));
 
 END:
     if (token != NULL) {
@@ -434,7 +443,7 @@ absent_dir(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s path=%s parent_token=%s",
+    //TRACE("[not implemented] %s path=%s parent_token=%s",
     //      cmd, BDATA(path), BDATA(parent_token));
 
 END:
@@ -517,7 +526,9 @@ checkout_file(svndiff_doc_t *doc, long rev)
 
     svnproto_fileent_init(&fe);
 
-    LTRACE(1, FYELLOW("! %s,%ld ->%s"), BDATA(doc->rp), rev, doc->lp);
+    if (shadow_ctx->debug_level > 1) {
+        LTRACE(1, FYELLOW("! %s,%ld ->%s"), BDATA(doc->rp), rev, doc->lp);
+    }
 
     if (svnproto_get_file(shadow_ctx, BDATA(doc->rp), rev,
                           GETFLAG_WANT_CONTENTS, &fe) != 0) {
@@ -679,7 +690,7 @@ textdelta_end(svnc_ctx_t *ctx,
         goto END;
     }
 
-    //TRACE("%s file_token=%s", cmd, BDATA(file_token));
+    //TRACE("[not implemented] %s file_token=%s", cmd, BDATA(file_token));
 
 END:
     if (file_token != NULL) {
@@ -767,8 +778,10 @@ close_file(svnc_ctx_t *ctx,
         if (svnproto_editor_verify_checksum(doc.fd,
                 doc.base_checksum) != 0) {
             /* check it out clean? */
-            LTRACE(1, FRED("Base checksum mismtach: expected %s over %s"),
+            if (ctx->debug_level > 2) {
+                LTRACE(1, FRED("Base checksum mismtach: expected %s over %s"),
                        BDATA(doc.base_checksum), doc.lp);
+            }
             close(doc.fd);
             doc.fd = -1;
             if (checkout_file(&doc, target_rev) != 0) {
@@ -788,7 +801,9 @@ close_file(svnc_ctx_t *ctx,
 
         /* first build tview */
         if (array_traverse(&doc.wnd,
-                          (array_traverser_t)svndiff_build_tview, &doc) != 0)  {
+                          (array_traverser_t)svndiff_build_tview,
+                          &doc) != 0)  {
+
             res = CLOSE_FILE + 4;
             goto END;
         }
@@ -815,10 +830,12 @@ close_file(svnc_ctx_t *ctx,
                 strcpy(bak, doc.lp);
                 strcat(bak, BACKUP_EXT);
 
-                LTRACE(1, FRED("Target checksum mismtach: expected "
-                               "%s over %s . Will ignore this file. "
-                               "Backup was saved at %s"),
-                       BDATA(text_checksum), doc.lp, bak);
+                if (ctx->debug_level > 2) {
+                    LTRACE(1, FRED("Target checksum mismtach: expected "
+                                   "%s over %s . Will ignore this file. "
+                                   "Backup was saved at %s"),
+                           BDATA(text_checksum), doc.lp, bak);
+                }
 
                 if (doc.fd != -1) {
                     /* file was open, now close it */
@@ -826,7 +843,9 @@ close_file(svnc_ctx_t *ctx,
 
                 }
 
-                if ((doc.fd = open(bak, O_RDWR|O_CREAT|O_TRUNC, doc.mod)) < 0) {
+                if ((doc.fd = open(bak,
+                                   O_RDWR|O_CREAT|O_TRUNC,
+                                   doc.mod)) < 0) {
                     FAIL("open");
                 }
                 free(bak);
@@ -884,16 +903,18 @@ EDIT_COMPLETE:
         goto END;
     }
 
-    if (BDATA(doc.base_checksum) == NULL) {
-        /* this is for "presentation" purposes */
-        if (doc.flags & SD_FLAG_MOD_SET) {
-            LTRACE(1, FGREEN("~ %s -> %s (%04o)"),
-                   BDATA(doc.rp), doc.lp, doc.mod);
+    if (ctx->debug_level > 0) {
+        if (BDATA(doc.base_checksum) == NULL) {
+            /* this is for "presentation" purposes */
+            if (doc.flags & SD_FLAG_MOD_SET) {
+                LTRACE(1, FGREEN("~ %s -> %s (%04o)"),
+                       BDATA(doc.rp), doc.lp, doc.mod);
+            } else {
+                LTRACE(1, FGREEN("+ %s -> %s"), BDATA(doc.rp), doc.lp);
+            }
         } else {
-            LTRACE(1, FGREEN("+ %s -> %s"), BDATA(doc.rp), doc.lp);
+            LTRACE(1, FGREEN("~ %s -> %s"), BDATA(doc.rp), doc.lp);
         }
-    } else {
-        LTRACE(1, FGREEN("~ %s -> %s"), BDATA(doc.rp), doc.lp);
     }
 
 
@@ -924,8 +945,8 @@ absent_file(svnc_ctx_t *ctx,
         goto END;
     }
 
-    TRACE("%s path=%s parent_token=%s",
-          cmd, BDATA(path), BDATA(parent_token));
+    //TRACE("[not implemented] %s path=%s parent_token=%s",
+    //      cmd, BDATA(path), BDATA(parent_token));
 
 END:
     if (path != NULL) {
@@ -1089,7 +1110,7 @@ editor_cb2(svnc_ctx_t *ctx,
             goto END;
         }
 
-        TRACE(FRED("ERROR: %s"), BDATA(ctx->last_error.message));
+        //TRACE(FRED("ERROR: %s"), BDATA(ctx->last_error.message));
 
         res = PARSE_EOD;
         goto END;
@@ -1156,7 +1177,10 @@ svnproto_editor(svnc_ctx_t *ctx)
 
     flags = 0;
 
-    if ((shadow_ctx = svnc_new(ctx->url, ctx->localroot, SVNC_NNOCACHE)) == NULL) {
+    if ((shadow_ctx = svnc_new(ctx->url,
+                               ctx->localroot,
+                               SVNC_NNOCACHE,
+                               ctx->debug_level)) == NULL) {
         TRRET(SVNPROTO_EDITOR + 25);
     }
 
