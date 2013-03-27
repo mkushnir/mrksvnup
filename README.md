@@ -40,7 +40,7 @@ copy of an individual file is checked out from the server using the
 _get-file_ svn command.  During this stage each file's remote path and
 final checksum is saved in the database.
 
-The optional next stage can be entered at an option, and performs a double
+The next stage can be entered at an option, and performs a double
 check of the local tree against the hash database. During this stage the
 known tracked files that might possibly be deleted/modified locally, but
 not listed remotely in the svndiff document (because they wouldn't
