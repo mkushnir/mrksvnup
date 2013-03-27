@@ -423,6 +423,7 @@ svndiff_build_tview(svndiff_wnd_t *wnd, svndiff_doc_t *doc)
             /* read len bytes from source at offset */
             if ((nread = pread(doc->fd, ptbuf, insn->len,
                                insn->offset + wnd->sview_offset)) < 0) {
+                /* add-file was combined with source insn? */
                 perror("pread");
                 res = SVNDIFF_BUILD_TVIEW + 2;
                 goto END;

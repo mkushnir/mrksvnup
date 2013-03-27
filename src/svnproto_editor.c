@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <fcntl.h>
 /* goes before md5.h */
 #include <sys/types.h>
@@ -481,7 +482,6 @@ add_file(svnc_ctx_t *ctx,
     svnproto_bytes_t *dir_token = NULL;
     svnproto_bytes_t *copy_path = NULL;
     long copy_rev = -1;
-    struct stat sb;
 
     /*
      * XXX support of copy-path
@@ -513,12 +513,15 @@ add_file(svnc_ctx_t *ctx,
         goto END;
     }
 
-    if (lstat(doc.lp, &sb) == 0) {
-        if (!S_ISREG(sb.st_mode)) {
+    if (lstat(doc.lp, &doc.sb) == 0) {
+        if (!S_ISREG(doc.sb.st_mode)) {
+            /* we are not yet handling it */
             res = ADD_FILE + 4;
             goto END;
         }
-        /* The file exists. If it's not empty, will skip it. */
+        if (unlink(doc.lp) != 0) {
+            FAIL("unlink");
+        }
     }
 
 END:
@@ -533,13 +536,114 @@ END:
 }
 
 static int
+create_file(svndiff_doc_t *doc, svnproto_fileent_t *fe)
+{
+    int res = 0;
+    svnproto_bytes_t **s;
+    array_iter_t it;
+    ssize_t total_len = 0;
+    int fd = -1;
+
+    if ((fd = open(doc->lp,
+                        O_RDWR|O_CREAT|O_TRUNC|O_NOFOLLOW,
+                        doc->mod)) < 0) {
+        perror("open");
+        TRACE(FRED("Failed to open %s"), doc->lp);
+        res = CREATE_FILE + 1;
+        goto END;
+    }
+
+    if (lseek(fd, 0, SEEK_SET) != 0) {
+        FAIL("lseek");
+    }
+
+    for (s = array_first(&fe->contents, &it);
+         s != NULL;
+         s = array_next(&fe->contents, &it)) {
+
+        if (write(fd, (*s)->data, (*s)->sz) < 0) {
+            FAIL("write");
+        }
+        total_len += (*s)->sz;
+    }
+
+    if (ftruncate(fd, total_len) != 0) {
+        FAIL("ftruncate");
+    }
+
+    if (lseek(fd, 0, SEEK_SET) != 0) {
+        FAIL("lseek");
+    }
+
+    if (fchmod(fd, doc->mod) != 0) {
+        FAIL("fchmod");
+    }
+END:
+    if (fd != -1) {
+        close(fd);
+        fd = -1;
+    }
+    TRRET(res);
+}
+
+static int
+create_symlink(svndiff_doc_t *doc, svnproto_fileent_t *fe)
+{
+    int res = 0;
+    svnproto_bytes_t **s;
+    array_iter_t it;
+    array_t lnk;
+    char *data;
+
+    if (array_init(&lnk, sizeof(char), 0, NULL, NULL) != 0) {
+        FAIL("array_init");
+    }
+
+    for (s = array_first(&fe->contents, &it);
+         s != NULL;
+         s = array_next(&fe->contents, &it)) {
+
+        array_ensure_len(&lnk, lnk.elnum + (*s)->sz, ARRAY_FLAG_SAVE);
+        memcpy((char *)array_get(&lnk, lnk.elnum), (*s)->data, (*s)->sz);
+    }
+    /* terminator */
+    array_incr(&lnk);
+
+    /* A weakref to internal buffer. Hackish. We just know that lnk.data is
+     * of char * type.
+     */
+    data = (char *)lnk.data;
+    *(data + lnk.elnum) = '\0';
+    if (strstr(data, "link ") == NULL) {
+        res = CREATE_SYMLINK + 1;
+        goto END;
+    }
+    /* strlen("link") */
+    *(data + 4) = '\0';
+    data += 5;
+
+    if (symlink(data, doc->lp) < 0) {
+        perror("symlink");
+        TRACE(FRED("Failed to symlink %s to %s"), data, doc->lp);
+        res = CREATE_SYMLINK + 2;
+        goto END;
+    }
+
+END:
+    if (array_fini(&lnk) != 0) {
+        FAIL("array_fini");
+    }
+
+    TRRET(res);
+}
+
+static int
 checkout_file(svndiff_doc_t *doc, long rev)
 {
     int res = 0;
     svnproto_fileent_t fe;
-    svnproto_bytes_t **s;
+    svnproto_prop_t *prop;
     array_iter_t it;
-    ssize_t total_len = 0;
 
     svnproto_fileent_init(&fe);
 
@@ -547,39 +651,39 @@ checkout_file(svndiff_doc_t *doc, long rev)
         LTRACE(1, FYELLOW("! %s,%ld ->%s"), BDATA(doc->rp), rev, doc->lp);
     }
 
-    if (svnproto_get_file(shadow_ctx, BDATA(doc->rp), rev,
-                          GETFLAG_WANT_CONTENTS, &fe) != 0) {
+    if (svnproto_get_file(shadow_ctx,
+                          BDATA(doc->rp),
+                          rev,
+                          GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS,
+                          &fe) != 0) {
         res = CHECKOUT_FILE + 1;
         goto END;
     }
 
-    if ((doc->fd = open(doc->lp, O_RDWR|O_CREAT|O_TRUNC, doc->mod)) < 0) {
-        perror("open");
-        TRACE(FRED("Failed to open %s"), doc->lp);
-        res = CHECKOUT_FILE + 2;
-        goto END;
-    }
+    doc->flags = 0;
+    for (prop = array_first(&fe.props, &it);
+         prop != NULL;
+         prop = array_next(&fe.props, &it)) {
 
-    if (lseek(doc->fd, 0, SEEK_SET) != 0) {
-        FAIL("lseek");
-    }
-
-    for (s = array_first(&fe.contents, &it);
-         s != NULL;
-         s = array_next(&fe.contents, &it)) {
-
-        if (write(doc->fd, (*s)->data, (*s)->sz) < 0) {
-            FAIL("write");
+        if (strcmp(BDATA(prop->name), "svn:executable") == 0) {
+            doc->mod = 0755;
+            doc->flags |= SD_FLAG_MOD_SET;
         }
-        total_len += (*s)->sz;
+        if (strcmp(BDATA(prop->name), "svn:special") == 0) {
+            doc->flags |= SD_FLAG_SYMLINK_SET;
+        }
     }
 
-    if (ftruncate(doc->fd, total_len) != 0) {
-        FAIL("ftruncate");
-    }
-
-    if (lseek(doc->fd, 0, SEEK_SET) != 0) {
-        FAIL("lseek");
+    if (doc->flags & SD_FLAG_SYMLINK_SET) {
+        if (create_symlink(doc, &fe) != 0) {
+            res = CHECKOUT_FILE + 2;
+            goto END;
+        }
+    } else {
+        if (create_file(doc, &fe) != 0) {
+            res = CHECKOUT_FILE + 3;
+            goto END;
+        }
     }
 
 END:
@@ -593,7 +697,6 @@ open_file(svnc_ctx_t *ctx,
 {
     int res = 0;
     svnproto_bytes_t *dir_token = NULL;
-    struct stat sb;
 
     if (svndiff_doc_init(&doc) != 0) {
         res = OPEN_FILE + 1;
@@ -618,24 +721,23 @@ open_file(svnc_ctx_t *ctx,
         goto END;
     }
 
-    if (lstat(doc.lp, &sb) == 0) {
-        if (!S_ISREG(sb.st_mode)) {
+    /* make sure the file exists locally */
+    if (lstat(doc.lp, &doc.sb) == 0) {
+        if (!S_ISREG(doc.sb.st_mode) && !S_ISLNK(doc.sb.st_mode)) {
+            /* we are not yet handling it */
             res = OPEN_FILE + 4;
+            if (ctx->debug_level > 0) {
+                LTRACE(1, FRED("%s Not a file: path=%s dir_token=%s "
+                       "file_token=%s rev=%ld"),
+                       cmd, BDATA(doc.rp), BDATA(dir_token),
+                       BDATA(doc.ft), doc.rev);
+            }
             goto END;
         }
         /* The file exists. */
     } else {
         if (checkout_file(&doc, doc.rev) != 0) {
             res = OPEN_FILE + 5;
-            goto END;
-        }
-    }
-
-    if (doc.fd == -1) {
-        if ((doc.fd = open(doc.lp, O_RDWR)) < 0) {
-            perror("open");
-            TRACE(FRED("Failed to open %s"), doc.lp);
-            res = OPEN_FILE + 6;
             goto END;
         }
     }
@@ -751,6 +853,10 @@ change_file_prop(svnc_ctx_t *ctx,
         doc.flags |= SD_FLAG_MOD_SET;
     }
 
+    if (strcmp(BDATA(name), "svn:special") == 0) {
+        doc.flags |= SD_FLAG_SYMLINK_SET;
+    }
+
 END:
     if (file_token != NULL) {
         free(file_token);
@@ -764,8 +870,6 @@ END:
 
     TRRET(res);
 }
-
-#define BACKUP_EXT ".bak.svnup"
 
 static int
 checksum_cb(svndiff_wnd_t *wnd, MD5_CTX *ctx)
@@ -806,29 +910,47 @@ close_file(svnc_ctx_t *ctx,
         }
     }
 
-    if (doc.base_checksum != NULL && doc.fd != -1) {
-        if (svnproto_editor_verify_checksum(doc.fd,
-                doc.base_checksum) != 0) {
-            /* check it out clean? */
-            if (ctx->debug_level > 2) {
-                LTRACE(1, FRED("Base checksum mismtach: expected %s over %s"),
-                       BDATA(doc.base_checksum), doc.lp);
+    assert(doc.fd == -1);
+
+    /* verify regular open-file (aka source view) */
+    if ((doc.fd = open(doc.lp, O_RDWR|O_NOFOLLOW)) >= 0) {
+
+        if (doc.base_checksum != NULL) {
+
+            if (svnproto_editor_verify_checksum(doc.fd,
+                    doc.base_checksum) != 0) {
+
+                /* check it out clean? */
+                if (ctx->debug_level > 2) {
+                    LTRACE(1, FRED("Base checksum mismtach: expected %s over %s"),
+                           BDATA(doc.base_checksum), doc.lp);
+                }
+
+                close(doc.fd);
+                doc.fd = -1;
+
+                if (checkout_file(&doc, target_rev) != 0) {
+                    res = CLOSE_FILE + 3;
+                    goto END;
+                }
+                goto EDIT_COMPLETE;
             }
-            close(doc.fd);
-            doc.fd = -1;
-            if (checkout_file(&doc, target_rev) != 0) {
-                res = CLOSE_FILE + 3;
-                goto END;
-            }
-            goto EDIT_COMPLETE;
+        } else {
+            /*
+             * cmd was add-file, but there was a local file in this
+             * place. Will discard its contents and replace with ours.
+             */
         }
     } else {
         /*
-         * It's come from an add-file command ...
+         * was reg/symlink add-file or symlink open-file.
+         *
+         * symlink open-files should never have instructions other than
+         * new, so it's safe to pass -1 as fd to svndiff_build_tview().
          */
     }
 
-    /* first build tview */
+    /* build target view */
     if (array_traverse(&doc.wnd,
                       (array_traverser_t)svndiff_build_tview,
                       &doc) != 0)  {
@@ -837,6 +959,7 @@ close_file(svnc_ctx_t *ctx,
         goto END;
     }
 
+    /* verify target view */
     if (BDATA(text_checksum) != NULL) {
 
         MD5Init(&mctx);
@@ -849,12 +972,16 @@ close_file(svnc_ctx_t *ctx,
         }
 
         if (strcmp(checksum, BDATA(text_checksum)) != 0) {
+
             if (ctx->debug_level > 2) {
-                LTRACE(1, FRED("Target checksum mismtach: expected %s over %s"),
+                LTRACE(1, FRED("Target checksum mismtach: "
+                               "expected %s over %s"),
                        BDATA(text_checksum), doc.lp);
             }
+
             close(doc.fd);
             doc.fd = -1;
+
             if (checkout_file(&doc, target_rev) != 0) {
                 res = CLOSE_FILE + 6;
                 goto END;
@@ -864,13 +991,90 @@ close_file(svnc_ctx_t *ctx,
     }
 
     if (doc.fd == -1) {
-        /* add-file ? */
-        if ((doc.fd = open(doc.lp, O_RDWR|O_CREAT|O_TRUNC, doc.mod)) < 0) {
-            res = CLOSE_FILE + 7;
-            goto END;
-        }
+        /* regular/symlink add-file or symlink open-file completion */
 
+        if (doc.flags & SD_FLAG_SYMLINK_SET) {
+            /* symlink add-file */
+
+            /*
+             * for simplicity, we assume the symlink target occupies
+             * a single window
+             */
+            if ((wnd = array_first(&doc.wnd, &it)) != NULL) {
+                char *data = wnd->tview;
+
+                *(data + wnd->tview_len) = '\0';
+
+                if (strstr(data, "link ") == NULL) {
+                    res = CLOSE_FILE + 1;
+                    goto END;
+                }
+                /* strlen("link ") */
+                *(data + 4) = '0';
+                data += 5;
+
+                if (symlink(data, doc.lp) < 0) {
+                    perror("symlink");
+                    TRACE(FRED("Failed to symlink %s to %s"), data, doc.lp);
+                    res = CLOSE_FILE + 2;
+                    goto END;
+                }
+
+            } else {
+                /* nothing to change */
+            }
+            goto EDIT_COMPLETE;
+
+        } else {
+            /* regular add-file or symlink open-file, try open it */
+            if ((doc.fd = open(doc.lp, O_RDWR|O_CREAT|O_NOFOLLOW, doc.mod)) < 0) {
+                /* symlink open-file */
+                if ((wnd = array_first(&doc.wnd, &it)) != NULL) {
+                    ssize_t nread;
+                    char olddata[1024];
+                    char *data;
+
+                    if ((nread = readlink(doc.lp, olddata, sizeof(olddata))) < 0) {
+                        FAIL("readlink");
+                    }
+                    olddata[nread] = '\0';
+
+                    data = wnd->tview;
+                    *(data + wnd->tview_len) = '\0';
+                    if (strstr(data, "link ") == NULL) {
+                        res = CLOSE_FILE + 1;
+                        goto END;
+                    }
+                    /* strlen("link") */
+                    *(data + 4) = '0';
+                    data += 5;
+
+                    if (ctx->debug_level > 2) {
+                        LTRACE(1, "Relinking from %s to %s", olddata, data);
+                    }
+
+                    if (unlink(doc.lp) < 0) {
+                        perror("unlink");
+                        TRACE(FRED("Failed to unlink %s"), doc.lp);
+                    }
+
+                    if (symlink(data, doc.lp) < 0) {
+                        perror("symlink");
+                        TRACE(FRED("Failed to symlink %s to %s"), data, doc.lp);
+                        res = CLOSE_FILE + 2;
+                        goto END;
+                    }
+
+                } else {
+                    /* nothing to change */
+                }
+                goto EDIT_COMPLETE;
+
+            }
+        }
     }
+
+    /* regular add-file and open-file completion */
 
     if (lseek(doc.fd, 0, SEEK_SET) != 0) {
         FAIL("lseek");
@@ -892,11 +1096,11 @@ close_file(svnc_ctx_t *ctx,
         FAIL("ftruncate");
     }
 
-EDIT_COMPLETE:
     if (fchmod(doc.fd, doc.mod) != 0) {
         FAIL("fchmod");
     }
 
+EDIT_COMPLETE:
     if (svnc_save_checksum(ctx, BDATA(doc.rp), text_checksum) != 0) {
         res = CLOSE_FILE + 8;
         goto END;

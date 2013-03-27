@@ -1,6 +1,9 @@
 #ifndef SVNDIFF_H
 #define SVNDIFF_H
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "mrkcommon/array.h"
 #include "mrkcommon/array.h"
 
@@ -68,7 +71,9 @@ typedef struct _svndiff_doc {
     int fd;
     array_t wnd;
 #define SD_FLAG_MOD_SET 0x01
+#define SD_FLAG_SYMLINK_SET 0x02
     unsigned flags;
+    struct stat sb;
 } svndiff_doc_t;
 
 int svndiff_parse_doc(const char *, const char *, svndiff_doc_t *);
