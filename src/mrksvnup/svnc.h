@@ -16,7 +16,7 @@
 
 #define RA_CLIENT (PACKAGE_NAME "/" PACKAGE_VERSION)
 
-#define DOTFILE ".svnup"
+#define REVFILE ".svnup.rev"
 #define CACHEFILE ".svnup.cache"
 
 typedef struct _svnc_ctx {

@@ -85,7 +85,7 @@ run(const char *url,
     int debug_level)
 {
     char *absroot;
-    char *dotfile = NULL;
+    char *revfile = NULL;
     long source_rev = -1;
     svnc_ctx_t *ctx;
     struct stat sb;
@@ -109,19 +109,19 @@ run(const char *url,
         }
     }
 
-    /* source revision is in a dotfile (previously saved target revision) */
-    if ((dotfile = path_join(absroot, DOTFILE)) == NULL) {
+    /* source revision is in a revfile (previously saved target revision) */
+    if ((revfile = path_join(absroot, REVFILE)) == NULL) {
         errx(1, "path_join() issue");
     }
 
     if (flags & SVNC_NFLUSHCACHE) {
         /* forget about source revision */
-        if (unlink(dotfile) != 0) {
+        if (unlink(revfile) != 0) {
             ;
         }
     } else {
-        if (lstat(dotfile, &sb) == 0 && S_ISREG(sb.st_mode)) {
-            if ((fd = open(dotfile, O_RDONLY)) >= 0) {
+        if (lstat(revfile, &sb) == 0 && S_ISREG(sb.st_mode)) {
+            if ((fd = open(revfile, O_RDONLY)) >= 0) {
                 char buf[64];
                 ssize_t nread;
                 if ((nread = read(fd, buf, 64)) > 0) {
@@ -191,7 +191,7 @@ run(const char *url,
      * 2. Check local integrity and possibly check out corrupt files.
      */
     if (debug_level > 0) {
-        LTRACE(0, "Checking integrity ...");
+        LTRACE(0, "Checking integrity (lengthy) ...");
     }
 
     svnc_check_integrity(ctx, target_rev);
@@ -203,7 +203,7 @@ run(const char *url,
     if (debug_level > 0) {
         LTRACE(0, "Update path: source %ld target %ld", source_rev, target_rev);
     }
-    if ((fd = open(dotfile, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
+    if ((fd = open(revfile, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
         err(1, "open");
     }
 
