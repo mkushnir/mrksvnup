@@ -40,16 +40,17 @@ copy of an individual file is checked out from the server using the
 _get-file_ svn command.  During this stage each file's remote path and
 final checksum is saved in the database.
 
-The next stage is a double check of the local tree against the hash
-database. During this stage the known tracked files that might possibly be
-deleted/modified locally, but not listed remotely in the svndiff document
-(because they wouldn't change), will be restored using the _get-file_
-command. This stage is optional. It takes much longer, since the local
-copy of the repository is fully traversed.  In many cases this is not
-actually needed.  If it is known that the local files were not
-moved/removed since the last update, no extra check is needed. This stage
-can be turned on using the _-s_ (strict mode) option. Actually a fresh
-re-checkout into an empty directory will often be quicker than this stage.
+The optional next stage can be entered at an option, and performs a double
+check of the local tree against the hash database. During this stage the
+known tracked files that might possibly be deleted/modified locally, but
+not listed remotely in the svndiff document (because they wouldn't
+change), will be restored using the _get-file_ command. It takes much
+longer, since the local copy of the repository is fully traversed.  In
+many cases this stage is not actually needed.  If it is known that the
+local files were not moved/removed since the last update, no extra check
+is needed. This stage can be turned on using the _-s_ (strict mode)
+option. Actually a fresh re-checkout into an empty directory will often be
+quicker than this stage.
 
 This program was first written as a proof of concept, mostly in order to
 explore the design decision. It can, however, be used in real world tasks.
