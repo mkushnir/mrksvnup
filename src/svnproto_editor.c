@@ -210,7 +210,7 @@ delete_entry(svnc_ctx_t *ctx,
             }
 
         } else {
-            if (S_ISREG(sb.st_mode)) {
+            if (S_ISREG(sb.st_mode) || S_ISLNK(sb.st_mode)) {
 
                 if (unlink(localpath) != 0) {
                     perror("unlink");
@@ -666,7 +666,11 @@ checkout_file(svndiff_doc_t *doc, long rev)
          prop = array_next(&fe.props, &it)) {
 
         if (strcmp(BDATA(prop->name), "svn:executable") == 0) {
-            doc->mod = 0755;
+            if (prop->value == NULL) {
+                doc->mod = 0644;
+            } else {
+                doc->mod = 0755;
+            }
             doc->flags |= SD_FLAG_MOD_SET;
         }
         if (strcmp(BDATA(prop->name), "svn:special") == 0) {
@@ -849,7 +853,11 @@ change_file_prop(svnc_ctx_t *ctx,
     }
 
     if (strcmp(BDATA(name), "svn:executable") == 0) {
-        doc.mod = 0755;
+        if (value == NULL) {
+            doc.mod = 0644;
+        } else {
+            doc.mod = 0755;
+        }
         doc.flags |= SD_FLAG_MOD_SET;
     }
 
@@ -898,8 +906,8 @@ close_file(svnc_ctx_t *ctx,
     }
 
     if (ctx->debug_level > 3) {
-        LTRACE(1, "%s file_token=%s text_checksum=%s",
-               cmd, BDATA(file_token), BDATA(text_checksum));
+        LTRACE(1, "%s file_token=%s text_checksum=%s doc.version=%d",
+               cmd, BDATA(file_token), BDATA(text_checksum), doc.version);
     }
 
     if (BDATA(file_token) && BDATA(doc.ft)) {
@@ -960,7 +968,7 @@ close_file(svnc_ctx_t *ctx,
     }
 
     /* verify target view */
-    if (BDATA(text_checksum) != NULL) {
+    if (BDATA(text_checksum) != NULL && doc.version != -1) {
 
         MD5Init(&mctx);
         array_traverse(&doc.wnd, (array_traverser_t)checksum_cb, &mctx);
@@ -1076,24 +1084,27 @@ close_file(svnc_ctx_t *ctx,
 
     /* regular add-file and open-file completion */
 
-    if (lseek(doc.fd, 0, SEEK_SET) != 0) {
-        FAIL("lseek");
-    }
+    if (doc.version != -1) {
 
-    total_len = 0;
-
-    for (wnd = array_first(&doc.wnd, &it);
-         wnd != NULL;
-         wnd = array_next(&doc.wnd, &it)) {
-
-        if (write(doc.fd, wnd->tview, wnd->tview_len) < 0) {
-            FAIL("write");
+        if (lseek(doc.fd, 0, SEEK_SET) != 0) {
+            FAIL("lseek");
         }
-        total_len += wnd->tview_len;
-    }
+        total_len = 0;
 
-    if (ftruncate(doc.fd, total_len) != 0) {
-        FAIL("ftruncate");
+        for (wnd = array_first(&doc.wnd, &it);
+             wnd != NULL;
+             wnd = array_next(&doc.wnd, &it)) {
+
+            if (write(doc.fd, wnd->tview, wnd->tview_len) < 0) {
+                FAIL("write");
+            }
+            total_len += wnd->tview_len;
+        }
+
+        if (ftruncate(doc.fd, total_len) != 0) {
+            FAIL("ftruncate");
+        }
+
     }
 
     if (fchmod(doc.fd, doc.mod) != 0) {
