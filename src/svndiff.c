@@ -202,7 +202,7 @@ svndiff_parse_doc(const char *start,
             svnproto_bytes_t *b = NULL;
 
             if ((start = decode_bytes(start, end, end - start, &b)) == NULL) {
-                res = SVNDIFF_PARSE_DOC + 9;
+                res = SVNDIFF_PARSE_DOC + 7;
 
             } else {
                 const char *instart = b->data;
@@ -245,7 +245,7 @@ svndiff_parse_doc(const char *start,
                                       end - start,
                                       &doc->current_wnd->bytes)) == NULL) {
 
-                res = SVNDIFF_PARSE_DOC + 9;
+                res = SVNDIFF_PARSE_DOC + 8;
 
             } else {
                 //TRACE("start after decode_bytes: %p", start);
@@ -475,7 +475,7 @@ svndiff_build_tview(svndiff_wnd_t *wnd, svndiff_doc_t *doc)
             if ((insn->offset + insn->len) >= wnd->tview_len) {
                 TRACE("insn->offset + insn->len=%ld >= wnd->tview_len=%ld",
                        (insn->offset + insn->len), wnd->tview_len);
-                res = SVNDIFF_BUILD_TVIEW + 6;
+                res = SVNDIFF_BUILD_TVIEW + 5;
                 goto END;
             }
 
@@ -487,7 +487,7 @@ svndiff_build_tview(svndiff_wnd_t *wnd, svndiff_doc_t *doc)
             navail -= insn->len;
 
         } else {
-            res = SVNDIFF_BUILD_TVIEW + 7;
+            res = SVNDIFF_BUILD_TVIEW + 6;
             svndiff_doc_dump(doc);
             goto END;
         }
