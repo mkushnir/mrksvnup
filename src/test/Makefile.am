@@ -32,7 +32,6 @@ testfoo_SOURCES = ../svnc.c \
 		  ../svnproto_finish_report.c \
 		  ../svnproto_abort_report.c \
 		  ../svnproto_editor.c \
-		  ../bytestream.c \
 		  testfoo.c
 testfoo_CFLAGS =
 testfoo_LDFLAGS =

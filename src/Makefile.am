@@ -15,7 +15,6 @@ nobase_include_HEADERS = mrksvnup/svnc.h \
 			 mrksvnup/svndiff.h \
 			 mrksvnup/svnproto.h \
 			 mrksvnup/svnproto_bytes.h \
-			 mrksvnup/bytestream.h
 			 mrksvnup/version.h
 
 libmrksvnup_la_SOURCES = svnc.c \
@@ -36,8 +35,7 @@ libmrksvnup_la_SOURCES = svnc.c \
 			 svnproto_set_path.c \
 			 svnproto_finish_report.c \
 			 svnproto_abort_report.c \
-			 svnproto_editor.c \
-			 bytestream.c
+			 svnproto_editor.c
 
 nodist_libmrksvnup_la_SOURCES = diag.c
 libmrksvnup_la_CFLAGS = -Wall -Wextra -Werror -g -std=c99 -I$(includedir) -O0 -ftrapv -fcatch-undefined-behavior

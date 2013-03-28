@@ -54,6 +54,9 @@ AC_CHECK_FUNCS([memmove])
 AC_CHECK_FUNCS([mkdir])
 AC_CHECK_FUNCS([rmdir])
 AC_CHECK_FUNCS([ftruncate])
+AC_CHECK_FUNCS([getcwd])
+AC_CHECK_FUNCS([strrchr])
+
 
 AC_CONFIG_FILES([Makefile src/Makefile src/test/Makefile man/Makefile])
 AC_CHECK_LIB(z, compress, [], [AC_MSG_FAILURE(libz.so is required.)]) 
