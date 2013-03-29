@@ -253,7 +253,7 @@ main(int argc, char *argv[])
     unsigned int flags = SVNC_NNOCHECK;
     int debug_level = 1;
 
-    while ((ch = getopt(argc, argv, "fhl:r:su:v:V")) != -1) {
+    while ((ch = getopt(argc, argv, "fhl:r:Ru:v:V")) != -1) {
         switch (ch) {
         case 'f':
             /* flush cache */
@@ -273,8 +273,8 @@ main(int argc, char *argv[])
             target_rev = strtol(optarg, NULL, 10);
             break;
 
-        case 's':
-            /* strict */
+        case 'R':
+            /* repair mode */
             flags &= ~SVNC_NNOCHECK;
             break;
 

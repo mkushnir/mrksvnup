@@ -48,7 +48,7 @@ change), will be restored using the _get-file_ command. It takes much
 longer, since the local copy of the repository is fully traversed.  In
 many cases this stage is not actually needed.  If it is known that the
 local files were not moved/removed since the last update, no extra check
-is needed. This stage can be turned on using the _-s_ (strict mode)
+is needed. This stage can be turned on using the _-R_ (repair mode)
 option. Actually a fresh re-checkout into an empty directory will often be
 quicker than this stage.
 

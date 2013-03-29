@@ -78,7 +78,6 @@ svnproto_command_response(svnc_ctx_t *ctx,
     svnc_clear_last_error(ctx);
 
     res = svnproto_unpack(ctx, &ctx->in, "(w", &status);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = SVNPROTO_COMMAND_RESPONSE + 1;
         goto END;
@@ -93,7 +92,6 @@ svnproto_command_response(svnc_ctx_t *ctx,
 
     va_start(ap, spec);
     res = svnproto_vunpack(ctx, &ctx->in, spec, ap);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = SVNPROTO_COMMAND_RESPONSE + 3;
         va_end(ap);
@@ -102,7 +100,6 @@ svnproto_command_response(svnc_ctx_t *ctx,
     va_end(ap);
 
     res = svnproto_unpack(ctx, &ctx->in, ")");
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = SVNPROTO_COMMAND_RESPONSE + 4;
         goto END;
@@ -124,14 +121,12 @@ TESTFAILURE:
     }
 
     res = svnproto_unpack(ctx, &ctx->in, "(r*)", unpack1, NULL);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = SVNPROTO_COMMAND_RESPONSE + 7;
         goto END;
     }
 
     res = svnproto_unpack(ctx, &ctx->in, ")");
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = SVNPROTO_COMMAND_RESPONSE + 8;
         goto END;

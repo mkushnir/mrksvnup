@@ -725,6 +725,7 @@ END_S_STAR:
             } else if (ch == 'r') {
                 svnproto_cb_t cb;
                 void *udata;
+                off_t recycled;
 
                 cb = va_arg(ap, svnproto_cb_t);
                 udata = va_arg(ap, void *);
@@ -800,9 +801,12 @@ END_S_STAR:
                     }
                 }
 
-                /* an ugly hack to not block parse_one_value(). */
-                //st->tokenizer_state = TS_IGNORE;
-                //bytestream_recycle(in, st->r.start);
+                /*
+                 * Take care of used up memory.
+                 */
+                recycled = bytestream_recycle(in, st->r.start);
+                st->r.end -= recycled;
+                st->r.start -= recycled;
 
             } else {
                 res = SVNPROTO_VUNPACK + 8;

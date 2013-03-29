@@ -12,7 +12,7 @@
 #include "mrkcommon/array.h"
 #include "mrkcommon/util.h"
 #include "mrkcommon/traversedir.h"
-#define TRRET_DEBUG
+//#define TRRET_DEBUG
 #include "mrkcommon/dumpm.h"
 #include "diag.h"
 
@@ -147,7 +147,6 @@ open_root(svnc_ctx_t *ctx,
     struct stat sb;
 
     res = svnproto_unpack(ctx, in, "((n?)s)", &rev, &token);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = OPEN_ROOT + 1;
         goto END;
@@ -189,7 +188,6 @@ delete_entry(svnc_ctx_t *ctx,
     UNUSED struct stat sb;
 
     res = svnproto_unpack(ctx, in, "(s(n?)s)", &path, &rev, &token);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = DELETE_ENTRY + 1;
         goto END;
@@ -277,7 +275,6 @@ add_dir(svnc_ctx_t *ctx,
     res = svnproto_unpack(ctx, in, "(sss(s?n?))",
                           &path, &parent_token, &child_token,
                           &copy_path, &copy_rev);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = ADD_DIR + 1;
         goto END;
@@ -345,7 +342,6 @@ open_dir(svnc_ctx_t *ctx,
 
     res = svnproto_unpack(ctx, in, "(sss(n))",
             &path, &parent_token, &child_token, &rev);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = OPEN_DIR + 1;
         goto END;
@@ -405,7 +401,6 @@ change_dir_prop(svnc_ctx_t *ctx,
     svnproto_bytes_t *value = NULL;
 
     res = svnproto_unpack(ctx, in, "(ss(s?))", &token, &name, &value);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = CHANGE_DIR_PROP + 1;
         goto END;
@@ -439,7 +434,6 @@ close_dir(svnc_ctx_t *ctx,
     svnproto_bytes_t *token = NULL;
 
     res = svnproto_unpack(ctx, in, "(s)", &token);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = CLOSE_DIR + 1;
         goto END;
@@ -466,7 +460,6 @@ absent_dir(svnc_ctx_t *ctx,
     svnproto_bytes_t *parent_token = NULL;
 
     res = svnproto_unpack(ctx, in, "(ss)", &path, &parent_token);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = ABSENT_DIR + 1;
         goto END;
@@ -509,7 +502,6 @@ add_file(svnc_ctx_t *ctx,
                         &doc.rp, &dir_token,
                         &doc.ft,
                         &copy_path, &copy_rev);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = ADD_FILE + 2;
         goto END;
@@ -726,7 +718,6 @@ open_file(svnc_ctx_t *ctx,
 
     res = svnproto_unpack(ctx, in, "(sss(n))", &doc.rp,
                         &dir_token, &doc.ft, &doc.rev);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = OPEN_FILE + 2;
         goto END;
@@ -783,7 +774,6 @@ apply_textdelta(svnc_ctx_t *ctx,
     res = svnproto_unpack(ctx, in, "(s(s?))",
                         &file_token,
                         &doc.base_checksum);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = APPLY_TEXTDELTA + 1;
         goto END;
@@ -812,7 +802,6 @@ textdelta_chunk(svnc_ctx_t *ctx,
 
     res = svnproto_unpack(ctx, in, "(sS)", &file_token,
                         chunk_cb, &doc);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = TEXTDELTA_CHUNK + 1;
         goto END;
@@ -838,7 +827,6 @@ textdelta_end(svnc_ctx_t *ctx,
     svnproto_bytes_t *file_token = NULL;
 
     res = svnproto_unpack(ctx, in, "(s)", &file_token);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = TEXTDELTA_END + 1;
         goto END;
@@ -867,7 +855,6 @@ change_file_prop(svnc_ctx_t *ctx,
 
     res = svnproto_unpack(ctx, in, "(ss(s?))",
                         &file_token, &name, &value);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = CHANGE_FILE_PROP + 1;
         goto END;
@@ -928,7 +915,6 @@ close_file(svnc_ctx_t *ctx,
 
     res = svnproto_unpack(ctx, in, "(s(s?))",
                         &file_token, &text_checksum);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = CLOSE_FILE + 1;
         goto END;
@@ -1184,7 +1170,6 @@ absent_file(svnc_ctx_t *ctx,
     svnproto_bytes_t *parent_token = NULL;
 
     res = svnproto_unpack(ctx, in, "(ss)", &path, &parent_token);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res != 0) {
         res = ABSENT_FILE + 1;
         goto END;
@@ -1217,7 +1202,6 @@ unpack2(svnc_ctx_t *ctx,
     if (strcmp(cmd, "target-rev") == 0) {
 
         res = svnproto_unpack(ctx, in, "(n)", &target_rev);
-        res = SVNPROTO_IGNORE_VUNPACK(res);
         if (res != 0) {
             res = SVNPROTO_EDITOR + 2;
             goto END;
@@ -1319,7 +1303,6 @@ unpack2(svnc_ctx_t *ctx,
 
     } else if (strcmp(cmd, "close-edit") == 0) {
         res = svnproto_unpack(ctx, in, "()");
-        res = SVNPROTO_IGNORE_VUNPACK(res);
         if (res != 0) {
             res = SVNPROTO_EDITOR + 18;
             goto END;
@@ -1333,7 +1316,6 @@ unpack2(svnc_ctx_t *ctx,
 
     } else if (strcmp(cmd, "abort-edit") == 0) {
         res = svnproto_unpack(ctx, in, "()");
-        res = SVNPROTO_IGNORE_VUNPACK(res);
         if (res != 0) {
             res = SVNPROTO_EDITOR + 19;
             goto END;
@@ -1345,7 +1327,6 @@ unpack2(svnc_ctx_t *ctx,
 
     } else if (strcmp(cmd, "finish-replay") == 0) {
         res = svnproto_unpack(ctx, in, "()");
-        res = SVNPROTO_IGNORE_VUNPACK(res);
         if (res != 0) {
             res = SVNPROTO_EDITOR + 20;
             goto END;
@@ -1362,7 +1343,6 @@ unpack2(svnc_ctx_t *ctx,
                               &ctx->last_error.message,
                               &ctx->last_error.file,
                               &ctx->last_error.line);
-        res = SVNPROTO_IGNORE_VUNPACK(res);
 
         if (ctx->debug_level > 3) {
             LTRACE(1, "[not implemented] %s apr_error=%ld "
@@ -1405,7 +1385,6 @@ unpack1(svnc_ctx_t *ctx,
     res = svnproto_unpack(ctx, in, "(wr)",
                           &cmd,
                           unpack2, udata);
-    res = SVNPROTO_IGNORE_VUNPACK(res);
     if (res == 0 && flags & COMMAND_CLOSING) {
         /* we terminate the matching sequence */
         res = SVNPROTO_UNPACK_NOMATCH_GOAHEAD;
