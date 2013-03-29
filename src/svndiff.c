@@ -12,7 +12,7 @@
 
 #include "mrksvnup/svnc.h"
 #include "mrksvnup/svnproto.h"
-//#include "mrksvnup/bytestream.h"
+//#include "mrkcommon/bytestream.h"
 #include "mrksvnup/svndiff.h"
 
 /* based on libsvn_delta/svndiff.c */

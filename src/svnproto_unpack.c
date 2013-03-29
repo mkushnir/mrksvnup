@@ -6,10 +6,11 @@
 #include "mrkcommon/array.h"
 #include "mrkcommon/util.h"
 //#define TRRET_DEBUG
+//#define TRRET_DEBUG_VERBOSE
 #include "mrkcommon/dumpm.h"
 
 #include "mrksvnup/svnproto.h"
-#include "mrksvnup/bytestream.h"
+#include "mrkcommon/bytestream.h"
 
 /* data helpers */
 
@@ -80,9 +81,14 @@ parse_one_value(bytestream_t *in, svnproto_state_t *st)
         char c;
 
         if (st->tokenizer_state == TS_STRING_IN) {
-            //TRACE("pos=%ld start=%ld", SPOS(in), st->r.start);
+
             if (SPOS(in) < (st->r.start + st->i)) {
                 SINCR(in);
+
+#ifdef TRRET_DEBUG_VERBOSE
+                TRACE("%p instr='%c'(%02x) pos=%ld", SDATA(in, SPOS(in)),
+                      SPCHR(in), SPCHR(in), SPOS(in));
+#endif
                 continue;
 
             } else {
@@ -98,6 +104,10 @@ parse_one_value(bytestream_t *in, svnproto_state_t *st)
 
         } else {
             c = SPCHR(in);
+#ifdef TRRET_DEBUG_VERBOSE
+            TRACE("%p in='%c'(%02x) pos=%ld", SDATA(in, SPOS(in)), c, c,
+                  SPOS(in));
+#endif
 
             if (ISSPACE(c)) {
                 if (st->tokenizer_state == TS_TOK_IN) {
@@ -121,6 +131,7 @@ parse_one_value(bytestream_t *in, svnproto_state_t *st)
                     st->tokenizer_state = TS_STRING_OUT;
                     SPCHR(in) = '\0';
 
+                  
                 } else if (st->tokenizer_state & TS_OUT) {
                     SINCR(in);
                     continue;
@@ -132,6 +143,7 @@ parse_one_value(bytestream_t *in, svnproto_state_t *st)
             } else if (c == '(') {
                 if (st->tokenizer_state & TS_OUT) {
                     st->tokenizer_state = TS_LIST_START;
+                    st->r.start = SPOS(in);
 
                 } else {
                     TRRET(PARSE_ONE_VALUE + 2);
@@ -140,6 +152,7 @@ parse_one_value(bytestream_t *in, svnproto_state_t *st)
             } else if (c == ')') {
                 if (st->tokenizer_state & TS_OUT) {
                     st->tokenizer_state = TS_LIST_END;
+                    st->r.start = SPOS(in);
 
                 } else {
                     //TRACE("st=%s", TSSTR(st->tokenizer_state));
@@ -201,27 +214,36 @@ parse_one_value(bytestream_t *in, svnproto_state_t *st)
         }
 
         SINCR(in);
-        return 0;
+#ifdef TRRET_DEBUG_VERBOSE
+        TRACE("%p inret='%c'(%02x) pos=%ld", SDATA(in, SPOS(in)), SPCHR(in), SPCHR(in), SPOS(in));
+#endif
+        TRRET(0);
     }
 
-    return PARSE_NEED_MORE;
+    TRRET(PARSE_NEED_MORE);
 }
 
 static int
 read_one_value(int fd, bytestream_t *in, svnproto_state_t *st)
 {
-    int res;
+    int res = 0;
     //off_t savedpos;
 
-    if (!st->next_read) {
-        st->next_read = 1;
-        return 0;
+    if (st->backtrack) {
+#ifdef TRRET_DEBUG_VERBOSE
+        TRACE("backtracking from %ld to %ld", SPOS(in), st->r.start);
+#endif
+        SPOS(in) = st->r.start;
+        st->tokenizer_state = TS_START;
+        st->backtrack = 0;
     }
 
     res = PARSE_NEED_MORE;
     //savedpos = SPOS(in);
 
     while (res == PARSE_NEED_MORE) {
+        //bytestream_dump(in);
+
         if (SNEEDMORE(in)) {
             if ((res = bytestream_consume_data(in, fd)) != 0) {
                 /* this must be treated as EOF condition */
@@ -249,12 +271,7 @@ read_one_value(int fd, bytestream_t *in, svnproto_state_t *st)
         }
     }
 
-    //TRACE("read value: st->i=%ld", st->i);
-    //if ((st->r.end - st->r.start) > 0) {
-    //    D16(SDATA(in, st->r.start), MIN(st->r.end - st->r.start, 64));
-    //}
-
-    return res;
+    TRRET(res);
 }
 
 static svnproto_bytes_t *
@@ -278,10 +295,29 @@ svnproto_state_init(svnproto_state_t *st)
 {
     st->tokenizer_state = TS_START;
     st->i = 0;
-    st->r.start = -1;
-    st->r.end = -1;
-    st->next_read = 1;
+    st->r.start = 0;
+    st->r.end = 0;
+    st->backtrack = 0;
 }
+
+svnproto_state_t *
+svnproto_state_new(void)
+{
+    svnproto_state_t *st;
+
+    if ((st = malloc(sizeof(svnproto_state_t))) == NULL) {
+        FAIL("malloc");
+    }
+    svnproto_state_init(st);
+    return st;
+}
+
+void
+svnproto_state_destroy(svnproto_state_t *st)
+{
+    free(st);
+}
+
 
 int
 svnproto_vunpack(svnc_ctx_t *ctx,
@@ -289,22 +325,25 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                  const char *spec,
                  va_list ap)
 {
-    int res;
+    int res = 0;
     const char *ps;
     char ch, ch1;
-    svnproto_state_t st;
+    svnproto_state_t *st = in->udata;
 
-    svnproto_state_init(&st);
-
-    //TRACE(">>>spec=%s", spec);
+#ifdef TRRET_DEBUG
+    TRACE(">>>spec=%s", spec);
+#endif
 
     for (ps = spec; ps; ++ps) {
 
         /* check spec */
         ch = *ps;
+#ifdef TRRET_DEBUG
+        TRACE(FYELLOW(">>>ch='%c'"), ch);
+#endif
 
         if (ch == '\0') {
-            res = 0;
+            //st->tokenizer_state = TS_END;
             break;
 
         } else {
@@ -315,28 +354,30 @@ svnproto_vunpack(svnc_ctx_t *ctx,
             }
 
             if (ch == '(') {
-                if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                     /* read error */
                     goto END;
                 }
 
-                if (!(st.tokenizer_state & (TS_LIST_START | TS_IGNORE))) {
-                    /* no match */
+                if (!(st->tokenizer_state & (TS_LIST_START | TS_IGNORE))) {
+                    /* no match stop */
                     res = SVNPROTO_VUNPACK + 1;
+                    st->backtrack = 1;
                     goto END;
                 }
 
                 /* no variable to pick */
 
             } else if (ch == ')') {
-                if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                     /* read error */
                     goto END;
                 }
 
-                if (!(st.tokenizer_state & (TS_LIST_END | TS_IGNORE))) {
-                    /* no match */
+                if (!(st->tokenizer_state & (TS_LIST_END | TS_IGNORE))) {
+                    /* no match stop */
                     res = SVNPROTO_VUNPACK + 2;
+                    st->backtrack = 1;
                     goto END;
                 }
 
@@ -346,7 +387,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 array_t *ar;
                 long *pv;
 
-                if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                     /* read error */
                     goto END;
                 }
@@ -355,15 +396,15 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                     ar = va_arg(ap, array_t *);
 
                     if (ar != NULL) {
-                        while (st.tokenizer_state == TS_NUM_OUT) {
+                        while (st->tokenizer_state == TS_NUM_OUT) {
 
                             if ((pv = array_incr(ar)) == NULL) {
                                 FAIL("array_incr");
                             }
 
-                            *pv = st.i;
+                            *pv = st->i;
 
-                            if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                            if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                                 /* read error */
                                 goto END;
                             }
@@ -371,9 +412,9 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                         /* no match continue */
 
                     } else {
-                        while (st.tokenizer_state == TS_NUM_OUT) {
+                        while (st->tokenizer_state == TS_NUM_OUT) {
 
-                            if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                            if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                                 /* read error */
                                 goto END;
                             }
@@ -381,33 +422,36 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                         /* no match continue */
                     }
 
-                    st.next_read = 0;
+                    st->backtrack = 1;
+                    //TRACE("backtrack @ n*");
 
                 } else if (ch1 == '?') {
                     pv = va_arg(ap, long *);
 
-                    if (st.tokenizer_state == TS_NUM_OUT) {
+                    if (st->tokenizer_state == TS_NUM_OUT) {
                         if (pv != NULL) {
-                            *pv = st.i;
+                            *pv = st->i;
                         }
                     } else {
                         /* no match continue */
                         if (pv != NULL) {
                             *pv = 0L;
                         }
-                        st.next_read = 0;
+                        st->backtrack = 1;
+                        //TRACE("backtrack @ n?");
                     }
 
                 } else {
-                    if (st.tokenizer_state == TS_NUM_OUT) {
+                    if (st->tokenizer_state == TS_NUM_OUT) {
                         pv = va_arg(ap, long *);
                         if (pv != NULL) {
-                            *pv = st.i;
+                            *pv = st->i;
                         }
 
                     } else {
-                        /* no match, error  */
+                        /* no match stop  */
                         res = SVNPROTO_VUNPACK + 3;
+                        st->backtrack = 1;
                         goto END;
                     }
                 }
@@ -416,7 +460,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 array_t *ar;
                 char **pv;
 
-                if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                     /* read error */
                     goto END;
                 }
@@ -425,15 +469,15 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                     ar = va_arg(ap, array_t *);
 
                     if (ar != NULL) {
-                        while (st.tokenizer_state == TS_TOK_OUT) {
+                        while (st->tokenizer_state == TS_TOK_OUT) {
 
                             if ((pv = array_incr(ar)) == NULL) {
                                 FAIL("array_incr");
                             }
 
-                            *pv = strdup(SDATA(in, st.r.start));
+                            *pv = strdup(SDATA(in, st->r.start));
 
-                            if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                            if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                                 /* read error */
                                 goto END;
                             }
@@ -441,9 +485,9 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                         /* no match continue */
 
                     } else {
-                        while (st.tokenizer_state == TS_TOK_OUT) {
+                        while (st->tokenizer_state == TS_TOK_OUT) {
 
-                            if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                            if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                                 /* read error */
                                 goto END;
                             }
@@ -451,34 +495,37 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                         /* no match continue */
                     }
 
-                    st.next_read = 0;
+                    st->backtrack = 1;
+                    //TRACE("backtrack @ w*");
 
                 } else if (ch1 == '?') {
                     pv = va_arg(ap, char **);
 
-                    if (st.tokenizer_state == TS_TOK_OUT) {
+                    if (st->tokenizer_state == TS_TOK_OUT) {
                         if (pv != NULL) {
-                            *pv = strdup(SDATA(in, st.r.start));
+                            *pv = strdup(SDATA(in, st->r.start));
                         }
                     } else {
                         /* no match continue */
                         if (pv != NULL) {
                             *pv = NULL;
                         }
-                        st.next_read = 0;
+                        st->backtrack = 1;
+                        //TRACE("backtrack @ w?");
                     }
 
                 } else {
-                    if (st.tokenizer_state == TS_TOK_OUT) {
+                    if (st->tokenizer_state == TS_TOK_OUT) {
 
                         pv = va_arg(ap, char **);
                         if (pv != NULL) {
-                            *pv = strdup(SDATA(in, st.r.start));
+                            *pv = strdup(SDATA(in, st->r.start));
                         }
 
                     } else {
-                        /* no match error */
+                        /* no match stop */
                         res = SVNPROTO_VUNPACK + 4;
+                        st->backtrack = 1;
                         goto END;
                     }
                 }
@@ -487,7 +534,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 array_t *ar;
                 svnproto_bytes_t **pv;
 
-                if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                     /* read error */
                     goto END;
                 }
@@ -496,24 +543,24 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                     ar = va_arg(ap, array_t *);
 
                     if (ar != NULL) {
-                        while (st.tokenizer_state == TS_STRING_OUT) {
+                        while (st->tokenizer_state == TS_STRING_OUT) {
 
                             if ((pv = array_incr(ar)) == NULL) {
                                 FAIL("array_incr");
                             }
 
-                            *pv = byte_chunk(in, &st);
+                            *pv = byte_chunk(in, st);
 
-                            if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                            if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                                 goto END;
                             }
                         }
                         /* no match continue */
 
                     } else {
-                        while (st.tokenizer_state == TS_STRING_OUT) {
+                        while (st->tokenizer_state == TS_STRING_OUT) {
 
-                            if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                            if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                                 /* read error */
                                 goto END;
                             }
@@ -521,34 +568,37 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                         /* no match continue */
                     }
 
-                    st.next_read = 0;
+                    st->backtrack = 1;
+                    //TRACE("backtrack @ s*");
 
                 } else if (ch1 == '?') {
                     pv = va_arg(ap, svnproto_bytes_t **);
 
-                    if (st.tokenizer_state == TS_STRING_OUT) {
+                    if (st->tokenizer_state == TS_STRING_OUT) {
                         if (pv != NULL) {
-                            *pv = byte_chunk(in, &st);
+                            *pv = byte_chunk(in, st);
                         }
                     } else {
                         if (pv != NULL) {
                             *pv = NULL;
                         }
                         /* no match continue */
-                        st.next_read = 0;
+                        st->backtrack = 1;
+                        //TRACE("backtrack @ s?");
                     }
 
                 } else {
-                    if (st.tokenizer_state == TS_STRING_OUT) {
+                    if (st->tokenizer_state == TS_STRING_OUT) {
 
                         pv = va_arg(ap, svnproto_bytes_t **);
                         if (pv != NULL) {
-                            *pv = byte_chunk(in, &st);
+                            *pv = byte_chunk(in, st);
                         }
 
                     } else {
-                        /* no match error */
+                        /* no match stop */
                         res = SVNPROTO_VUNPACK + 5;
+                        st->backtrack = 1;
                         goto END;
                     }
                 }
@@ -561,7 +611,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 udata = va_arg(ap, void *);
 
 
-                if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                     /* read error */
                     goto END;
                 }
@@ -569,66 +619,105 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 if (ch1 == '*') {
 
                     if (cb != NULL) {
-                        while (st.tokenizer_state == TS_STRING_OUT) {
-                            if (cb(ctx, in, &st, udata) != 0) {
-                                /*
-                                 * user-level no-match, continue (with the
-                                 * next ofrmat character)
-                                 */
-                                break;
+                        while (st->tokenizer_state == TS_STRING_OUT) {
+                            if ((res = cb(ctx, in, st, udata)) != 0) {
+
+                                if ((res & DIAG_CLASS_MASK) !=
+                                     SVNPROTO_VUNPACK) {
+
+                                    /* read error */
+                                    goto END;
+
+                                } else {
+                                    /*
+                                     * user-level no-match, continue
+                                     */
+                                    /* no backtrack */
+                                    goto END_S_STAR;
+                                }
+
                             }
 
-                            if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                            if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                                 /* read error */
                                 goto END;
                             }
                         }
+                        st->backtrack = 1;
+                        //TRACE("backtrack @ S*");
 
                     } else {
-                        while (st.tokenizer_state == TS_STRING_OUT) {
+                        while (st->tokenizer_state == TS_STRING_OUT) {
 
-                            if ((res = read_one_value(ctx->fd, in, &st)) != 0) {
+                            if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                                 /* read error */
                                 goto END;
                             }
                         }
-                    }
+                        st->backtrack = 1;
+                        //TRACE("backtrack @ S*");
 
-                    st.next_read = 0;
+                    }
+END_S_STAR:
+                    ;
+
 
                 } else if (ch1 == '?') {
 
-                    if (st.tokenizer_state == TS_STRING_OUT) {
+                    if (st->tokenizer_state == TS_STRING_OUT) {
                         if (cb != NULL) {
-                            if (cb(ctx, in, &st, udata) != 0) {
-                                /*
-                                 * user-level no-math, continue with the
-                                 * next character (that is ignore this
-                                 * result).
-                                 */
-                            }
-                        }
 
+                            if ((res = cb(ctx, in, st, udata)) != 0) {
+
+                                if ((res & DIAG_CLASS_MASK) !=
+                                     SVNPROTO_VUNPACK) {
+
+                                    /* read error */
+                                    goto END;
+
+                                } else {
+                                    /*
+                                     * user-level no-match, continue
+                                     */
+                                }
+                            }
+
+                        } else {
+                            /* ignore */
+                        }
                     } else {
-                        st.next_read = 0;
+                        /* no-match continue */
+                        st->backtrack = 1;
+                        //TRACE("backtrack @ S?");
                     }
 
+
                 } else {
-                    if (st.tokenizer_state == TS_STRING_OUT) {
+                    if (st->tokenizer_state == TS_STRING_OUT) {
 
                         if (cb != NULL) {
-                            if (cb(ctx, in, &st, udata) != 0) {
-                                /*
-                                 * user-level no-match. Ignore this result
-                                 * adn continue with the next format
-                                 * character.
-                                 */
+                            if ((res = cb(ctx, in, st, udata)) != 0) {
+
+                                if ((res & DIAG_CLASS_MASK) !=
+                                     SVNPROTO_VUNPACK) {
+
+                                    /* read error */
+                                    goto END;
+
+                                } else {
+                                    /*
+                                     * user-level no-match, stop
+                                     */
+                                    res = SVNPROTO_VUNPACK + 6;
+                                    goto END;
+                                }
                             }
                         }
 
                     } else {
-                        /* no match error */
-                        res = SVNPROTO_VUNPACK + 6;
+                        /* no match stop */
+                        res = SVNPROTO_VUNPACK + 7;
+                        st->backtrack = 1;
                         goto END;
                     }
                 }
@@ -643,107 +732,118 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 /*
                  * XXX we don't ready any values here. The values are
                  * supposed to be read in the callback.
-                 *
-                 * Return values:
-                 *      * return 0 - loop
-                 *      * return PARSE_EOD - no-match continue with the
-                 *          next format chracter
-                 *      * return other - read error
                  */
 
                 if (ch1 == '*') {
 
                     if (cb != NULL) {
-                        while ((res = cb(ctx, in, &st, udata)) == 0) {
+                        while ((res = cb(ctx, in, st, udata)) == 0) {
                             ;
                         }
-                        if (res == PARSE_EOD) {
-                            /*
-                             * user-level interrupt, means no-match, reset
-                             * next_read and continue.
-                             */
+
+                        if ((res & DIAG_CLASS_MASK) != SVNPROTO_VUNPACK) {
+
+                            /* read error */
+                            goto END;
 
                         } else {
-                            /* read error */
-                            res = SVNPROTO_VUNPACK + 7;
-                            goto END;
+                            /*
+                             * user-level no-match, continue (next read
+                             * won't be skippedm unless it's set in
+                             * callback)
+                             */
                         }
 
                     } else {
                         /* weird */
                         /* noop */
                     }
-                    svnproto_state_init(&st);
-                    st.next_read = 0;
 
                 } else if (ch1 == '?') {
 
                     if (cb != NULL) {
-                        if ((res = cb(ctx, in, &st, udata)) != 0) {
-                            if (res == PARSE_EOD) {
-                                /*
-                                 * user-level interrupt, no match, reset
-                                 * next read and continue
-                                 */
-                                svnproto_state_init(&st);
-                                st.next_read = 0;
+                        if ((res = cb(ctx, in, st, udata)) != 0) {
+
+                            if ((res & DIAG_CLASS_MASK) != SVNPROTO_VUNPACK) {
+
+                                /* read error */
+                                goto END;
 
                             } else {
-                                /* read error */
-                                res = SVNPROTO_VUNPACK + 8;
-                                goto END;
+                                /*
+                                 * user-level no-match, continue (next
+                                 * read won't eb skipped unless it's set
+                                 * in callback)
+                                 */
                             }
-
-                        } else {
-                            /* continue with the next format character */
-                            svnproto_state_init(&st);
                         }
-
                     } else {
                         /* noop */
                     }
 
                 } else {
                     if (cb != NULL) {
-                        if ((res = cb(ctx, in, &st, udata)) != 0) {
-                            /* read error, no choice  */
-                            res = SVNPROTO_VUNPACK + 9;
-                            goto END;
+                        if ((res = cb(ctx, in, st, udata)) != 0) {
+                            if ((res & DIAG_CLASS_MASK) != SVNPROTO_VUNPACK) {
+
+                                /* read error */
+                                goto END;
+
+                            } else {
+                                /*
+                                 * user-level no-match, continue (next
+                                 * read won't be skipped unless it's set
+                                 * in callback)
+                                 */
+                            }
                         }
                     }
-                    /* continue with the next format character */
-                    svnproto_state_init(&st);
                 }
 
                 /* an ugly hack to not block parse_one_value(). */
-                st.tokenizer_state = TS_IGNORE;
-                bytestream_recycle(in);
+                //st->tokenizer_state = TS_IGNORE;
+                //bytestream_recycle(in, st->r.start);
 
             } else {
-                res = SVNPROTO_VUNPACK + 10;
+                res = SVNPROTO_VUNPACK + 8;
                 goto END;
             }
-
         }
-
-        //TRACE("ch='%c' ch1='%c' st=%s res=%d st.i=%ld st.r:",
-        //      ch, ch1, TSSTR(st.tokenizer_state), res, st.i);
-        //if ((st.r.end - st.r.start) > 0) {
-        //    D16(SDATA(in, st.r.start), MIN(st.r.end - st.r.start, 64));
-        //}
-
     }
 
 END:
+    /* supress SVNPROTO_UNPACK_NOMATCH */
+    if (res == SVNPROTO_UNPACK_NOMATCH_GOAHEAD ||
+        res == SVNPROTO_UNPACK_NOMATCH_BACKTRACK) {
+#ifdef TRRET_DEBUG
+        TRACE("Suppressing SVNPROTO_UNPACK_NOMATCH returned by callback");
+#endif
+        res = 0;
+    }
+#ifdef TRRET_DEBUG
+    TRACE("Returning:");
+    TRACE("%s %s ch='%c' ch1='%c' st=%s st->i=%ld st->r:",
+          diag_str(res),
+          st->backtrack ? "backtrack" : "go ahead",
+          ch, ch1, TSSTR(st->tokenizer_state), st->i);
     //if (res != 0) {
-    //    TRACE("ch='%c' ch1='%c' st=%s res=%d st.i=%ld st.r:",
-    //          ch, ch1, TSSTR(st.tokenizer_state), res, st.i);
-    //    if ((st.r.end - st.r.start) > 0) {
-    //        D16(SDATA(in, st.r.start), MIN(st.r.end - st.r.start, 64));
+    //    TRACE("before (start=%ld):", st->r.start);
+    //    off_t before = MAX(st->r.start - 128, 0);
+    //    ssize_t sz = before == 0 ? st->r.start : 128;
+    //    D16(SDATA(in, before), sz);
+    //    TRACE("start:");
+    //    if (SEOD(in) > st->r.start) {
+    //        D16(SDATA(in, st->r.start), MIN(SEOD(in) - st->r.start, 128));
+    //    }
+    //    sz = MIN(SEOD(in) - st->r.start, 128);
+    //    TRACE("end:");
+    //    if (sz > 0) {
+    //        D16(SDATA(in, SEOD(in) - st->r.start), sz);
     //    }
     //}
-    //TRACE("<<<spec=%s", spec);
-    return res;
+    TRACE("<<<spec=%s", spec);
+#endif
+    TRRET(res);
 }
 
 int

@@ -46,14 +46,16 @@ svnproto_init_bytes_array(array_t *ar)
 }
 
 void
-svnproto_fini_bytes_array(array_t *ar) {
+svnproto_fini_bytes_array(array_t *ar)
+{
     if (array_fini(ar) != 0) {
         FAIL("array_fini");
     }
 }
 
 void
-svnproto_dump_bytes_array(array_t *ar) {
+svnproto_dump_bytes_array(array_t *ar)
+{
     array_traverse(ar, (array_traverser_t)dump_bytes, NULL);
 }
 

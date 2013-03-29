@@ -6,7 +6,7 @@
 #include "mrkcommon/dumpm.h"
 
 #include "mrksvnup/svnproto.h"
-#include "mrksvnup/bytestream.h"
+#include "mrkcommon/bytestream.h"
 
 /*
  * command:
@@ -169,9 +169,8 @@ svnproto_update(svnc_ctx_t *ctx,
         TRRET(SVNPROTO_UPDATE + 17);
     }
 
-    bytestream_rewind(&ctx->in);
     bytestream_rewind(&ctx->out);
 
-    return res;
+    TRRET(res);
 }
 

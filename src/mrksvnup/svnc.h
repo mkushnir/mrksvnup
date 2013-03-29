@@ -8,7 +8,8 @@
 #include <fcntl.h>
 #include <limits.h>
 
-#include "mrksvnup/bytestream.h"
+#include "mrkcommon/bytestream.h"
+
 #include "mrksvnup/svnproto_bytes.h"
 #include "mrksvnup/version.h"
 
@@ -18,6 +19,9 @@
 
 #define REVFILE ".svnup.rev"
 #define CACHEFILE ".svnup.cache"
+
+/* bytestream state shared between svnproto_unpack() calls */
+#define SP_UNPACK_SKIP_READ 0x01
 
 typedef struct _svnc_ctx {
     char *url;

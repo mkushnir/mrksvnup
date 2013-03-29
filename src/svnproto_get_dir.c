@@ -5,7 +5,7 @@
 #include "mrkcommon/dumpm.h"
 
 #include "mrksvnup/svnproto.h"
-#include "mrksvnup/bytestream.h"
+#include "mrkcommon/bytestream.h"
 
 /*
  * command:
@@ -129,78 +129,6 @@ pack1(UNUSED svnc_ctx_t *ctx,
 }
 
 static int
-unpack3(svnc_ctx_t *ctx,
-        bytestream_t *in,
-        UNUSED svnproto_state_t *st,
-        UNUSED void *udata)
-{
-    int res;
-
-    res = svnproto_unpack(ctx, in, "()");
-    TRRET(PARSE_EOD);
-}
-
-static int
-unpack2(svnc_ctx_t *ctx,
-        bytestream_t *in,
-        UNUSED svnproto_state_t *st,
-        UNUSED void *udata)
-{
-    int res;
-    svnproto_bytes_t *name = NULL;
-    char *kind_str = NULL;
-    long size;
-    array_t *dirents = udata;
-    svnproto_dirent_t *e;
-
-
-    res = svnproto_unpack(ctx, in, "(swnwn(s?)(s?))", &name, &kind_str, &size,
-                          NULL,
-                          NULL,
-                          NULL,
-                          NULL);
-    if (name != NULL) {
-        if ((e = array_incr(dirents)) == NULL) {
-            FAIL("array_incr");
-        }
-        e->name = name;
-        e->kind = svnproto_kind2int(kind_str);
-        e->size = size;
-    }
-    if (kind_str != NULL) {
-        free(kind_str);
-        kind_str = NULL;
-    }
-    if (res != 0) {
-        res = PARSE_EOD;
-    }
-    TRRET(res);
-}
-
-static int
-unpack1(svnc_ctx_t *ctx,
-        bytestream_t *in,
-        UNUSED svnproto_state_t *st,
-        UNUSED void *udata)
-{
-    int res;
-    svnproto_bytes_t *key = NULL, *value = NULL;
-
-    res = svnproto_unpack(ctx, in, "(ss)", &key, &value);
-    //TRACE("key=%s value=%s", BDATA(key), BDATA(value));
-    if (key != NULL) {
-        free(key);
-    }
-    if (value != NULL) {
-        free(value);
-    }
-    if (res != 0) {
-        res = PARSE_EOD;
-    }
-    TRRET(res);
-}
-
-static int
 dirent_init(svnproto_dirent_t *e)
 {
     e->name = NULL;
@@ -247,6 +175,78 @@ svnproto_dump_dirent_array(array_t *ar)
     array_traverse(ar, (array_traverser_t)dirent_dump, NULL);
 }
 
+static int
+unpack3(svnc_ctx_t *ctx,
+        bytestream_t *in,
+        UNUSED svnproto_state_t *st,
+        UNUSED void *udata)
+{
+    int res;
+
+    res = svnproto_unpack(ctx, in, "()");
+    TRRET(res);
+}
+
+static int
+unpack2(svnc_ctx_t *ctx,
+        bytestream_t *in,
+        UNUSED svnproto_state_t *st,
+        UNUSED void *udata)
+{
+    int res;
+    svnproto_bytes_t *name = NULL;
+    char *kind_str = NULL;
+    long size;
+    array_t *dirents = udata;
+    svnproto_dirent_t *e;
+
+
+    res = svnproto_unpack(ctx, in, "(swnwn(s?)(s?))", &name, &kind_str, &size,
+                          NULL,
+                          NULL,
+                          NULL,
+                          NULL);
+    if (name != NULL) {
+        if ((e = array_incr(dirents)) == NULL) {
+            FAIL("array_incr");
+        }
+        e->name = name;
+        e->kind = svnproto_kind2int(kind_str);
+        e->size = size;
+    }
+    if (kind_str != NULL) {
+        free(kind_str);
+        kind_str = NULL;
+    }
+    //if (res != 0) {
+    //    res = PARSE_EOD;
+    //}
+    TRRET(res);
+}
+
+static int
+unpack1(svnc_ctx_t *ctx,
+        bytestream_t *in,
+        UNUSED svnproto_state_t *st,
+        UNUSED void *udata)
+{
+    int res;
+    svnproto_bytes_t *key = NULL, *value = NULL;
+
+    res = svnproto_unpack(ctx, in, "(ss)", &key, &value);
+    //TRACE("key=%s value=%s", BDATA(key), BDATA(value));
+    if (key != NULL) {
+        free(key);
+    }
+    if (value != NULL) {
+        free(value);
+    }
+    if (res != 0) {
+        res = PARSE_EOD;
+    }
+    TRRET(res);
+}
+
 int
 svnproto_get_dir(svnc_ctx_t *ctx,
                  const char *path,
@@ -289,8 +289,6 @@ svnproto_get_dir(svnc_ctx_t *ctx,
         de->rev = orev;
     }
 
-
-    bytestream_rewind(&ctx->in);
     bytestream_rewind(&ctx->out);
 
     return res;

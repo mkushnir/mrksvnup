@@ -15,9 +15,10 @@
 #include "mrkcommon/dumpm.h"
 #include "mrkcommon/traversedir.h"
 
-#include "mrksvnup/svnc.h"
 #include "mrksvnup/svncdir.h"
 #include "mrksvnup/svnproto.h"
+
+#include "svnc_private.h"
 
 /* keep it in sync with enum _svn_depth */
 UNUSED static const char *svn_depth_str[] = {
@@ -251,6 +252,7 @@ svnc_connect(svnc_ctx_t *ctx)
     }
 
     ctx->in.read_more = bytestream_recv_more;
+    ctx->in.udata = svnproto_state_new();
 
     if (bytestream_init(&ctx->out) != 0) {
         TRRET(SVNC_CONNECT + 3);
@@ -268,6 +270,11 @@ svnc_connect(svnc_ctx_t *ctx)
 int
 svnc_close(svnc_ctx_t *ctx)
 {
+    if (ctx->in.udata != NULL) {
+        svnproto_state_destroy(ctx->in.udata);
+        ctx->in.udata = NULL;
+    }
+
     bytestream_fini(&ctx->in);
     bytestream_fini(&ctx->out);
 
@@ -377,6 +384,8 @@ svnc_debug_open(svnc_ctx_t *ctx, const char *path)
     if (bytestream_init(&ctx->in) != 0) {
         TRRET(SVNC_OPEN + 2);
     }
+
+    ctx->in.udata = svnproto_state_new();
 
     ctx->in.read_more = bytestream_read_more;
 

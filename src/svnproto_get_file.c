@@ -5,7 +5,7 @@
 #include "mrkcommon/dumpm.h"
 
 #include "mrksvnup/svnproto.h"
-#include "mrksvnup/bytestream.h"
+#include "mrkcommon/bytestream.h"
 
 /*
  * command:
@@ -97,45 +97,6 @@ pack1(UNUSED svnc_ctx_t *ctx,
 }
 
 static int
-unpack2(svnc_ctx_t *ctx,
-        bytestream_t *in,
-        UNUSED svnproto_state_t *st,
-        UNUSED void *udata)
-{
-    int res;
-
-    res = svnproto_unpack(ctx, in, "()");
-    TRRET(PARSE_EOD);
-}
-
-static int
-unpack1(svnc_ctx_t *ctx,
-        bytestream_t *in,
-        UNUSED svnproto_state_t *st,
-        UNUSED void *udata)
-{
-    int res;
-    svnproto_bytes_t *name = NULL, *value = NULL;
-    svnproto_fileent_t *e = udata;
-    svnproto_prop_t *p;
-
-
-    res = svnproto_unpack(ctx, in, "(ss)", &name, &value);
-    if (name != NULL) {
-        if ((p = array_incr(&e->props)) == NULL) {
-            FAIL("array_incr");
-        }
-        p->name = name;
-        p->value = value;
-    }
-
-    if (res != 0) {
-        res = PARSE_EOD;
-    }
-    TRRET(res);
-}
-
-static int
 prop_init(svnproto_prop_t *p)
 {
     p->name = NULL;
@@ -202,6 +163,80 @@ svnproto_fileent_dump(svnproto_fileent_t *e)
     svnproto_dump_string_array(&e->contents);
 }
 
+static int
+unpack3(UNUSED svnc_ctx_t *ctx,
+              UNUSED bytestream_t *in,
+              svnproto_state_t *st,
+              UNUSED void *udata)
+{
+    int res = 0;
+    svnproto_bytes_t **b;
+    array_t *ar = udata;
+    ssize_t sz;
+
+    sz = st->r.end - st->r.start;
+
+#ifdef TRRET_DEBUG
+    TRACE(FRED("sz=%ld"), sz);
+#endif
+
+    if (sz <= 0) {
+        res = SVNPROTO_UNPACK_NOMATCH_GOAHEAD;
+
+    } else {
+
+        if ((b = array_incr(ar)) == NULL) {
+            FAIL("array_incr");
+        }
+
+        if ((*b = malloc(sizeof(svnproto_bytes_t) + sz)) == NULL) {
+            FAIL("malloc");
+        }
+        (*b)->sz = sz;
+        memcpy((*b)->data, SDATA(in, st->r.start), (*b)->sz);
+    }
+    TRRET(res);
+}
+
+static int
+unpack2(svnc_ctx_t *ctx,
+        bytestream_t *in,
+        UNUSED svnproto_state_t *st,
+        UNUSED void *udata)
+{
+    int res;
+    res = svnproto_unpack(ctx, in, "()");
+    if (res != 0) {
+        TRRET(res);
+    }
+
+    TRRET(res);
+}
+
+static int
+unpack1(svnc_ctx_t *ctx,
+        bytestream_t *in,
+        UNUSED svnproto_state_t *st,
+        UNUSED void *udata)
+{
+    int res;
+    svnproto_bytes_t *name = NULL, *value = NULL;
+    svnproto_fileent_t *e = udata;
+    svnproto_prop_t *p;
+
+
+    res = svnproto_unpack(ctx, in, "(ss)", &name, &value);
+    if (name != NULL) {
+        if ((p = array_incr(&e->props)) == NULL) {
+            FAIL("array_incr");
+        }
+        p->name = name;
+        p->value = value;
+    }
+
+    TRRET(res);
+}
+
 int
 svnproto_get_file(svnc_ctx_t *ctx,
                   const char *path,
@@ -228,7 +263,7 @@ svnproto_get_file(svnc_ctx_t *ctx,
         TRRET(SVNPROTO_GET_FILE + 11);
     }
 
-    if (svnproto_command_response(ctx, "((s)n(r*)r?)",
+    if (svnproto_command_response(ctx, "((s?)n(r*)r?)",
                                   &e->checksum,
                                   &e->rev,
                                   unpack1, e,
@@ -237,13 +272,16 @@ svnproto_get_file(svnc_ctx_t *ctx,
     }
 
     if (flags & GETFLAG_WANT_CONTENTS) {
-        svnproto_unpack(ctx, &ctx->in, "s*", &e->contents);
+        res = svnproto_unpack(ctx, &ctx->in, "S*", unpack3, &e->contents);
     }
 
-    bytestream_rewind(&ctx->in);
+    if (svnproto_command_response(ctx, "()") != 0) {
+        TRRET(SVNPROTO_GET_FILE + 13);
+    }
+
     bytestream_rewind(&ctx->out);
 
-    return res;
+    TRRET(res);
 }
 
 

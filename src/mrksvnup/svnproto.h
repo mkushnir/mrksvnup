@@ -2,11 +2,12 @@
 #define SVNPROTO_H
 
 #include "mrkcommon/array.h"
+#include "mrkcommon/bytestream.h"
 
 #include "mrksvnup/svnc.h"
-#include "mrksvnup/bytestream.h"
 #include "mrksvnup/svnproto_bytes.h"
 
+#include "diag.h"
 /*
  * Parser.
  */
@@ -37,7 +38,6 @@ typedef int (*svnproto_cb_t) (svnc_ctx_t *, bytestream_t *, struct _svnproto_sta
 typedef struct _svnproto_state {
     svnrange_t r;
     long i;
-    int next_read:1;
 #   define TS_START 0x01
 #   define TS_TOK_IN 0x02
 #   define TS_TOK_OUT 0x04
@@ -49,6 +49,7 @@ typedef struct _svnproto_state {
 #   define TS_NUM_IN 0x100
 #   define TS_NUM_OUT 0x200
 #   define TS_IGNORE 0x400
+#   define TS_END 0x800
 #   define TS_OUT (TS_START | TS_TOK_OUT | TS_NUM_OUT | TS_STRING_OUT | TS_IGNORE)
 #   define TS_LIST (TS_LIST_START | TS_LIST_END)
 #   define TS_DATA (TS_TOK_OUT | TS_NUM_OUT | TS_STRING_OUT)
@@ -64,9 +65,11 @@ typedef struct _svnproto_state {
         ts == TS_NUM_IN ?  "TS_NUM_IN" : \
         ts == TS_NUM_OUT ? "TS_NUM_OUT" : \
         ts == TS_IGNORE ? "TS_IGNORE" : \
+        ts == TS_END ? "TS_END" : \
         "<unknown>" \
     )
     int tokenizer_state;
+    int backtrack:1;
 } svnproto_state_t;
 #define RLEN(v) ((v)->r.end - (v)->r.start)
 
@@ -111,6 +114,12 @@ int svnproto_unpack(svnc_ctx_t *, bytestream_t *, const char *, ...);
 int svnproto_vunpack(svnc_ctx_t *, bytestream_t *, const char *, va_list);
 int svnproto_command_response(svnc_ctx_t *, const char *, ...);
 
+/* for user-defined calbacks to terminate r* r? S* S? */
+#define SVNPROTO_UNPACK_NOMATCH_BACKTRACK (SVNPROTO_VUNPACK + 100)
+#define SVNPROTO_UNPACK_NOMATCH_GOAHEAD (SVNPROTO_VUNPACK + 101)
+#define SVNPROTO_IGNORE_VUNPACK(res) \
+    ((((res) & DIAG_CLASS_MASK) == SVNPROTO_VUNPACK) ? 0 : (res))
+
 /*
  * Serializer.
  */
@@ -128,6 +137,8 @@ void svnproto_init_string_array(array_t *);
 void svnproto_dump_string_array(array_t *);
 void svnproto_init_dirent_array(array_t *ar);
 void svnproto_dump_dirent_array(array_t *ar);
+void svnproto_init_bytes_array(array_t *ar);
+void svnproto_dump_bytes_array(array_t *ar);
 const char *svnproto_kind2str(int);
 int svnproto_kind2int(const char *);
 

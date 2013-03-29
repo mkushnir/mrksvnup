@@ -4,7 +4,7 @@
 #include "mrkcommon/dumpm.h"
 
 #include "mrksvnup/svnproto.h"
-#include "mrksvnup/bytestream.h"
+#include "mrkcommon/bytestream.h"
 
 /*
  * command:
@@ -55,7 +55,6 @@ svnproto_get_latest_rev(svnc_ctx_t *ctx, long *rev)
         TRRET(SVNPROTO_GET_LATEST_REV + 6);
     }
 
-    bytestream_rewind(&ctx->in);
     bytestream_rewind(&ctx->out);
 
     return res;

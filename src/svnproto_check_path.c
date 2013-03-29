@@ -6,7 +6,7 @@
 #include "mrkcommon/dumpm.h"
 
 #include "mrksvnup/svnproto.h"
-#include "mrksvnup/bytestream.h"
+#include "mrkcommon/bytestream.h"
 
 /*
  * command:
@@ -104,7 +104,6 @@ svnproto_check_path(svnc_ctx_t *ctx, const char *path, long rev, int *kind)
 
     *kind = svnproto_kind2int(kind_str);
 
-    bytestream_rewind(&ctx->in);
     bytestream_rewind(&ctx->out);
 
 

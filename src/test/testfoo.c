@@ -16,6 +16,7 @@
 #include "mrksvnup/svnc.h"
 #include "mrksvnup/svncdir.h"
 #include "mrksvnup/svnproto.h"
+#include "mrksvnup/svnproto_bytes.h"
 
 static int
 mystrcmp(const char *a, const char *b)
@@ -110,16 +111,47 @@ dump_string(const char **v, UNUSED void *udata)
     return 0;
 }
 
+static int
+str_cb(UNUSED svnc_ctx_t *ctx,
+       UNUSED bytestream_t *in,
+       svnproto_state_t *st,
+       UNUSED void *udata)
+{
+    int res = 0;
+    svnproto_bytes_t **b;
+    array_t *ar = udata;
+
+
+    if (st->r.end == st->r.start) {
+        TRACE(FRED("!!!!!!!!"));
+        res = SVNPROTO_UNPACK_NOMATCH_GOAHEAD;
+    } else {
+        TRACE("str %s", SDATA(in, st->r.start));
+        if ((b = array_incr(ar)) == NULL) {
+            FAIL("array_incr");
+        }
+
+        if ((*b = malloc(sizeof(svnproto_bytes_t) + st->r.end - st->r.start)) == NULL) {
+            FAIL("malloc");
+        }
+        (*b)->sz = st->r.end - st->r.start;
+        memcpy((*b)->data, SDATA(in, st->r.start), (*b)->sz);
+    }
+
+    return res;
+}
+
 UNUSED static void
 test_unpack(void)
 {
+    int res;
     svnc_ctx_t *ctx;
     long n1, n2, n3, n4, n5 = -1;
     char *s1 = NULL, *s2 = NULL, *s3 = NULL, *s4 = NULL,
          *s5 = NULL, *s6 = NULL, *s7 = NULL, *s8 = NULL;
     array_t ar;
 
-    if ((ctx = svnc_new("svn://localhost/mysan", "", 0, 0))
+    if ((ctx = svnc_new("svn://localhost/mysvn", "qwe", 0, 0))
         == NULL) {
 
         assert(0);
@@ -130,9 +162,11 @@ test_unpack(void)
         assert(0);
     }
 
-    if (svnproto_unpack(ctx, &ctx->in, "nnn", &n1, &n2, &n3) != 0) {
-        assert(0);
-    }
+    res = svnproto_unpack(ctx, &ctx->in, "nnn", &n1, &n2, &n3);
+    TRACE("res=%s", diag_str(res));
+    //if (SVNPROTO_UNPACK(ctx, &ctx->in, "nnn", &n1, &n2, &n3) != 0) {
+    //    assert(0);
+    //}
 
     TRACE("n1=%ld n2=%ld n3=%ld", n1, n2, n3);
 
@@ -238,16 +272,30 @@ test_unpack(void)
     svnc_close(ctx);
 
 
-    //if (svnc_debug_open(ctx, "teststring") != 0) {
-    //    assert(0);
-    //}
+    if (svnc_debug_open(ctx, "teststring") != 0) {
+        assert(0);
+    }
 
-    //svnproto_spec_t teststring_sp = {"sss", 0};
-    //if (svnproto_unpack(ctx, &ctx->in, &teststring_sp) != 0) {
-    //    assert(0);
-    //}
+    svnproto_init_bytes_array(&ar);
+    res = svnproto_unpack(ctx, &ctx->in, "S*", str_cb, &ar);
 
-    //svnc_close(ctx);
+    if (res == PARSE_EOD) {
+        res = 0;
+    }
+    if (res != 0) {
+        assert(0);
+    }
+
+    svnproto_dump_bytes_array(&ar);
+    array_fini(&ar);
+
+    if (svnproto_unpack(ctx, &ctx->in, "(w)", &s1) != 0) {
+        assert(0);
+    }
+
+    TRACE("s=%s", s1);
+
+    svnc_close(ctx);
 
     svnc_destroy(ctx);
     free(ctx);
@@ -278,7 +326,7 @@ test_unpack_cb(void)
     svnc_ctx_t *ctx;
     array_t ar;
 
-    if ((ctx = svnc_new("svn://localhost/mysvn", "", 0, 0))
+    if ((ctx = svnc_new("svn://localhost/mysvn", "qwe", 0, 0))
         == NULL) {
 
         assert(0);
@@ -324,7 +372,7 @@ test_pack(void)
     svnc_ctx_t *ctx;
 
     if ((ctx =
-            svnc_new("svn://localhost/mysvn", "", 0, 0)) == NULL) {
+            svnc_new("svn://localhost/mysvn", "qwe", 0, 0)) == NULL) {
 
         assert(0);
     }
@@ -437,7 +485,7 @@ test_packresponse(void)
     }
 
     if ((ctx =
-            svnc_new("svn://localhost/mysvn", "", 0, 0)) == NULL) {
+            svnc_new("svn://localhost/mysvn", "qwe", 0, 0)) == NULL) {
 
         assert(0);
     }
@@ -478,7 +526,7 @@ test_simple(void)
     svnproto_fileent_t fe;
 
     if ((ctx =
-            svnc_new("svn://localhsot/mysvn", "", 0, 0)) == NULL) {
+            svnc_new("svn://localhsot/mysvn", "qwe", 0, 0)) == NULL) {
 
         assert(0);
     }
@@ -676,7 +724,7 @@ test_editor(void)
     svnc_ctx_t *ctx;
 
     if ((ctx =
-            svnc_new("svn://localhost/mysvn", "", 0, 0)) == NULL) {
+            svnc_new("svn://localhost/mysvn", "qwe", 0, 0)) == NULL) {
 
         assert(0);
     }
@@ -754,11 +802,11 @@ test_get_file(void)
 int
 main(void)
 {
-    //test_parse_url();
-    //test_unpack();
+    test_parse_url();
+    test_unpack();
     //test_unpack_cb();
-    //test_pack();
-    //test_packresponse();
+    test_pack();
+    test_packresponse();
     //test_cache();
 
     //test_conn2();

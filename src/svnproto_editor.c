@@ -12,11 +12,11 @@
 #include "mrkcommon/array.h"
 #include "mrkcommon/util.h"
 #include "mrkcommon/traversedir.h"
-//#define TRRET_DEBUG
+#define TRRET_DEBUG
 #include "mrkcommon/dumpm.h"
 #include "diag.h"
 
-#include "mrksvnup/bytestream.h"
+#include "mrkcommon/bytestream.h"
 #include "mrksvnup/svnc.h"
 #include "mrksvnup/svncdir.h"
 #include "mrksvnup/svnproto.h"
@@ -27,10 +27,10 @@
 /* global editor context */
 static char *cmd = NULL;
 static svndiff_doc_t doc;
-#define SVNPE_CLOSING 0x01
-static int flags = 0;
 static svnc_ctx_t *shadow_ctx;
 static long target_rev;
+#define COMMAND_CLOSING 0x01
+static int flags = 0;
 
 int
 svnproto_editor_verify_checksum(int fd, const svnproto_bytes_t *cs)
@@ -146,7 +146,9 @@ open_root(svnc_ctx_t *ctx,
     svnproto_bytes_t *token = NULL;
     struct stat sb;
 
-    if (svnproto_unpack(ctx, in, "((n?)s)", &rev, &token) != 0) {
+    res = svnproto_unpack(ctx, in, "((n?)s)", &rev, &token);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = OPEN_ROOT + 1;
         goto END;
     }
@@ -186,7 +188,9 @@ delete_entry(svnc_ctx_t *ctx,
     char *localpath = NULL;
     UNUSED struct stat sb;
 
-    if (svnproto_unpack(ctx, in, "(s(n?)s)", &path, &rev, &token) != 0) {
+    res = svnproto_unpack(ctx, in, "(s(n?)s)", &path, &rev, &token);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = DELETE_ENTRY + 1;
         goto END;
     }
@@ -270,9 +274,11 @@ add_dir(svnc_ctx_t *ctx,
     /*
      * XXX support of copy-path/copy-rev
      */
-    if (svnproto_unpack(ctx, in, "(sss(s?n?))",
-                        &path, &parent_token, &child_token,
-                        &copy_path, &copy_rev) != 0) {
+    res = svnproto_unpack(ctx, in, "(sss(s?n?))",
+                          &path, &parent_token, &child_token,
+                          &copy_path, &copy_rev);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = ADD_DIR + 1;
         goto END;
     }
@@ -337,8 +343,10 @@ open_dir(svnc_ctx_t *ctx,
     char *localpath = NULL;
     struct stat sb;
 
-    if (svnproto_unpack(ctx, in, "(sss(n))",
-            &path, &parent_token, &child_token, &rev) != 0) {
+    res = svnproto_unpack(ctx, in, "(sss(n))",
+            &path, &parent_token, &child_token, &rev);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = OPEN_DIR + 1;
         goto END;
     }
@@ -396,7 +404,9 @@ change_dir_prop(svnc_ctx_t *ctx,
     svnproto_bytes_t *name = NULL;
     svnproto_bytes_t *value = NULL;
 
-    if (svnproto_unpack(ctx, in, "(ss(s?))", &token, &name, &value) != 0) {
+    res = svnproto_unpack(ctx, in, "(ss(s?))", &token, &name, &value);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = CHANGE_DIR_PROP + 1;
         goto END;
     }
@@ -428,7 +438,9 @@ close_dir(svnc_ctx_t *ctx,
     int res = 0;
     svnproto_bytes_t *token = NULL;
 
-    if (svnproto_unpack(ctx, in, "(s)", &token) != 0) {
+    res = svnproto_unpack(ctx, in, "(s)", &token);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = CLOSE_DIR + 1;
         goto END;
     }
@@ -453,7 +465,9 @@ absent_dir(svnc_ctx_t *ctx,
     svnproto_bytes_t *path = NULL;
     svnproto_bytes_t *parent_token = NULL;
 
-    if (svnproto_unpack(ctx, in, "(ss)", &path, &parent_token) != 0) {
+    res = svnproto_unpack(ctx, in, "(ss)", &path, &parent_token);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = ABSENT_DIR + 1;
         goto END;
     }
@@ -491,10 +505,12 @@ add_file(svnc_ctx_t *ctx,
         goto END;
     }
 
-    if (svnproto_unpack(ctx, in, "(sss(s?n?))",
+    res = svnproto_unpack(ctx, in, "(sss(s?n?))",
                         &doc.rp, &dir_token,
                         &doc.ft,
-                        &copy_path, &copy_rev) != 0) {
+                        &copy_path, &copy_rev);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = ADD_FILE + 2;
         goto END;
     }
@@ -514,13 +530,14 @@ add_file(svnc_ctx_t *ctx,
     }
 
     if (lstat(doc.lp, &doc.sb) == 0) {
-        if (!S_ISREG(doc.sb.st_mode)) {
+        if (S_ISREG(doc.sb.st_mode) || S_ISLNK(doc.sb.st_mode)) {
+            if (unlink(doc.lp) != 0) {
+                FAIL("unlink");
+            }
+        } else {
             /* we are not yet handling it */
             res = ADD_FILE + 4;
             goto END;
-        }
-        if (unlink(doc.lp) != 0) {
-            FAIL("unlink");
         }
     }
 
@@ -707,8 +724,10 @@ open_file(svnc_ctx_t *ctx,
         goto END;
     }
 
-    if (svnproto_unpack(ctx, in, "(sss(n))", &doc.rp,
-                        &dir_token, &doc.ft, &doc.rev) != 0) {
+    res = svnproto_unpack(ctx, in, "(sss(n))", &doc.rp,
+                        &dir_token, &doc.ft, &doc.rev);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = OPEN_FILE + 2;
         goto END;
     }
@@ -761,9 +780,11 @@ apply_textdelta(svnc_ctx_t *ctx,
     int res = 0;
     svnproto_bytes_t *file_token = NULL;
 
-    if (svnproto_unpack(ctx, in, "(s(s?))",
+    res = svnproto_unpack(ctx, in, "(s(s?))",
                         &file_token,
-                        &doc.base_checksum) != 0) {
+                        &doc.base_checksum);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = APPLY_TEXTDELTA + 1;
         goto END;
     }
@@ -789,8 +810,10 @@ textdelta_chunk(svnc_ctx_t *ctx,
     int res = 0;
     svnproto_bytes_t *file_token = NULL;
 
-    if (svnproto_unpack(ctx, in, "(sS)", &file_token,
-                        chunk_cb, &doc) != 0) {
+    res = svnproto_unpack(ctx, in, "(sS)", &file_token,
+                        chunk_cb, &doc);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = TEXTDELTA_CHUNK + 1;
         goto END;
     }
@@ -814,7 +837,9 @@ textdelta_end(svnc_ctx_t *ctx,
     int res = 0;
     svnproto_bytes_t *file_token = NULL;
 
-    if (svnproto_unpack(ctx, in, "(s)", &file_token) != 0) {
+    res = svnproto_unpack(ctx, in, "(s)", &file_token);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = TEXTDELTA_END + 1;
         goto END;
     }
@@ -840,8 +865,10 @@ change_file_prop(svnc_ctx_t *ctx,
     svnproto_bytes_t *name = NULL;
     svnproto_bytes_t *value = NULL;
 
-    if (svnproto_unpack(ctx, in, "(ss(s?))",
-                        &file_token, &name, &value) != 0) {
+    res = svnproto_unpack(ctx, in, "(ss(s?))",
+                        &file_token, &name, &value);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = CHANGE_FILE_PROP + 1;
         goto END;
     }
@@ -899,8 +926,10 @@ close_file(svnc_ctx_t *ctx,
     char *checksum = NULL;
     ssize_t total_len;
 
-    if (svnproto_unpack(ctx, in, "(s(s?))",
-                        &file_token, &text_checksum) != 0) {
+    res = svnproto_unpack(ctx, in, "(s(s?))",
+                        &file_token, &text_checksum);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = CLOSE_FILE + 1;
         goto END;
     }
@@ -930,7 +959,7 @@ close_file(svnc_ctx_t *ctx,
 
                 /* check it out clean? */
                 if (ctx->debug_level > 2) {
-                    LTRACE(1, FRED("Base checksum mismtach: expected %s over %s"),
+                    LTRACE(1, FRED("Base checksum mismatch: expected %s over %s"),
                            BDATA(doc.base_checksum), doc.lp);
                 }
 
@@ -1154,7 +1183,9 @@ absent_file(svnc_ctx_t *ctx,
     svnproto_bytes_t *path = NULL;
     svnproto_bytes_t *parent_token = NULL;
 
-    if (svnproto_unpack(ctx, in, "(ss)", &path, &parent_token) != 0) {
+    res = svnproto_unpack(ctx, in, "(ss)", &path, &parent_token);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res != 0) {
         res = ABSENT_FILE + 1;
         goto END;
     }
@@ -1176,7 +1207,7 @@ END:
 }
 
 static int
-editor_cb2(svnc_ctx_t *ctx,
+unpack2(svnc_ctx_t *ctx,
            bytestream_t *in,
            UNUSED svnproto_state_t *st,
            UNUSED void *udata)
@@ -1185,7 +1216,9 @@ editor_cb2(svnc_ctx_t *ctx,
 
     if (strcmp(cmd, "target-rev") == 0) {
 
-        if (svnproto_unpack(ctx, in, "(n)", &target_rev) != 0) {
+        res = svnproto_unpack(ctx, in, "(n)", &target_rev);
+        res = SVNPROTO_IGNORE_VUNPACK(res);
+        if (res != 0) {
             res = SVNPROTO_EDITOR + 2;
             goto END;
         }
@@ -1285,18 +1318,23 @@ editor_cb2(svnc_ctx_t *ctx,
         }
 
     } else if (strcmp(cmd, "close-edit") == 0) {
-        if (svnproto_unpack(ctx, in, "()") != 0) {
+        res = svnproto_unpack(ctx, in, "()");
+        res = SVNPROTO_IGNORE_VUNPACK(res);
+        if (res != 0) {
             res = SVNPROTO_EDITOR + 18;
             goto END;
         }
 
+        flags |= COMMAND_CLOSING;
+
         if (ctx->debug_level > 3) {
             LTRACE(1, "%s", cmd);
         }
-        flags |= SVNPE_CLOSING;
 
     } else if (strcmp(cmd, "abort-edit") == 0) {
-        if (svnproto_unpack(ctx, in, "()") != 0) {
+        res = svnproto_unpack(ctx, in, "()");
+        res = SVNPROTO_IGNORE_VUNPACK(res);
+        if (res != 0) {
             res = SVNPROTO_EDITOR + 19;
             goto END;
         }
@@ -1304,10 +1342,11 @@ editor_cb2(svnc_ctx_t *ctx,
         if (ctx->debug_level > 3) {
             LTRACE(1, "[not implemented] %s", cmd);
         }
-        flags |= SVNPE_CLOSING;
 
     } else if (strcmp(cmd, "finish-replay") == 0) {
-        if (svnproto_unpack(ctx, in, "()") != 0) {
+        res = svnproto_unpack(ctx, in, "()");
+        res = SVNPROTO_IGNORE_VUNPACK(res);
+        if (res != 0) {
             res = SVNPROTO_EDITOR + 20;
             goto END;
         }
@@ -1315,25 +1354,30 @@ editor_cb2(svnc_ctx_t *ctx,
         if (ctx->debug_level > 3) {
             LTRACE(1, "[not implemented] %s", cmd);
         }
-        flags |= SVNPE_CLOSING;
-
 
     } else if (strcmp(cmd, "failure") == 0) {
         svnc_clear_last_error(ctx);
-        if (svnproto_unpack(ctx, in, "((nssn))",
+        res = svnproto_unpack(ctx, in, "((nssn))",
                               &ctx->last_error.apr_error,
                               &ctx->last_error.message,
                               &ctx->last_error.file,
-                              &ctx->last_error.line) != 0) {
+                              &ctx->last_error.line);
+        res = SVNPROTO_IGNORE_VUNPACK(res);
+
+        if (ctx->debug_level > 3) {
+            LTRACE(1, "[not implemented] %s apr_error=%ld "
+                      "message=%s file=%s line=%ld",
+                      cmd,
+                      ctx->last_error.apr_error,
+                      BDATA(ctx->last_error.message),
+                      BDATA(ctx->last_error.file),
+                      ctx->last_error.line);
+        }
+
+        if (res != 0) {
             res = SVNPROTO_EDITOR + 21;
             goto END;
         }
-
-        //TRACE(FRED("ERROR: %s"), BDATA(ctx->last_error.message));
-
-        res = PARSE_EOD;
-        goto END;
-
 
     } else {
         TRACE(FRED("unknown: %s"), cmd);
@@ -1350,34 +1394,21 @@ END:
     TRRET(res);
 }
 
-UNUSED static int
-editor_cb1(svnc_ctx_t *ctx,
-           bytestream_t *in,
-           UNUSED svnproto_state_t *st,
-           UNUSED void *udata)
-{
-    if ((svnproto_unpack(ctx, in, "w", &cmd)) != 0) {
-        TRRET(SVNPROTO_EDITOR + 23);
-    }
-    return 0;
-
-}
-
 static int
-editor_cb0(svnc_ctx_t *ctx,
+unpack1(svnc_ctx_t *ctx,
            bytestream_t *in,
            UNUSED svnproto_state_t *st,
            void *udata)
 {
     int res = 0;
 
-    if (flags && SVNPE_CLOSING) {
-        res = PARSE_EOD;
-
-    } else {
-        res = svnproto_unpack(ctx, in, "(wr)",
-                              &cmd,
-                              editor_cb2, udata);
+    res = svnproto_unpack(ctx, in, "(wr)",
+                          &cmd,
+                          unpack2, udata);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
+    if (res == 0 && flags & COMMAND_CLOSING) {
+        /* we terminate the matching sequence */
+        res = SVNPROTO_UNPACK_NOMATCH_GOAHEAD;
     }
 
     TRRET(res);
@@ -1387,14 +1418,14 @@ editor_cb0(svnc_ctx_t *ctx,
 int
 svnproto_editor(svnc_ctx_t *ctx)
 {
+    int res;
+
     /* editor starts with check auth */
     if (svnproto_check_auth(ctx) != 0) {
         TRRET(SVNPROTO_EDITOR + 24);
     }
 
     cmd = NULL;
-
-    flags = 0;
 
     if ((shadow_ctx = svnc_new(ctx->url,
                                ctx->localroot,
@@ -1407,11 +1438,8 @@ svnproto_editor(svnc_ctx_t *ctx)
         TRRET(SVNPROTO_EDITOR + 26);
     }
 
-    if (svnproto_unpack(ctx, &ctx->in, "r*", editor_cb0, &doc) != 0) {
-        TRRET(SVNPROTO_EDITOR + 27);
-    }
-
-    //TRACE("consumed %ld", ctx->in.pos - saved_pos);
+    res = svnproto_unpack(ctx, &ctx->in, "r*", unpack1, &doc);
+    res = SVNPROTO_IGNORE_VUNPACK(res);
 
     if (cmd != NULL) {
         free(cmd);
@@ -1422,6 +1450,6 @@ svnproto_editor(svnc_ctx_t *ctx)
     svnc_destroy(shadow_ctx);
     free(shadow_ctx);
 
-    return 0;
+    TRRET(res);
 }
 
