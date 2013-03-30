@@ -27,30 +27,31 @@ currently restricted to the _svn://_ only. The utility behaves more
 like a traditional svn client.  It tracks the latest checked out revision
 in a dotfile in the root directory.  It then can update to a different
 revision _relative to the current one_ using svndiff documents downloaded
-from the server. It doesn't delete the files not being tracked on the
-remote side (for example, it won't wipe out custom kernel configurations
-during update) unless the containing directory was removed on the server.
+from the server. When it's done on a regular basis, it's rally fast. The
+utility doesn't delete files not being tracked on the remote side (for
+example, it won't wipe out custom kernel configurations during update)
+unless the containing directory was removed on the server.
 
-The _mrksvnup_ utility keeps some  minimal state about each tracked file:
-its remote path and the checksum as a key/value pair in a local database.
-An update procedure is carried out in two stages: first an _svndiff_
-document is obtained given the source and target revisions, and the files
-are edited along with this document. When something went wrong, a full
-copy of an individual file is checked out from the server using the
-_get-file_ svn command.  During this stage each file's remote path and
-final checksum is saved in the database.
+During update procedure an _svndiff_ document is obtained given the source
+and target revisions, and the files are edited along with this document.
+When something went wrong, a full copy of an individual file is checked
+out from the server using the _get-file_ svn command.  Each file's remote
+path and final checksum is saved in the database.
 
-The next stage can be entered at an option, and performs a double
-check of the local tree against the hash database. During this stage the
-known tracked files that might possibly be deleted/modified locally, but
-not listed remotely in the svndiff document (because they wouldn't
-change), will be restored using the _get-file_ command. It takes much
-longer, since the local copy of the repository is fully traversed.  In
-many cases this stage is not actually needed.  If it is known that the
-local files were not moved/removed since the last update, no extra check
-is needed. This stage can be turned on using the _-R_ (repair mode)
-option. Actually a fresh re-checkout into an empty directory will often be
-quicker than this stage.
+The _mrksvnup_ utility can also repair a corrupted tree (to some extent)
+using some minimal state about each tracked file: its remote path and the
+checksum as a key/value pair saved in a local database during update.
+Repairment stage can be entered at an option, and performs a double check
+of the local tree against the hash database. During this stage the known
+tracked files that might possibly be deleted/modified locally, but not
+listed remotely in the svndiff document (because they wouldn't change),
+will be restored using the _get-file_ command. It takes much longer, since
+the local copy of the repository is fully traversed.  In many cases this
+stage is not actually needed.  If it is known that the local files were
+not modified/moved/removed since the last update, no extra check is
+needed. This stage can be turned on using the _-R_ (repair mode) option.
+Actually a fresh re-checkout into an empty directory will often be quicker
+than this stage.
 
 This program was first written as a proof of concept, mostly in order to
 explore the design decision. It can, however, be used in real world tasks.
