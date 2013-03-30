@@ -10,7 +10,7 @@ was to resolve some John's utility's problems of resource usage found by
 the time of this writing (hopefully it will be improved).  I also wanted
 to achieve a faster run time in at least the obvious cases of small
 incremental updates.  The John's utility is based on the _main command
-set_ of the SVN RA protocol.  This approach, while yields a correct net
+set_ of the SVN RA protocol.  This approach, while yields the correct net
 result, is probably not the most optimal in terms of performance. It
 requires walking through the entire tree regardless of whether it's
 actually needed or not, on the local side.  It doesn't make benefit from
