@@ -174,7 +174,7 @@ run(const char *url,
     //TRACE("check_path kind=%s", svnproto_kind2str(kind));
     
     if (kind != SVNP_KIND_DIR) {
-        errx(1, "Not a path: %s", update_params.path);
+        errx(1, "Remote path is not a directory: %s", update_params.path);
     }
 
     /*
@@ -300,13 +300,11 @@ main(int argc, char *argv[])
 
     if (url == NULL) {
         usage(argv[0]);
-        TRACE("Missing URL");
-        exit(1);
+        errx(1, "Missing URL");
     }
     if (localroot == NULL) {
         usage(argv[0]);
-        TRACE("Missing local path");
-        exit(1);
+        errx(1, "Missing local path");
     }
 
     //TRACE("command-line arguments: %s %ld %s", url, target_rev, localroot);
