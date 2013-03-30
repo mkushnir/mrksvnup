@@ -27,7 +27,7 @@ currently restricted to the _svn://_ only. The utility behaves more
 like a traditional svn client.  It tracks the latest checked out revision
 in a dotfile in the root directory.  It then can update to a different
 revision _relative to the current one_ using svndiff documents downloaded
-from the server. When it's done on a regular basis, it's rally fast. The
+from the server. When it's done on a regular basis, it's really fast. The
 utility doesn't delete files not being tracked on the remote side (for
 example, it won't wipe out custom kernel configurations during update)
 unless the containing directory was removed on the server.
