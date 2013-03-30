@@ -55,11 +55,10 @@ than this stage.
 
 This program was first written as a proof of concept, mostly in order to
 explore the design decision. It can, however, be used in real world tasks.
-Since this is my homework, I made no provision for distributing it through
-ports, or other packaging systems. It can be built using basic [GNU
-autotools][4]. in this program I have used another my library of common
-functions (just for my convenience). This can be easily integrated into
-a single self-contained project.
+It can be built using basic [GNU autotools][4]. in this program I have
+used another my library of common functions (just for my convenience).
+This can be easily integrated into a single self-contained project. On
+FreeBSD, it can be built as a port, please see the port directory.
 
 Everything is released under 2-clause BSD license.
 
