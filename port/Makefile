@@ -1,7 +1,7 @@
 # $FreeBSD$
 PORTNAME=	mrksvnup
 PORTVERSION=	0.1
-CATEGORIES=	misc
+CATEGORIES=	net
 MASTER_SITES=	https://raw.github.com/mkushnir/distfiles/master/
 
 MAINTAINER=	markiyan.kushnir@gmail.com
