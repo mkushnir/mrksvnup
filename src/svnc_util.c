@@ -104,6 +104,10 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
             errx(1, "path_join");
         }
 
+        /*
+         * XXX fix it to handle symlinks here (as it is in the editor)!
+         */
+
         /* exists? */
 
         if (lstat(lp, &sb) == 0) {
