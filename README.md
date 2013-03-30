@@ -10,7 +10,7 @@ was to resolve some John's utility's problems of resource usage found by
 the time of this writing (hopefully it will be improved).  I also wanted
 to achieve a faster run time in at least the obvious cases of small
 incremental updates.  The John's utility is based on the _main command
-set_ of the SVN RA protocol.  This approach, while yields a correct net
+set_ of the SVN RA protocol.  This approach, while yields the correct net
 result, is probably not the most optimal in terms of performance. It
 requires walking through the entire tree regardless of whether it's
 actually needed or not, on the local side.  It doesn't make benefit from
@@ -27,7 +27,7 @@ currently restricted to the _svn://_ only. The utility behaves more
 like a traditional svn client.  It tracks the latest checked out revision
 in a dotfile in the root directory.  It then can update to a different
 revision _relative to the current one_ using svndiff documents downloaded
-from the server. When it's done on a regular basis, it's rally fast. The
+from the server. When it's done on a regular basis, it's really fast. The
 utility doesn't delete files not being tracked on the remote side (for
 example, it won't wipe out custom kernel configurations during update)
 unless the containing directory was removed on the server.
