@@ -249,10 +249,6 @@ dump_wnd_array(array_t *ar)
 int
 svndiff_doc_init(svndiff_doc_t *doc)
 {
-    /*
-     * algorithm check: assume svndiff_doc_init() and svndiff_doc_fini()
-     * are balanced.
-     */
     doc->version = -1;
     doc->parse_state = SD_STATE_VERSION;
     doc->base_checksum = NULL;
