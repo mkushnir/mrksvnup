@@ -943,7 +943,7 @@ close_file(svnc_ctx_t *ctx,
 
     assert(doc.fd == -1);
 
-    /* verify aka source view, if available */
+    /* verify source view, if available */
     if ((doc.fd = open(doc.lp, O_RDWR|O_NOFOLLOW)) >= 0) {
 
         /* We deal with a regular file */
