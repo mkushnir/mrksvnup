@@ -16,5 +16,6 @@ USE_LDCONFIG=	yes
 #LIB_DEPENDS=	mrkcommon:devel/mrkcommon
 
 GNU_CONFIGURE=	yes
+CONFIGURE_ENV=	LDFLAGS=-L${LOCALBASE}/lib
 
 .include <bsd.port.mk>
