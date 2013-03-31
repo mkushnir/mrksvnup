@@ -58,7 +58,7 @@ explore the design decision. It can, however, be used in real world tasks.
 It can be built using basic [GNU autotools][4]. in this program I have
 used another [my library of common functions][5] (just for my convenience).
 This can be easily integrated into a single self-contained project. On
-FreeBSD, it can be built as a port, please see the port directory.
+FreeBSD, it can be turned into a port, please see the port directory.
 
 Everything is released under 2-clause BSD license.
 
