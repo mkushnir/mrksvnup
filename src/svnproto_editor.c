@@ -101,43 +101,6 @@ chunk_cb(UNUSED svnc_ctx_t *ctx,
 }
 
 static int
-delete_entry_cb(const char *path,
-                struct dirent *de,
-                UNUSED void *udata)
-{
-    int res = 0;
-    char *fname;
-
-    /*
-     * XXX Check for modified and third-party files/dirs.
-     */
-    if (de != NULL) {
-
-        if ((fname = path_join(path, de->d_name)) == NULL) {
-            return 1;
-        }
-
-        //TRACE("deleting file: %s", fname);
-
-        if (unlink(fname) != 0) {
-            perror("unlink");
-            res = 1;
-        }
-
-        free(fname);
-
-    } else {
-        //TRACE("deleting dir: %s", path);
-
-        if (rmdir(path) != 0) {
-            perror("rmdir");
-            res = 2;
-        }
-    }
-    return res;
-}
-
-static int
 open_root(svnc_ctx_t *ctx,
           bytestream_t *in)
 {
@@ -174,6 +137,43 @@ END:
     }
 
     TRRET(res);
+}
+
+static int
+delete_entry_cb(const char *path,
+                struct dirent *de,
+                UNUSED void *udata)
+{
+    int res = 0;
+    char *fname;
+
+    /*
+     * XXX Check for modified and third-party files/dirs.
+     */
+    if (de != NULL) {
+
+        if ((fname = path_join(path, de->d_name)) == NULL) {
+            return 1;
+        }
+
+        //TRACE("deleting file: %s", fname);
+
+        if (unlink(fname) != 0) {
+            perror("unlink");
+            res = 1;
+        }
+
+        free(fname);
+
+    } else {
+        //TRACE("deleting dir: %s", path);
+
+        if (rmdir(path) != 0) {
+            perror("rmdir");
+            res = 2;
+        }
+    }
+    return res;
 }
 
 static int
