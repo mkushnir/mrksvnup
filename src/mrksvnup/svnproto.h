@@ -48,9 +48,8 @@ typedef struct _svnproto_state {
 #   define TS_STRING_OUT 0x80
 #   define TS_NUM_IN 0x100
 #   define TS_NUM_OUT 0x200
-#   define TS_IGNORE 0x400
-#   define TS_END 0x800
-#   define TS_OUT (TS_START | TS_TOK_OUT | TS_NUM_OUT | TS_STRING_OUT | TS_IGNORE)
+#   define TS_END 0x400
+#   define TS_OUT (TS_START | TS_TOK_OUT | TS_NUM_OUT | TS_STRING_OUT)
 #   define TS_LIST (TS_LIST_START | TS_LIST_END)
 #   define TS_DATA (TS_TOK_OUT | TS_NUM_OUT | TS_STRING_OUT)
 #   define TSSTR(ts) ( \
@@ -64,7 +63,6 @@ typedef struct _svnproto_state {
         ts == TS_STRING_OUT ? "TS_STRING_OUT" : \
         ts == TS_NUM_IN ?  "TS_NUM_IN" : \
         ts == TS_NUM_OUT ? "TS_NUM_OUT" : \
-        ts == TS_IGNORE ? "TS_IGNORE" : \
         ts == TS_END ? "TS_END" : \
         "<unknown>" \
     )

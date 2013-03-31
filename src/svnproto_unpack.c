@@ -359,7 +359,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                     goto END;
                 }
 
-                if (!(st->tokenizer_state & (TS_LIST_START | TS_IGNORE))) {
+                if (!(st->tokenizer_state == TS_LIST_START)) {
                     /* no match stop */
                     res = SVNPROTO_VUNPACK + 1;
                     st->backtrack = 1;
@@ -374,7 +374,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                     goto END;
                 }
 
-                if (!(st->tokenizer_state & (TS_LIST_END | TS_IGNORE))) {
+                if (!(st->tokenizer_state == TS_LIST_END)) {
                     /* no match stop */
                     res = SVNPROTO_VUNPACK + 2;
                     st->backtrack = 1;
