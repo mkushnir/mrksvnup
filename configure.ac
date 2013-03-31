@@ -6,9 +6,7 @@ then
     CPP="clang -E"
 fi
 
-LD_LIBRARY_PATH=$HOME/lib
-LDFLAGS=-L$HOME/lib
-CFLAGS=-I$HOME/include
+AC_CONFIG_MACRO_DIR([m4])
 
 AC_LANG(C)
 
@@ -23,6 +21,7 @@ AM_INIT_AUTOMAKE
 
 dnl AM_MAINTAINER_MODE
 
+AC_CONFIG_FILES([Makefile src/Makefile src/test/Makefile man/Makefile])
 AC_CONFIG_HEADERS(config.h)
 
 AC_CHECK_HEADERS([syslog.h])
@@ -57,9 +56,9 @@ AC_CHECK_FUNCS([ftruncate])
 AC_CHECK_FUNCS([getcwd])
 AC_CHECK_FUNCS([strrchr])
 
+AC_PRESERVE_HELP_ORDER
 
-AC_CONFIG_FILES([Makefile src/Makefile src/test/Makefile man/Makefile])
 AC_CHECK_LIB(z, compress, [], [AC_MSG_FAILURE(libz.so is required.)]) 
 AC_CHECK_LIB(md, MD5Init, [], [AC_MSG_FAILURE(libmd.so is required.)]) 
-AC_CHECK_LIB(mrkcommon, _fini, [], [AC_MSG_FAILURE(libmrkcommon.so is required. Please find it at git@github.com:mkushnir/mrkcommon.git)]) 
+#AC_CHECK_LIB(mrkcommon, _fini, [], [AC_MSG_FAILURE(libmrkcommon.so is required. Please find it at git@github.com:mkushnir/mrkcommon.git)]) 
 AC_OUTPUT

@@ -9,8 +9,11 @@ COMMENT=	A fast svnup for FreeBSD
 
 #MAN1=		svnup.1
 #MANCOMPRESSED=	yes
+USE_LDCONFIG=	yes
+
+# I assume it will be there
+#LIB_DEPENDS=	mrkcommon:devel/mrkcommon
 
 GNU_CONFIGURE=	yes
-HAS_CONFIGURE=	yes
 
 .include <bsd.port.mk>
