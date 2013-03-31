@@ -56,7 +56,7 @@ than this stage.
 This program was first written as a proof of concept, mostly in order to
 explore the design decision. It can, however, be used in real world tasks.
 It can be built using basic [GNU autotools][4]. in this program I have
-used another my library of common functions (just for my convenience).
+used another [my library of common functions][5] (just for my convenience).
 This can be easily integrated into a single self-contained project. On
 FreeBSD, it can be built as a port, please see the port directory.
 
@@ -74,3 +74,4 @@ TODO
 [2]: http://svn.apache.org/repos/asf/subversion/trunk/notes/svndiff
 [3]: https://metacpan.org/module/Parse::SVNDiff
 [4]: http://en.wikipedia.org/wiki/GNU_build_system 
+[5]: https://github.com/mkushnir/mrkcommon
