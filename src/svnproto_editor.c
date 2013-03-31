@@ -557,7 +557,7 @@ create_file(svndiff_doc_t *doc, svnproto_fileent_t *fe)
                         O_RDWR|O_CREAT|O_TRUNC|O_NOFOLLOW,
                         doc->mod)) < 0) {
         perror("open");
-        TRACE(FRED("Failed to open %s"), doc->lp);
+        TRACE(FRED("Failed to create %s"), doc->lp);
         res = CREATE_FILE + 1;
         goto END;
     }
@@ -866,6 +866,14 @@ change_file_prop(svnc_ctx_t *ctx,
                BDATA(value));
     }
 
+    /*
+     * XXX Check that the file_token matches doc.ft
+     */
+
+    /*
+     * XXX The below logic is quite simplistic. It should eventually be
+     * improved.
+     */
     if (strcmp(BDATA(name), "svn:executable") == 0) {
         if (value == NULL) {
             doc.mod = 0644;
@@ -935,10 +943,16 @@ close_file(svnc_ctx_t *ctx,
 
     assert(doc.fd == -1);
 
-    /* verify regular open-file (aka source view) */
+    /* verify aka source view, if available */
     if ((doc.fd = open(doc.lp, O_RDWR|O_NOFOLLOW)) >= 0) {
 
+        /* We deal with a regular file */
+
         if (doc.base_checksum != NULL) {
+
+            /* 
+             * cmd was open-file
+             */
 
             if (svnproto_editor_verify_checksum(doc.fd,
                     doc.base_checksum) != 0) {
@@ -966,10 +980,11 @@ close_file(svnc_ctx_t *ctx,
         }
     } else {
         /*
-         * was reg/symlink add-file or symlink open-file.
+         * was reg/symlink add-file or symlink open-file?
          *
          * symlink open-files should never have instructions other than
-         * new, so it's safe to pass -1 as fd to svndiff_build_tview().
+         * new (hopefully), so we think we may pass -1 as fd to
+         * svndiff_build_tview().
          */
     }
 
