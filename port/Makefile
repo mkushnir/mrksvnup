@@ -11,7 +11,8 @@ COMMENT=	A fast svnup for FreeBSD
 #MANCOMPRESSED=	yes
 USE_LDCONFIG=	yes
 
-# I assume it will be there
+# I assume it will be there,
+# https://github.com/mkushnir/mrkcommon
 #LIB_DEPENDS=	mrkcommon:devel/mrkcommon
 
 GNU_CONFIGURE=	yes
