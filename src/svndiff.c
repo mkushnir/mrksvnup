@@ -12,7 +12,6 @@
 
 #include "mrksvnup/svnc.h"
 #include "mrksvnup/svnproto.h"
-//#include "mrkcommon/bytestream.h"
 #include "mrksvnup/svndiff.h"
 
 /* based on libsvn_delta/svndiff.c */
@@ -123,6 +122,204 @@ decode_bytes(const char *start, const char *end,
     start += encoded_len;
 
     return start;
+}
+
+static int
+init_insn(svndiff_insn_t *insn)
+{
+    insn->code = -1;
+    insn->offset = -1;
+    insn->len = -1;
+    return 0;
+}
+
+static int
+dump_insn(svndiff_insn_t *insn, UNUSED void *udata)
+{
+    TRACE("from %s %ld/%ld",
+          (insn->code == SVN_TXDELTA_SOURCE ? "source" :
+           insn->code == SVN_TXDELTA_TARGET ? "target" :
+           insn->code == SVN_TXDELTA_NEW ? "new" :
+           "<unknown>"), insn->offset, insn->len);
+    return 0;
+}
+
+
+static void
+init_insn_array(array_t *ar)
+{
+    if (array_init(ar, sizeof(svndiff_insn_t), 0,
+                   (array_initializer_t)init_insn,
+                   NULL) != 0) {
+        FAIL("array_init");
+    }
+}
+
+static void
+fini_insn_array(array_t *ar)
+{
+    if (array_fini(ar) != 0) {
+        FAIL("array_fini");
+    }
+}
+
+static void
+dump_insn_array(array_t *ar)
+{
+    array_traverse(ar, (array_traverser_t)dump_insn, NULL);
+}
+
+static int
+init_wnd(svndiff_wnd_t *wnd)
+{
+    wnd->sview_offset = 0;
+    wnd->sview_len = 0;
+    wnd->tview_len = 0;
+    wnd->inslen = 0;
+    wnd->newlen = 0;
+    wnd->orig_inslen = 0;
+    init_insn_array(&wnd->insns);
+    wnd->bytes = NULL;
+    wnd->tview = NULL;
+    return 0;
+}
+
+static int
+fini_wnd(svndiff_wnd_t *wnd)
+{
+    wnd->sview_offset = 0;
+    wnd->sview_len = 0;
+    wnd->tview_len = 0;
+    wnd->inslen = 0;
+    wnd->newlen = 0;
+    wnd->orig_inslen = 0;
+    fini_insn_array(&wnd->insns);
+    if (wnd->bytes != NULL) {
+        free(wnd->bytes);
+        wnd->bytes = NULL;
+    }
+    if (wnd->tview != NULL) {
+        free(wnd->tview);
+        wnd->tview = NULL;
+    }
+    return 0;
+}
+
+static int
+dump_wnd(svndiff_wnd_t *wnd, UNUSED void *udata)
+{
+    TRACE("wnd sview_offset=%ld sview_len=%ld "
+          "tview_len=%ld inslen=%ld "
+          "orig_inslen=%ld newlen=%ld ",
+          wnd->sview_offset,
+          wnd->sview_len,
+          wnd->tview_len,
+          wnd->inslen,
+          wnd->orig_inslen,
+          wnd->newlen
+         );
+    dump_insn_array(&wnd->insns);
+    return 0;
+}
+
+static void
+init_wnd_array(array_t *ar)
+{
+    if (array_init(ar, sizeof(svndiff_wnd_t), 0,
+                   (array_initializer_t)init_wnd,
+                   (array_finalizer_t)fini_wnd) != 0) {
+        FAIL("array_init");
+    }
+}
+
+static void
+fini_wnd_array(array_t *ar)
+{
+    if (array_fini(ar) != 0) {
+        FAIL("array_fini");
+    }
+}
+
+static void
+dump_wnd_array(array_t *ar)
+{
+    array_traverse(ar, (array_traverser_t)dump_wnd, NULL);
+}
+
+int
+svndiff_doc_init(svndiff_doc_t *doc)
+{
+    /*
+     * algorithm check: assume svndiff_doc_init() and svndiff_doc_fini()
+     * are balanced.
+     */
+    doc->version = -1;
+    doc->parse_state = SD_STATE_VERSION;
+    doc->base_checksum = NULL;
+    doc->rp = NULL;
+    doc->lp = NULL;
+    doc->rev = -1;
+    doc->ft = NULL;
+    doc->fd = -1;
+    doc->mod = 0644;
+    init_wnd_array(&doc->wnd);
+    doc->flags = 0;
+    return 0;
+}
+
+static void
+clear_current_file(svndiff_doc_t *doc)
+{
+    if (doc->rp != NULL) {
+        free(doc->rp);
+        doc->rp = NULL;
+    }
+    if (doc->lp != NULL) {
+        free(doc->lp);
+        doc->lp = NULL;
+    }
+    doc->rev = -1;
+    if (doc->ft != NULL) {
+        free(doc->ft);
+        doc->ft = NULL;
+    }
+    if (doc->fd != -1) {
+        close(doc->fd);
+        doc->fd = -1;
+    }
+}
+
+int
+svndiff_doc_fini(svndiff_doc_t *doc)
+{
+    doc->version = -1;
+    doc->parse_state = SD_STATE_VERSION;
+    if (doc->base_checksum != NULL) {
+        free(doc->base_checksum);
+        doc->base_checksum = NULL;
+    }
+    clear_current_file(doc);
+    doc->mod = 0644;
+    fini_wnd_array(&doc->wnd);
+    doc->flags = 0;
+    return 0;
+}
+
+int
+svndiff_doc_dump(svndiff_doc_t *doc)
+{
+    TRACE("doc version=%d "
+          "base_checksum=%s rp=%s rev=%ld lp=%s fd=%d mod=%04o",
+          doc->version,
+          BDATA(doc->base_checksum),
+          BDATA(doc->rp),
+          doc->rev,
+          doc->lp,
+          doc->fd,
+          doc->mod
+         );
+    dump_wnd_array(&doc->wnd);
+    return 0;
 }
 
 int
@@ -261,129 +458,6 @@ svndiff_parse_doc(const char *start,
 
 }
 
-static int
-init_insn(svndiff_insn_t *insn)
-{
-    insn->code = -1;
-    insn->offset = -1;
-    insn->len = -1;
-    return 0;
-}
-
-static int
-dump_insn(svndiff_insn_t *insn, UNUSED void *udata)
-{
-    TRACE("from %s %ld/%ld",
-          (insn->code == SVN_TXDELTA_SOURCE ? "source" :
-           insn->code == SVN_TXDELTA_TARGET ? "target" :
-           insn->code == SVN_TXDELTA_NEW ? "new" :
-           "<unknown>"), insn->offset, insn->len);
-    return 0;
-}
-
-
-static void
-init_insn_array(array_t *ar)
-{
-    if (array_init(ar, sizeof(svndiff_insn_t), 0,
-                   (array_initializer_t)init_insn,
-                   NULL) != 0) {
-        FAIL("array_init");
-    }
-}
-
-static void
-fini_insn_array(array_t *ar)
-{
-    if (array_fini(ar) != 0) {
-        FAIL("array_fini");
-    }
-}
-
-static void
-dump_insn_array(array_t *ar)
-{
-    array_traverse(ar, (array_traverser_t)dump_insn, NULL);
-}
-
-static int
-init_wnd(svndiff_wnd_t *wnd)
-{
-    wnd->sview_offset = 0;
-    wnd->sview_len = 0;
-    wnd->tview_len = 0;
-    wnd->inslen = 0;
-    wnd->newlen = 0;
-    wnd->orig_inslen = 0;
-    init_insn_array(&wnd->insns);
-    wnd->bytes = NULL;
-    wnd->tview = NULL;
-    return 0;
-}
-
-static int
-fini_wnd(svndiff_wnd_t *wnd)
-{
-    wnd->sview_offset = 0;
-    wnd->sview_len = 0;
-    wnd->tview_len = 0;
-    wnd->inslen = 0;
-    wnd->newlen = 0;
-    wnd->orig_inslen = 0;
-    fini_insn_array(&wnd->insns);
-    if (wnd->bytes != NULL) {
-        free(wnd->bytes);
-        wnd->bytes = NULL;
-    }
-    if (wnd->tview != NULL) {
-        free(wnd->tview);
-        wnd->tview = NULL;
-    }
-    return 0;
-}
-
-static int
-dump_wnd(svndiff_wnd_t *wnd, UNUSED void *udata)
-{
-    TRACE("wnd sview_offset=%ld sview_len=%ld "
-          "tview_len=%ld inslen=%ld "
-          "orig_inslen=%ld newlen=%ld ",
-          wnd->sview_offset,
-          wnd->sview_len,
-          wnd->tview_len,
-          wnd->inslen,
-          wnd->orig_inslen,
-          wnd->newlen
-         );
-    dump_insn_array(&wnd->insns);
-    return 0;
-}
-
-static void
-init_wnd_array(array_t *ar)
-{
-    if (array_init(ar, sizeof(svndiff_wnd_t), 0,
-                   (array_initializer_t)init_wnd,
-                   (array_finalizer_t)fini_wnd) != 0) {
-        FAIL("array_init");
-    }
-}
-
-static void
-fini_wnd_array(array_t *ar)
-{
-    if (array_fini(ar) != 0) {
-        FAIL("array_fini");
-    }
-}
-
-static void
-dump_wnd_array(array_t *ar)
-{
-    array_traverse(ar, (array_traverser_t)dump_wnd, NULL);
-}
-
-
 int
 svndiff_build_tview(svndiff_wnd_t *wnd, svndiff_doc_t *doc)
 {
@@ -496,81 +570,5 @@ svndiff_build_tview(svndiff_wnd_t *wnd, svndiff_doc_t *doc)
 
 END:
     TRRET(res);
-}
-
-int
-svndiff_doc_init(svndiff_doc_t *doc)
-{
-    /*
-     * algorithm check: assume svndiff_doc_init() and svndiff_doc_fini()
-     * are balanced.
-     */
-    doc->version = -1;
-    doc->parse_state = SD_STATE_VERSION;
-    doc->base_checksum = NULL;
-    doc->rp = NULL;
-    doc->lp = NULL;
-    doc->rev = -1;
-    doc->ft = NULL;
-    doc->fd = -1;
-    doc->mod = 0644;
-    init_wnd_array(&doc->wnd);
-    doc->flags = 0;
-    return 0;
-}
-
-static void
-clear_current_file(svndiff_doc_t *doc)
-{
-    if (doc->rp != NULL) {
-        free(doc->rp);
-        doc->rp = NULL;
-    }
-    if (doc->lp != NULL) {
-        free(doc->lp);
-        doc->lp = NULL;
-    }
-    doc->rev = -1;
-    if (doc->ft != NULL) {
-        free(doc->ft);
-        doc->ft = NULL;
-    }
-    if (doc->fd != -1) {
-        close(doc->fd);
-        doc->fd = -1;
-    }
-}
-
-int
-svndiff_doc_fini(svndiff_doc_t *doc)
-{
-    doc->version = -1;
-    doc->parse_state = SD_STATE_VERSION;
-    if (doc->base_checksum != NULL) {
-        free(doc->base_checksum);
-        doc->base_checksum = NULL;
-    }
-    clear_current_file(doc);
-    doc->mod = 0644;
-    fini_wnd_array(&doc->wnd);
-    doc->flags = 0;
-    return 0;
-}
-
-int
-svndiff_doc_dump(svndiff_doc_t *doc)
-{
-    TRACE("doc version=%d "
-          "base_checksum=%s rp=%s rev=%ld lp=%s fd=%d mod=%04o",
-          doc->version,
-          BDATA(doc->base_checksum),
-          BDATA(doc->rp),
-          doc->rev,
-          doc->lp,
-          doc->fd,
-          doc->mod
-         );
-    dump_wnd_array(&doc->wnd);
-    return 0;
 }
 
