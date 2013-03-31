@@ -18,18 +18,21 @@ typedef struct _svnrange {
 } svnrange_t;
 
 /*
- * n    long
- * n?   long
- * n*   array_t of long
- * s    char *
- * s?   char *
- * s*   array_t of svnproto_bytes_t *
- * w    char *
- * w?   char *
- * w*   array_t of char *
- * r    cb, udata
- * r?   cb, udata
- * r*   cb, udata
+ * n    read long
+ * n?   read long
+ * n*   read array_t of long
+ * w    read char *
+ * w?   read char *
+ * w*   read array_t of char *
+ * s    read svnproto_bytes_t *
+ * s?   read svnproto_bytes_t *
+ * s*   read array_t of svnproto_bytes_t *
+ * S    cb, udata (read svnproto_bytes_t *)
+ * S?   cb, udata (read svnproto_bytes_t *)
+ * S*   cb, udata (read svnproto_bytes_t *)
+ * r    cb, udata (no read)
+ * r?   cb, udata (no read)
+ * r*   cb, udata (no read)
  */
 struct _svnproto_state;
 
