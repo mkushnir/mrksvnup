@@ -803,6 +803,21 @@ END_S_STAR:
 
                 /*
                  * Take care of used up memory.
+                 *
+                 * Callbacks should never define specs that are not
+                 * wrapped with parentheses.
+                 *
+                 * Examples: for the "r*" spec, the following sub-spec is
+                 * invalid:
+                 *
+                 *      "nnn"
+                 *
+                 *  A valid one may be:
+                 *
+                 *      "(nnn)"
+                 *
+                 *  The SVN RA protocol specification seems to promise not
+                 *  to introduce schemes that would put us in trouble.
                  */
                 recycled = bytestream_recycle(in, st->r.start);
                 st->r.end -= recycled;
