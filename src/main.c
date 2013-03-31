@@ -147,23 +147,20 @@ run(const char *url,
         errx(1, "svnc_connect");
     }
 
+    if (target_rev <= 0) {
+        if (svnproto_get_latest_rev(ctx, &target_rev) != 0) {
+            errx(1, "svnproto_get_latest_rev");
+        }
+    }
+
     if (source_rev <= 0) {
         /* for check out */
-        if (target_rev <= 0) {
-            if (svnproto_get_latest_rev(ctx, &target_rev) != 0) {
-                errx(1, "svnproto_get_latest_rev 1");
-            }
-        }
         source_rev = target_rev;
 
         update_params.set_path_flags |= SETPFLAG_START_EMPTY;
+
     } else {
         /* for update */
-        if (target_rev <= 0) {
-            if (svnproto_get_latest_rev(ctx, &target_rev) != 0) {
-                errx(1, "svnproto_get_latest_rev 2");
-            }
-        }
     }
 
     if (svnproto_check_path(ctx, update_params.path,
