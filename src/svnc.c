@@ -163,6 +163,7 @@ svnc_new(const char *url,
     }
 
     if (svn_url_parse(ctx->url, &ctx->host, &ctx->port, &ctx->path)) {
+        LTRACE(1, "URL could not be accepted: %s", ctx->url);
         TRRETNULL(SVNC_NEW + 4);
     }
 
