@@ -23,6 +23,11 @@
 /* bytestream state shared between svnproto_unpack() calls */
 #define SP_UNPACK_SKIP_READ 0x01
 
+typedef struct _svnrange {
+    off_t start;
+    off_t end;
+} svnrange_t;
+
 typedef struct _svnc_ctx {
     char *url;
     char *host;

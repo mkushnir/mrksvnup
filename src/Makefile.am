@@ -15,12 +15,14 @@ nobase_include_HEADERS = mrksvnup/svnc.h \
 			 mrksvnup/svndiff.h \
 			 mrksvnup/svnproto.h \
 			 mrksvnup/svnproto_bytes.h \
+			 mrksvnup/http.h \
 			 mrksvnup/version.h
 
 libmrksvnup_la_SOURCES = svnc.c \
 			 svnc_util.c \
 			 svncdir.c \
 			 svndiff.c \
+			 http.c \
 			 svnproto.c \
 			 svnproto_bytes.c \
 			 svnproto_unpack.c \

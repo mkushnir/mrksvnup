@@ -14,6 +14,7 @@
 #include "mrkcommon/traversedir.h"
 
 #include "mrksvnup/svnc.h"
+#include "mrksvnup/http.h"
 #include "mrksvnup/svncdir.h"
 #include "mrksvnup/svnproto.h"
 #include "mrksvnup/svnproto_bytes.h"
@@ -25,6 +26,15 @@ mystrcmp(const char *a, const char *b)
         return ((uintptr_t)a ^ (uintptr_t)b);
     }
     return strcmp(a, b);
+}
+
+static int
+mymemcmp(const char *a, const char *b, size_t sz)
+{
+    if (a == NULL || b == NULL) {
+        return ((uintptr_t)a ^ (uintptr_t)b);
+    }
+    return memcmp(a, b, sz);
 }
 
 UNUSED static void
@@ -76,6 +86,96 @@ test_parse_url(void)
 
         if (path != NULL) {
             free(path);
+        }
+    }
+}
+
+UNUSED static void
+test_utlencode(void)
+{
+    char *encoded;
+
+    struct {
+        long rnd;
+        const char *url;
+        size_t sz;
+        const char*expected;
+    } data[] = {
+        {0, "qwe", 3, "qwe"},
+        {0, "This ", 5, "This%20"},
+        {0, "!*'();:@&=+$,/?#[]", 18,
+            "%21%2A%27%28%29%3B%3A%40%26%3D%2B%24%2C%2F%3F%23%5B%5D"},
+        {0, "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f",
+            16,
+            "%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F"},
+        {0, "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f",
+            16,
+            "%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F"},
+    };
+    UNITTEST_PROLOG_RAND;
+
+    FOREACHDATA {
+        TRACE("Trying");
+        D16(CDATA.url, CDATA.sz);
+        encoded = http_urlencode_reserved(CDATA.url, CDATA.sz);
+        TRACE("Encoded: %s", encoded);
+        assert(mystrcmp(CDATA.expected, encoded) == 0);
+
+        if (encoded != NULL) {
+            free(encoded);
+        }
+    }
+}
+
+UNUSED static void
+test_utldecode(void)
+{
+    struct {
+        long rnd;
+        const char *encoded;
+        const char*expected;
+    } data[] = {
+        {0, "qwe", "qwe"},
+        {0, "This%20", "This "},
+        {0,
+            "%21%2A%27%28%29%3B%3A%40%26%3D%2B%24%2C%2F%3F%23%5B%5D",
+            "!*'();:@&=+$,/?#[]",
+        },
+        {0,
+            "%21%2a%27%28%29%3b%3a%40%26%3d%2b%24%2c%2f%3f%23%5b%5d",
+            "!*'();:@&=+$,/?#[]",
+        },
+        {0,
+            "%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F",
+            "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f",
+        },
+        {0,
+            "%00%01%02%03%04%05%06%07%08%09%0a%0b%0c%0d%0e%0f",
+            "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f",
+        },
+        {0,
+            "%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F",
+            "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f",
+        },
+        {0,
+            "%10%11%12%13%14%15%16%17%18%19%1a%1b%1c%1d%1e%1f",
+            "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f",
+        },
+    };
+    UNITTEST_PROLOG_RAND;
+
+    FOREACHDATA {
+        char *start, *end;
+
+        TRACE("Trying %s", CDATA.encoded);
+        start = strdup(CDATA.encoded);
+        end = http_urldecode(start);
+        TRACE("Decoded:");
+        D16(start, end - start);
+        assert(mymemcmp(start, CDATA.expected, end - start) == 0);
+
+        if (start != NULL) {
+            free(start);
         }
     }
 }
@@ -802,15 +902,17 @@ test_get_file(void)
 int
 main(void)
 {
-    test_parse_url();
-    test_unpack();
+    //test_parse_url();
+    //test_utlencode();
+    test_utldecode();
+    //test_unpack();
     //test_unpack_cb();
-    test_pack();
-    test_packresponse();
+    //test_pack();
+    //test_packresponse();
     //test_cache();
 
     //test_conn2();
-    test_get_file();
+    //test_get_file();
 
     /* broken, need to fix test data */
     //test_simple();

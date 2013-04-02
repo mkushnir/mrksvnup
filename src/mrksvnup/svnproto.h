@@ -12,11 +12,6 @@
  * Parser.
  */
 
-typedef struct _svnrange {
-    off_t start;
-    off_t end;
-} svnrange_t;
-
 /*
  * n    read long
  * n?   read long
@@ -34,9 +29,6 @@ typedef struct _svnrange {
  * r?   cb, udata (no read)
  * r*   cb, udata (no read)
  */
-struct _svnproto_state;
-
-typedef int (*svnproto_cb_t) (svnc_ctx_t *, bytestream_t *, struct _svnproto_state *, void *);
 
 typedef struct _svnproto_state {
     svnrange_t r;
@@ -107,6 +99,11 @@ typedef struct _svnproto_fileent {
     array_t props;
     array_t contents;
 } svnproto_fileent_t;
+
+typedef int (*svnproto_cb_t) (svnc_ctx_t *,
+                              bytestream_t *,
+                              svnproto_state_t *,
+                              void *);
 
 /*
  * Parser
