@@ -10,38 +10,6 @@
 #include "mrksvnup/svnc.h"
 #include "mrksvnup/svnproto.h"
 
-static const char *kinds[] = {
-    "none",
-    "file",
-    "dir",
-    "unknown",
-};
-
-int
-svnproto_kind2int(const char *kind)
-{
-    unsigned i;
-
-    if (kind != NULL) {
-        for (i = 0; i < countof(kinds); ++i) {
-            if (strcmp(kind, kinds[i]) == 0) {
-                return i;
-            }
-        }
-    }
-
-    return SVNP_KIND_UNKNOWN;
-}
-
-const char *
-svnproto_kind2str(int kind)
-{
-    if (kind < 0 || kind > SVNP_KIND_UNKNOWN) {
-        kind = SVNP_KIND_UNKNOWN;
-    }
-    return kinds[kind];
-}
-
 /*
  * command-response:   ( success params:list )
  *                   | ( failure ( err:error ... ) )
@@ -149,7 +117,7 @@ TESTFAILURE:
 static int
 mycaps(UNUSED svnc_ctx_t *ctx,
        bytestream_t *out,
-       UNUSED svnproto_state_t *v,
+       UNUSED void *v,
        UNUSED void *data)
 {
     unsigned i;
@@ -174,7 +142,7 @@ mycaps(UNUSED svnc_ctx_t *ctx,
 static int
 greeting_response(svnc_ctx_t *ctx,
                   bytestream_t *out,
-                  UNUSED svnproto_state_t *v,
+                  UNUSED void *v,
                   UNUSED void *udata)
 {
     if (pack_number(out, 2) != 0) {
@@ -209,9 +177,9 @@ svnproto_setup(svnc_ctx_t *ctx)
     array_t server_mechs, server_caps, repo_caps;
     char *uuid = NULL, *repo_url = NULL;
 
-    svnproto_init_string_array(&server_mechs);
-    svnproto_init_string_array(&server_caps);
-    svnproto_init_string_array(&repo_caps);
+    init_string_array(&server_mechs);
+    init_string_array(&server_caps);
+    init_string_array(&repo_caps);
 
     /* greeting request */
     if (svnproto_command_response(ctx, "(nn(w*)(w*))",

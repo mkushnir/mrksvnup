@@ -4,6 +4,7 @@
 //#define TRRET_DEBUG
 #include "mrkcommon/dumpm.h"
 
+#include "mrksvnup/svnc.h"
 #include "mrksvnup/svnproto.h"
 #include "mrkcommon/bytestream.h"
 
@@ -25,7 +26,7 @@
 static int
 pack3(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       UNUSED void *udata)
 {
     struct {
@@ -43,7 +44,7 @@ pack3(UNUSED svnc_ctx_t *ctx,
 static int
 pack2(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       UNUSED void *udata)
 {
     struct {
@@ -82,7 +83,7 @@ pack2(UNUSED svnc_ctx_t *ctx,
 static int
 pack1(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       UNUSED void *udata)
 {
     if (pack_word(out, strlen("get-file"), "get-file") != 0) {
@@ -94,73 +95,6 @@ pack1(UNUSED svnc_ctx_t *ctx,
     }
 
     return 0;
-}
-
-static int
-prop_init(svnproto_prop_t *p)
-{
-    p->name = NULL;
-    p->value = NULL;
-    return 0;
-}
-
-static int
-prop_fini(svnproto_prop_t *p)
-{
-    if (p->name != NULL) {
-        free(p->name);
-        p->name = NULL;
-    }
-    if (p->value != NULL) {
-        free(p->value);
-        p->value = NULL;
-    }
-    return 0;
-}
-
-static int
-prop_dump(svnproto_prop_t *p, UNUSED void *udata)
-{
-    TRACE("prop: %s=%s", BDATA(p->name), BDATA(p->value));
-    return 0;
-}
-
-
-int
-svnproto_fileent_init(svnproto_fileent_t *e)
-{
-    e->checksum = NULL;
-    e->rev = -1;
-    if (array_init(&e->props, sizeof(svnproto_prop_t), 0,
-                   (array_initializer_t)prop_init,
-                   (array_finalizer_t)prop_fini) != 0) {
-        FAIL("array_init");
-    }
-    svnproto_init_string_array(&e->contents);
-    return 0;
-}
-
-int
-svnproto_fileent_fini(svnproto_fileent_t *e)
-{
-    if (e->checksum != NULL) {
-        free(e->checksum);
-        e->checksum = NULL;
-    }
-    if (array_fini(&e->props) != 0) {
-        FAIL("array_fini");
-    }
-    array_fini(&e->contents);
-    return 0;
-}
-
-void
-svnproto_fileent_dump(svnproto_fileent_t *e)
-{
-    TRACE("checksum=%s rev=%ld", BDATA(e->checksum), e->rev);
-    array_traverse(&e->props,
-                   (array_traverser_t)prop_dump, NULL);
-    svnproto_dump_string_array(&e->contents);
 }
 
 static int
@@ -221,8 +155,8 @@ unpack1(svnc_ctx_t *ctx,
 {
     int res;
     svnproto_bytes_t *name = NULL, *value = NULL;
-    svnproto_fileent_t *e = udata;
-    svnproto_prop_t *p;
+    svnc_fileent_t *e = udata;
+    svnc_prop_t *p;
 
 
     res = svnproto_unpack(ctx, in, "(ss)", &name, &value);
@@ -242,7 +176,7 @@ svnproto_get_file(svnc_ctx_t *ctx,
                   const char *path,
                   long rev,
                   int flags,
-                  svnproto_fileent_t *e)
+                  svnc_fileent_t *e)
 {
     int res = 0;
     struct {

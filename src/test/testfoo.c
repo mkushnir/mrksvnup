@@ -40,6 +40,7 @@ mymemcmp(const char *a, const char *b, size_t sz)
 UNUSED static void
 test_parse_url(void)
 {
+    int scheme;
     char *host;
     int port;
     char *path;
@@ -49,33 +50,36 @@ test_parse_url(void)
         long rnd;
         const char *url;
         int expected;
+        int scheme;
         const char *host;
         int port;
         const char *path;
     } data[] = {
-        {0, "svn://test.com/1/2/3", 0, "test.com", SVN_DEFAULT_PORT, "/1/2/3"},
-        {0, "svn://test.com/", 0, "test.com", SVN_DEFAULT_PORT, "/"},
-        {0, "svn://test.com", SVN_URL_PARSE + 2, NULL, 0, NULL},
-        {0, "svn://test.com:123/1/2/3", 0, "test.com", 123, "/1/2/3"},
-        {0, "svn://test.com:123/", 0, "test.com", 123, "/"},
-        {0, "svn://test.com:123", SVN_URL_PARSE + 2, NULL, 0, NULL},
-        {0, "svn://test.com:qwe/", SVN_URL_PARSE + 4, "test.com", 0, NULL},
-        {0, "svn://test.com:qwe", SVN_URL_PARSE + 2, NULL, 0, NULL},
-        {0, "test.com:123/1/2/3", SVN_URL_PARSE + 1, NULL, 0, NULL},
+        {0, "svn://test.com/1/2/3", 0, SVNC_SCHEME_SVN, "test.com", SVN_DEFAULT_PORT, "/1/2/3"},
+        {0, "svn://test.com/", 0, SVNC_SCHEME_SVN, "test.com", SVN_DEFAULT_PORT, "/"},
+        {0, "svn://test.com", SVNC_SCHEME_SVN, SVN_URL_PARSE + 2, NULL, 0, NULL},
+        {0, "svn://test.com:123/1/2/3", 0, SVNC_SCHEME_SVN, "test.com", 123, "/1/2/3"},
+        {0, "svn://test.com:123/", 0, SVNC_SCHEME_SVN, "test.com", 123, "/"},
+        {0, "svn://test.com:123", SVN_URL_PARSE + 2, SVNC_SCHEME_SVN, NULL, 0, NULL},
+        {0, "svn://test.com:qwe/", SVN_URL_PARSE + 4, SVNC_SCHEME_SVN, "test.com", 0, NULL},
+        {0, "svn://test.com:qwe", SVN_URL_PARSE + 2, SVNC_SCHEME_SVN, NULL, 0, NULL},
+        {0, "test.com:123/1/2/3", SVN_URL_PARSE + 1, SVNC_SCHEME_SVN, NULL, 0, NULL},
     };
     UNITTEST_PROLOG_RAND;
 
     FOREACHDATA {
+        scheme = 0;
         host = NULL;
         port = 0;
         path = NULL;
 
         //TRACE("Trying %s", CDATA.url);
 
-        res = svn_url_parse(CDATA.url, &host, &port, &path);
+        res = svn_url_parse(CDATA.url, &scheme, &host, &port, &path);
 
         //TRACE("host=%s port=%d path=%s", host, port, path);
         assert(res == CDATA.expected &&
+               CDATA.scheme == scheme &&
                mystrcmp(CDATA.host, host) == 0 &&
                CDATA.port == port &&
                mystrcmp(CDATA.path, path) == 0);
@@ -408,10 +412,10 @@ my_unpack_cb(svnc_ctx_t *ctx, UNUSED svnproto_state_t *st, UNUSED void *udata)
     long n1 = 0;
     array_t ar;
 
-    svnproto_init_string_array(&ar);
+    init_string_array(&ar);
     res = svnproto_unpack(ctx, &ctx->in, "(nw*)", &n1, &ar);
     TRACE("n1=%ld", n1);
-    svnproto_dump_string_array(&ar);
+    dump_string_array(&ar);
     array_fini(&ar);
 
     if (res != 0) {
@@ -437,7 +441,7 @@ test_unpack_cb(void)
         assert(0);
     }
 
-    svnproto_init_string_array(&ar);
+    init_string_array(&ar);
     if (svnproto_unpack(ctx, &ctx->in,
             "(n*)(n*)(n*)(n*)(n*)(n*)(n*)(n*)(n*)(n*)(w*s)((n?)r*)w*",
             NULL,
@@ -457,7 +461,7 @@ test_unpack_cb(void)
         assert(0);
     }
 
-    svnproto_dump_string_array(&ar);
+    dump_string_array(&ar);
     array_fini(&ar);
 
     svnc_close(ctx);
@@ -513,7 +517,7 @@ test_pack(void)
 static int
 my_caps(UNUSED svnc_ctx_t *ctx,
         bytestream_t *out,
-        UNUSED svnproto_state_t *st,
+        UNUSED void *st,
         UNUSED void *udata)
 {
     unsigned i;
@@ -539,7 +543,7 @@ my_caps(UNUSED svnc_ctx_t *ctx,
 static int
 my_response(UNUSED svnc_ctx_t *ctx,
             bytestream_t *out,
-            UNUSED svnproto_state_t *st,
+            UNUSED void *st,
             UNUSED void *udata)
 {
     if (pack_number(out, 2) != 0) {
@@ -622,8 +626,8 @@ test_simple(void)
     int kind = -1;
     array_t dirents;
     array_iter_t it;
-    svnproto_dirent_t *de;
-    svnproto_fileent_t fe;
+    svnc_dirent_t *de;
+    svnc_fileent_t fe;
 
     if ((ctx =
             svnc_new("svn://localhsot/mysvn", "qwe", 0, 0)) == NULL) {
@@ -639,17 +643,19 @@ test_simple(void)
         assert(0);
     }
 
-    if (svnproto_get_latest_rev(ctx, &rev) != 0) {
+    assert(ctx->get_latest_rev !=  NULL);
+    if (ctx->get_latest_rev(ctx, &rev) != 0) {
         assert(0);
     }
 
     TRACE("rev=%ld", rev);
 
-    if (svnproto_check_path(ctx, "", rev, &kind) != 0) {
+    assert(ctx->check_path != NULL);
+    if (ctx->check_path(ctx, "", rev, &kind) != 0) {
         assert(0);
     }
 
-    TRACE("kind=%s", svnproto_kind2str(kind));
+    TRACE("kind=%s", svnc_kind2str(kind));
 
     svnproto_init_dirent_array(&dirents);
 
@@ -663,14 +669,15 @@ test_simple(void)
         assert(0);
     }
 
-    svnproto_fileent_init(&fe);
-    if (svnproto_get_file(ctx, de->name->data, de->rev,
+    svnc_fileent_init(&fe);
+    assert(ctx->get_file != NULL);
+    if (ctx->get_file(ctx, de->name->data, de->rev,
                           GETFLAG_WANT_PROPS | GETFLAG_WANT_CONTENTS,
                           &fe) != 0) {
         assert(0);
     }
-    svnproto_fileent_dump(&fe);
-    svnproto_fileent_fini(&fe);
+    svnc_fileent_dump(&fe);
+    svnc_fileent_fini(&fe);
 
     array_fini(&dirents);
 
@@ -682,9 +689,9 @@ test_simple(void)
 static int
 walk_cb(svnc_ctx_t *ctx,
         UNUSED const char *dir,
-        UNUSED svnproto_dirent_t *de,
+        UNUSED svnc_dirent_t *de,
         const char *path,
-        svnproto_fileent_t *fe,
+        svnc_fileent_t *fe,
         void *udata)
 {
     struct stat sb;
@@ -703,7 +710,7 @@ walk_cb(svnc_ctx_t *ctx,
 
         if (lstat(localpath, &sb) != 0) {
             int fd;
-            svnproto_fileent_t ffe;
+            svnc_fileent_t ffe;
             svnproto_bytes_t **chunk;
             array_iter_t it;
 
@@ -713,13 +720,14 @@ walk_cb(svnc_ctx_t *ctx,
             }
 
             /* get-file */
-            svnproto_fileent_init(&ffe);
+            svnc_fileent_init(&ffe);
 
-            if (svnproto_get_file(ctx, path, fe->rev,
+            assert(ctx->get_file != NULL);
+            if (ctx->get_file(ctx, path, fe->rev,
                                   GETFLAG_WANT_CONTENTS, &ffe) != 0) {
 
                 TRACE(FRED("Failed to get a file"));
-                svnproto_fileent_fini(&ffe);
+                svnc_fileent_fini(&ffe);
                 return 1;
             }
 
@@ -729,11 +737,11 @@ walk_cb(svnc_ctx_t *ctx,
                  chunk = array_next(&ffe.contents, &it)) {
                 if (write(fd, (*chunk)->data, (*chunk)->sz) < 0) {
                     perror("write");
-                    svnproto_fileent_fini(&ffe);
+                    svnc_fileent_fini(&ffe);
                     return 1;
                 }
             }
-            svnproto_fileent_fini(&ffe);
+            svnc_fileent_fini(&ffe);
 
         } else {
             if (!S_ISREG(sb.st_mode)) {
@@ -875,7 +883,7 @@ UNUSED static void
 test_get_file(void)
 {
     svnc_ctx_t *ctx;
-    svnproto_fileent_t fe;
+    svnc_fileent_t fe;
 
     if ((ctx =
             svnc_new("svn://localhost/mysvn", "qwe", 0, 0)) == NULL) {
@@ -886,12 +894,93 @@ test_get_file(void)
         assert(0);
     }
 
-    svnproto_fileent_init(&fe);
-    svnproto_get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
-    svnproto_get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
-    svnproto_get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
-    svnproto_get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
-    svnproto_fileent_fini(&fe);
+    svnc_fileent_init(&fe);
+    assert(ctx->get_file != NULL);
+    ctx->get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
+    ctx->get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
+    ctx->get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
+    ctx->get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
+    svnc_fileent_fini(&fe);
+
+    svnc_close(ctx);
+    svnc_destroy(ctx);
+    free(ctx);
+
+}
+
+UNUSED static void
+test_http_simple(void)
+{
+    int res = 0;
+
+    svnc_ctx_t *ctx;
+    if ((ctx =
+            svnc_new("http://localhost/mysvn", "qwe", 0, 0)) == NULL) {
+        assert(0);
+    }
+    if (svnc_debug_open(ctx, "testhttpsimple") != 0) {
+        assert(0);
+    }
+
+    if (http_start_request(&ctx->out, "GET", "/") != 0) {
+        assert(0);
+    }
+
+    if (http_add_header_field(&ctx->out, "Host", "localhost") != 0) {
+        assert(0);
+    }
+
+    if (http_end_of_header(&ctx->out) != 0) {
+        assert(0);
+    }
+
+    if (http_add_body(&ctx->out, "This is the test",
+                      strlen("This is the test")) != 0) {
+        assert(0);
+    }
+
+    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+        assert(0);
+    }
+
+    bytestream_rewind(&ctx->out);
+
+    res = http_parse_response(ctx->fd, &ctx->in, NULL, NULL, NULL);
+    TRACE("res=%s", diag_str(res));
+
+
+}
+
+UNUSED static void
+test_conn3(void)
+{
+    svnc_ctx_t *ctx;
+    long rev = 0;
+    int kind = -1;
+
+    if ((ctx =
+            svnc_new("http://svn.freebsd.org/base/user/des/svnsup/bin/apply",
+                     "qwe", 0, 0)) == NULL) {
+        assert(0);
+    }
+
+    if (svnc_connect(ctx) != 0) {
+        assert(0);
+    }
+
+    assert(ctx->get_latest_rev != NULL);
+    if (ctx->get_latest_rev(ctx, &rev) != 0) {
+        assert(0);
+    }
+
+    TRACE("rev=%ld", rev);
+
+    assert(ctx->check_path != NULL);
+    if (ctx->check_path(ctx, "", rev, &kind) != 0) {
+        assert(0);
+    }
+
+    TRACE("kind=%s", svnc_kind2str(kind));
 
     svnc_close(ctx);
     svnc_destroy(ctx);
@@ -904,14 +993,17 @@ main(void)
 {
     //test_parse_url();
     //test_utlencode();
-    test_utldecode();
+    //test_utldecode();
     //test_unpack();
     //test_unpack_cb();
     //test_pack();
     //test_packresponse();
     //test_cache();
+    //
+    //test_http_simple();
 
     //test_conn2();
+    test_conn3();
     //test_get_file();
 
     /* broken, need to fix test data */

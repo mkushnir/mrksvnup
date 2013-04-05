@@ -31,7 +31,7 @@
  */
 
 typedef struct _svnproto_state {
-    svnrange_t r;
+    byterange_t r;
     long i;
 #   define TS_START 0x01
 #   define TS_TOK_IN 0x02
@@ -77,34 +77,6 @@ typedef struct _svnproto_state {
 /* end of data */
 #define PARSE_EOD (-2)
 
-typedef struct _svnproto_prop {
-    svnproto_bytes_t *name;
-    svnproto_bytes_t *value;
-} svnproto_prop_t;
-
-typedef struct _svnproto_dirent {
-    svnproto_bytes_t *name;
-    long rev; /* copied from get-dir response */
-#define SVNP_KIND_NONE 0
-#define SVNP_KIND_FILE 1
-#define SVNP_KIND_DIR 2
-#define SVNP_KIND_UNKNOWN 3
-    int kind;
-    ssize_t size;
-} svnproto_dirent_t;
-
-typedef struct _svnproto_fileent {
-    svnproto_bytes_t *checksum;
-    long rev;
-    array_t props;
-    array_t contents;
-} svnproto_fileent_t;
-
-typedef int (*svnproto_cb_t) (svnc_ctx_t *,
-                              bytestream_t *,
-                              svnproto_state_t *,
-                              void *);
-
 /*
  * Parser
  */
@@ -124,25 +96,16 @@ int svnproto_command_response(svnc_ctx_t *, const char *, ...);
 int pack_word(bytestream_t *, size_t, const char *);
 int pack_number(bytestream_t *, int);
 int pack_string(bytestream_t *, size_t, const char *);
-int pack_list(bytestream_t *, svnproto_cb_t, svnc_ctx_t *, void *);
+int pack_list(bytestream_t *, svnc_cb_t, svnc_ctx_t *, void *);
 
 /*
  * Helpers
  */
-void svnproto_init_long_array(array_t *);
-void svnproto_dump_long_array(array_t *);
-void svnproto_init_string_array(array_t *);
-void svnproto_dump_string_array(array_t *);
 void svnproto_init_dirent_array(array_t *ar);
 void svnproto_dump_dirent_array(array_t *ar);
 void svnproto_init_bytes_array(array_t *ar);
 void svnproto_dump_bytes_array(array_t *ar);
-const char *svnproto_kind2str(int);
-int svnproto_kind2int(const char *);
 
-int svnproto_fileent_init(svnproto_fileent_t *);
-int svnproto_fileent_fini(svnproto_fileent_t *);
-void svnproto_fileent_dump(svnproto_fileent_t *);
 /*
  * Protocol.
  */
@@ -150,18 +113,12 @@ int svnproto_setup(svnc_ctx_t *);
 int svnproto_check_auth(svnc_ctx_t *);
 int svnproto_get_latest_rev(svnc_ctx_t *, long *);
 int svnproto_check_path(svnc_ctx_t *, const char *, long, int *);
-#define GETFLAG_WANT_PROPS      0x01
-#define GETFLAG_WANT_CONTENTS   0x02
-#define GETFLAG_WANT_IPROPS     0x04
 int svnproto_get_dir(svnc_ctx_t *, const char *, long, array_t *);
 int svnproto_get_file(svnc_ctx_t *, const char *, long, int,
-                      svnproto_fileent_t *);
+                      svnc_fileent_t *);
 int svnproto_reparent(svnc_ctx_t *, const char *);
-#define UPFLAG_RECURSE 0x01
-#define UPFLAG_SEND_COPY_FREOM_PARAM 0x02
 int svnproto_update(svnc_ctx_t *, long, const char *, svn_depth_t, long,
-                    svnproto_cb_t, void *);
-#define SETPFLAG_START_EMPTY 0x01
+                    svnc_cb_t, void *);
 int svnproto_set_path(svnc_ctx_t *, const char *, long, const char *,
                       svn_depth_t, long);
 int svnproto_finish_report(svnc_ctx_t *);

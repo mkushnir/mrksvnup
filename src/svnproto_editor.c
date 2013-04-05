@@ -545,7 +545,7 @@ END:
 }
 
 static int
-create_file(svndiff_doc_t *doc, svnproto_fileent_t *fe)
+create_file(svndiff_doc_t *doc, svnc_fileent_t *fe)
 {
     int res = 0;
     svnproto_bytes_t **s;
@@ -596,7 +596,7 @@ END:
 }
 
 static int
-create_symlink(svndiff_doc_t *doc, svnproto_fileent_t *fe)
+create_symlink(svndiff_doc_t *doc, svnc_fileent_t *fe)
 {
     int res = 0;
     svnproto_bytes_t **s;
@@ -650,21 +650,22 @@ static int
 checkout_file(svndiff_doc_t *doc, long rev)
 {
     int res = 0;
-    svnproto_fileent_t fe;
-    svnproto_prop_t *prop;
+    svnc_fileent_t fe;
+    svnc_prop_t *prop;
     array_iter_t it;
 
-    svnproto_fileent_init(&fe);
+    svnc_fileent_init(&fe);
 
     if (shadow_ctx->debug_level > 1) {
         LTRACE(1, FYELLOW("! %s,%ld ->%s"), BDATA(doc->rp), rev, doc->lp);
     }
 
-    if (svnproto_get_file(shadow_ctx,
-                          BDATA(doc->rp),
-                          rev,
-                          GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS,
-                          &fe) != 0) {
+    assert(shadow_ctx->get_file != NULL);
+    if (shadow_ctx->get_file(shadow_ctx,
+                             BDATA(doc->rp),
+                             rev,
+                             GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS,
+                             &fe) != 0) {
         res = CHECKOUT_FILE + 1;
         goto END;
     }
@@ -700,7 +701,7 @@ checkout_file(svndiff_doc_t *doc, long rev)
     }
 
 END:
-    svnproto_fileent_fini(&fe);
+    svnc_fileent_fini(&fe);
     TRRET(res);
 }
 

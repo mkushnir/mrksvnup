@@ -14,21 +14,59 @@
 #include "mrksvnup/version.h"
 
 #define SVN_DEFAULT_PORT 3690
+#define HTTP_DEFAULT_PORT 80
+#define HTTPS_DEFAULT_PORT 443
 
 #define RA_CLIENT (PACKAGE_NAME "/" PACKAGE_VERSION)
 
 #define REVFILE ".svnup.rev"
 #define CACHEFILE ".svnup.cache"
 
-/* bytestream state shared between svnproto_unpack() calls */
-#define SP_UNPACK_SKIP_READ 0x01
+typedef enum _svn_depth {
+    SVN_DEPTH_UNKNOWN,
+    SVN_DEPTH_EXCLUDE,
+    SVN_DEPTH_EMPTY,
+    SVN_DEPTH_FILES,
+    SVN_DEPTH_IMMEDIATES,
+    SVN_DEPTH_INFINITY,
+} svn_depth_t;
+#define SVN_DEPTH_STR(d) \
+    ((d) == SVN_DEPTH_UNKNOWN ? "unknown" : \
+     (d) == SVN_DEPTH_EXCLUDE ? "exclude" : \
+     (d) == SVN_DEPTH_EMPTY ? "empty" : \
+     (d) == SVN_DEPTH_FILES ? "files" : \
+     (d) == SVN_DEPTH_IMMEDIATES ? "immediates" : \
+     (d) == SVN_DEPTH_INFINITY ? "infinity" : \
+     "unknown")
 
-typedef struct _svnrange {
-    off_t start;
-    off_t end;
-} svnrange_t;
+typedef struct _svnc_prop {
+    svnproto_bytes_t *name;
+    svnproto_bytes_t *value;
+} svnc_prop_t;
+
+typedef struct _svnc_fileent {
+    svnproto_bytes_t *checksum;
+    long rev;
+    array_t props;
+    array_t contents;
+} svnc_fileent_t;
+
+typedef struct _svnc_dirent {
+    svnproto_bytes_t *name;
+    long rev; /* copied from get-dir response */
+    int kind;
+    ssize_t size;
+} svnc_dirent_t;
+
+struct _svnc_ctx;
+
+typedef int (*svnc_cb_t)(struct _svnc_ctx *, bytestream_t *, void *, void *);
 
 typedef struct _svnc_ctx {
+#define SVNC_SCHEME_SVN 1
+#define SVNC_SCHEME_HTTP 2
+#define SVNC_SCHEME_HTTPS 3
+    int scheme;
     char *url;
     char *host;
     int port;
@@ -64,6 +102,21 @@ typedef struct _svnc_ctx {
         long line;
     } last_error;
 
+    int (*get_latest_rev)(struct _svnc_ctx *, long *);
+    int (*check_path)(struct _svnc_ctx *, const char *, long, int *);
+    int (*setup)(struct _svnc_ctx *);
+    int (*set_path)(struct _svnc_ctx *, const char *, long, const char *,
+                    svn_depth_t, long);
+    int (*finish_report)(struct _svnc_ctx *);
+    int (*get_file)(struct _svnc_ctx *, const char *,long, int,
+                    svnc_fileent_t *);
+    int (*update)(struct _svnc_ctx *, long, const char *,svn_depth_t,
+                  long, svnc_cb_t, void *);
+    int (*editor)(struct _svnc_ctx *);
+
+    /* this is not controlled by svnc module */
+    void *udata;
+
     /* not used ATM */
 #define SVNCAP_EDIT_PIPELINE    0x01
 #define SVNCAP_SVNDIFF1         0x02
@@ -74,30 +127,19 @@ typedef struct _svnc_ctx {
 #define SVNCAP_ATOMIC_REVPROPS  0x40
     uint64_t server_caps;
     uint64_t client_caps;
-
 } svnc_ctx_t;
 
-typedef enum _svn_depth {
-    SVN_DEPTH_UNKNOWN,
-    SVN_DEPTH_EXCLUDE,
-    SVN_DEPTH_EMPTY,
-    SVN_DEPTH_FILES,
-    SVN_DEPTH_IMMEDIATES,
-    SVN_DEPTH_INFINITY,
-} svn_depth_t;
-#define SVN_DEPTH_STR(d) \
-    ((d) == SVN_DEPTH_UNKNOWN ? "unknown" : \
-     (d) == SVN_DEPTH_EXCLUDE ? "exclude" : \
-     (d) == SVN_DEPTH_EMPTY ? "empty" : \
-     (d) == SVN_DEPTH_FILES ? "files" : \
-     (d) == SVN_DEPTH_IMMEDIATES ? "immediates" : \
-     (d) == SVN_DEPTH_INFINITY ? "infinity" : \
-     "unknown")
+#define SVNC_KIND_NONE 0
+#define SVNC_KIND_FILE 1
+#define SVNC_KIND_DIR 2
+#define SVNC_KIND_UNKNOWN 3
 
 #define SVNC_NNOCACHE 0x01
 #define SVNC_NFLUSHCACHE 0x02
 #define SVNC_NNOCHECK 0x04
 #define SVNC_NVERBOSE 0x08
+const char *svnc_kind2str(int);
+int svnc_kind2int(const char *);
 svnc_ctx_t *svnc_new(const char *, const char *, unsigned int, int);
 int svnc_connect(svnc_ctx_t *);
 void svnc_clear_last_error(svnc_ctx_t *);
@@ -111,7 +153,28 @@ int svnc_next_checksum(svnc_ctx_t *, char **, svnproto_bytes_t **);
 int svnc_debug_open(svnc_ctx_t *, const char *);
 
 /* Utilities */
-int svn_url_parse(const char *, char **, int *, char **);
+int svn_url_parse(const char *, int *, char **, int *, char **);
 void svnc_check_integrity(svnc_ctx_t *, long);
+int svnc_fileent_init(svnc_fileent_t *);
+int svnc_fileent_fini(svnc_fileent_t *);
+void svnc_fileent_dump(svnc_fileent_t *);
+void init_long_array(array_t *);
+void dump_long_array(array_t *);
+void init_string_array(array_t *);
+void dump_string_array(array_t *);
+
+/* Protocol API flags */
+
+/* get-file */
+#define GETFLAG_WANT_PROPS      0x01
+#define GETFLAG_WANT_CONTENTS   0x02
+#define GETFLAG_WANT_IPROPS     0x04
+
+/* update */
+#define UPFLAG_RECURSE 0x08
+#define UPFLAG_SEND_COPY_FREOM_PARAM 0x10
+
+/* set-path */
+#define SETPFLAG_START_EMPTY 0x20
 
 #endif

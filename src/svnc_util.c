@@ -18,9 +18,46 @@
 #include "mrksvnup/svnc.h"
 #include "mrksvnup/svncdir.h"
 #include "mrksvnup/svnproto.h"
+#include "mrksvnup/http.h"
+
+static const char *kinds[] = {
+    "none",
+    "file",
+    "dir",
+    "unknown",
+};
 
 int
-svn_url_parse(const char *url, char **host, int *port, char **path)
+svnc_kind2int(const char *kind)
+{
+    unsigned i;
+
+    if (kind != NULL) {
+        /* mix of dav and svn ra */
+        if ((strcmp(kind, "collection")) == 0) {
+            return SVNC_KIND_DIR;
+        }
+        for (i = 0; i < countof(kinds); ++i) {
+            if (strcmp(kind, kinds[i]) == 0) {
+                return i;
+            }
+        }
+    }
+
+    return SVNC_KIND_UNKNOWN;
+}
+
+const char *
+svnc_kind2str(int kind)
+{
+    if (kind < 0 || kind > SVNC_KIND_UNKNOWN) {
+        kind = SVNC_KIND_UNKNOWN;
+    }
+    return kinds[kind];
+}
+
+int
+svn_url_parse(const char *url, int *scheme, char **host, int *port, char **path)
 {
     char *p0, *p1, *p2;
     size_t sz;
@@ -29,12 +66,24 @@ svn_url_parse(const char *url, char **host, int *port, char **path)
 
     sz = strlen(url);
 
-    if ((p0 = strnstr(url, "svn://", sz)) != url) {
+    if ((p0 = strnstr(url, "svn://", sz)) == url) {
+        *scheme = SVNC_SCHEME_SVN;
+        p0 += 6;
+        sz -= 6;
+
+    } else if ((p0 = strnstr(url, "http://", sz)) == url) {
+        *scheme = SVNC_SCHEME_HTTP;
+        p0 += 7;
+        sz -= 7;
+
+    } else if ((p0 = strnstr(url, "https://", sz)) == url) {
+        *scheme = SVNC_SCHEME_HTTPS;
+        p0 += 8;
+        sz -= 8;
+
+    } else {
         TRRET(SVN_URL_PARSE + 1);
     }
-
-    p0 += 6;
-    sz -= 6;
 
     if ((p1 = strchr(p0, '/')) == NULL) {
         TRRET(SVN_URL_PARSE + 2);
@@ -62,7 +111,13 @@ svn_url_parse(const char *url, char **host, int *port, char **path)
             }
         }
     } else {
-        *port = SVN_DEFAULT_PORT;
+        if (*scheme == SVNC_SCHEME_SVN) {
+            *port = SVN_DEFAULT_PORT;
+        } else if (*scheme == SVNC_SCHEME_HTTP) {
+            *port = HTTP_DEFAULT_PORT;
+        } else if (*scheme == SVNC_SCHEME_HTTPS) {
+            *port = HTTPS_DEFAULT_PORT;
+        }
     }
 
     if ((*path = malloc(sz + 1)) == NULL) {
@@ -96,7 +151,7 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
 
         char *lp;
         int fd = -1;
-        svnproto_fileent_t fe;
+        svnc_fileent_t fe;
         struct stat sb;
         int need_file = 0;
 
@@ -127,13 +182,14 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
         }
 
         if (need_file) {
-            svnproto_fileent_init(&fe);
+            svnc_fileent_init(&fe);
 
-            if (svnproto_get_file(ctx,
-                                  rp,
-                                  target_rev,
-                                  GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS,
-                                  &fe) != 0) {
+            assert(ctx->get_file != NULL);
+            if (ctx->get_file(ctx,
+                              rp,
+                              target_rev,
+                              GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS,
+                              &fe) != 0) {
 
                 if (ctx->debug_level > 2) {
                     LTRACE(1, FYELLOW("Failed to get remote file: %s "
@@ -150,7 +206,7 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
             } else {
                 array_iter_t it;
                 svnproto_bytes_t **s;
-                svnproto_prop_t *prop;
+                svnc_prop_t *prop;
                 ssize_t total_len = 0;
 
                 if (fd == -1) {
@@ -230,5 +286,134 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
     }
     fprintf(stderr, ("\n"));
     fflush(stderr);
+}
+
+/* data helpers */
+
+static int
+dump_long(long *v, UNUSED void *udata)
+{
+    TRACE("v=%ld", *v);
+    return 0;
+}
+
+void
+init_long_array(array_t *ar)
+{
+    if (array_init(ar, sizeof(long), 0,
+                   NULL, NULL) != 0) {
+        FAIL("array_init");
+    }
+}
+
+void
+dump_long_array(array_t *ar) {
+    array_traverse(ar, (array_traverser_t)dump_long, NULL);
+}
+
+static int
+init_string(const char **v)
+{
+    *v = NULL;
+    return 0;
+}
+
+static int
+fini_string(char **v)
+{
+    if (*v != NULL) {
+        free(*v);
+        *v = NULL;
+    }
+    return 0;
+}
+
+static int
+dump_string(const char **v, UNUSED void *udata)
+{
+    TRACE("v=%s", *v);
+    return 0;
+}
+
+void
+init_string_array(array_t *ar)
+{
+    if (array_init(ar, sizeof(char *), 0,
+                   (array_initializer_t)init_string,
+                   (array_finalizer_t)fini_string) != 0) {
+        FAIL("array_init");
+    }
+}
+
+void
+dump_string_array(array_t *ar) {
+    array_traverse(ar, (array_traverser_t)dump_string, NULL);
+}
+
+static int
+prop_init(svnc_prop_t *p)
+{
+    p->name = NULL;
+    p->value = NULL;
+    return 0;
+}
+
+static int
+prop_fini(svnc_prop_t *p)
+{
+    if (p->name != NULL) {
+        free(p->name);
+        p->name = NULL;
+    }
+    if (p->value != NULL) {
+        free(p->value);
+        p->value = NULL;
+    }
+    return 0;
+}
+
+static int
+prop_dump(svnc_prop_t *p, UNUSED void *udata)
+{
+    TRACE("prop: %s=%s", BDATA(p->name), BDATA(p->value));
+    return 0;
+}
+
+
+int
+svnc_fileent_init(svnc_fileent_t *e)
+{
+    e->checksum = NULL;
+    e->rev = -1;
+    if (array_init(&e->props, sizeof(svnc_prop_t), 0,
+                   (array_initializer_t)prop_init,
+                   (array_finalizer_t)prop_fini) != 0) {
+        FAIL("array_init");
+    }
+    init_string_array(&e->contents);
+    return 0;
+}
+
+int
+svnc_fileent_fini(svnc_fileent_t *e)
+{
+    if (e->checksum != NULL) {
+        free(e->checksum);
+        e->checksum = NULL;
+    }
+    if (array_fini(&e->props) != 0) {
+        FAIL("array_fini");
+    }
+    array_fini(&e->contents);
+    return 0;
+}
+
+void
+svnc_fileent_dump(svnc_fileent_t *e)
+{
+    TRACE("checksum=%s rev=%ld", BDATA(e->checksum), e->rev);
+    array_traverse(&e->props,
+                   (array_traverser_t)prop_dump, NULL);
+    dump_string_array(&e->contents);
 }
 

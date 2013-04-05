@@ -17,6 +17,9 @@
 
 #include "mrksvnup/svncdir.h"
 #include "mrksvnup/svnproto.h"
+#include "mrksvnup/http.h"
+#include "mrksvnup/dav.h"
+#include "mrksvnup/httpproto.h"
 
 #include "svnc_private.h"
 
@@ -139,6 +142,7 @@ svnc_new(const char *url,
 
     /* XXX manually initialize it here */
     ctx->fd = -1;
+    ctx->scheme = 0;
     ctx->url = NULL;
     ctx->host = NULL;
     ctx->port = 0;
@@ -153,6 +157,16 @@ svnc_new(const char *url,
     ctx->cachepath = NULL;
     ctx->cachedb = NULL;
     ctx->debug_level = debug_level;
+    ctx->get_latest_rev = NULL;
+    ctx->check_path = NULL;
+    ctx->setup = NULL;
+    ctx->set_path = NULL;
+    ctx->finish_report = NULL;
+    ctx->get_file = NULL;
+    ctx->update = NULL;
+    ctx->editor = NULL;
+    ctx->udata = NULL;
+
 
     if ((ctx->url = strdup(url)) == NULL) {
         TRRETNULL(SVNC_NEW + 2);
@@ -162,7 +176,7 @@ svnc_new(const char *url,
         TRRETNULL(SVNC_NEW + 3);
     }
 
-    if (svn_url_parse(ctx->url, &ctx->host, &ctx->port, &ctx->path)) {
+    if (svn_url_parse(ctx->url, &ctx->scheme, &ctx->host, &ctx->port, &ctx->path)) {
         LTRACE(1, "URL could not be accepted: %s", ctx->url);
         TRRETNULL(SVNC_NEW + 4);
     }
@@ -224,6 +238,26 @@ svnc_new(const char *url,
         }
     }
 
+    if (ctx->scheme == SVNC_SCHEME_SVN) {
+        ctx->get_latest_rev = svnproto_get_latest_rev;
+        ctx->check_path = svnproto_check_path;
+        ctx->setup = svnproto_setup;
+        ctx->set_path = svnproto_set_path;
+        ctx->finish_report = svnproto_finish_report;
+        ctx->get_file = svnproto_get_file;
+        ctx->update = svnproto_update;
+        ctx->editor = svnproto_editor;
+    } else if (ctx->scheme == SVNC_SCHEME_HTTP) {
+        ctx->get_latest_rev = httpproto_get_latest_rev;
+        ctx->check_path = httpproto_check_path;
+        ctx->setup = httpproto_setup;
+        ctx->set_path = httpproto_set_path;
+        ctx->finish_report = httpproto_finish_report;
+        ctx->get_file = httpproto_get_file;
+        ctx->update = httpproto_update;
+        ctx->editor = httpproto_editor;
+    }
+
     return (ctx);
 }
 
@@ -253,7 +287,14 @@ svnc_connect(svnc_ctx_t *ctx)
     }
 
     ctx->in.read_more = bytestream_recv_more;
-    ctx->in.udata = svnproto_state_new();
+
+    if (ctx->scheme == SVNC_SCHEME_SVN) {
+        ctx->in.udata = svnproto_state_new();
+    } else if (ctx->scheme == SVNC_SCHEME_HTTP) {
+        ctx->in.udata = http_ctx_new();
+    } else {
+        ctx->in.udata = NULL;
+    }
 
     if (bytestream_init(&ctx->out) != 0) {
         TRRET(SVNC_CONNECT + 3);
@@ -261,8 +302,9 @@ svnc_connect(svnc_ctx_t *ctx)
 
     ctx->out.write = bytestream_send;
 
-    if (svnproto_setup(ctx) != 0) {
-        TRRET(SVNC_CONNECT + 4);
+    assert(ctx->setup != NULL);
+    if (ctx->setup(ctx) != 0) {
+        TRRET(SVNC_CONNECT + 5);
     }
 
     return (0);
@@ -272,7 +314,13 @@ int
 svnc_close(svnc_ctx_t *ctx)
 {
     if (ctx->in.udata != NULL) {
-        svnproto_state_destroy(ctx->in.udata);
+        if (ctx->scheme == SVNC_SCHEME_SVN) {
+            svnproto_state_destroy(ctx->in.udata);
+        } else if (ctx->scheme == SVNC_SCHEME_HTTP) {
+            http_ctx_destroy(ctx->in.udata);
+        } else {
+            ;
+        }
         ctx->in.udata = NULL;
     }
 
@@ -369,6 +417,15 @@ svnc_destroy(svnc_ctx_t *ctx)
 
     svnc_clear_last_error(ctx);
 
+    ctx->get_latest_rev = NULL;
+    ctx->check_path = NULL;
+    ctx->setup = NULL;
+    ctx->set_path = NULL;
+    ctx->finish_report = NULL;
+    ctx->get_file = NULL;
+    ctx->update = NULL;
+    ctx->editor = NULL;
+
     return (0);
 }
 
@@ -386,7 +443,13 @@ svnc_debug_open(svnc_ctx_t *ctx, const char *path)
         TRRET(SVNC_OPEN + 2);
     }
 
-    ctx->in.udata = svnproto_state_new();
+    if (ctx->scheme == SVNC_SCHEME_SVN) {
+        ctx->in.udata = svnproto_state_new();
+    } else if (ctx->scheme == SVNC_SCHEME_HTTP) {
+        ctx->in.udata = http_ctx_new();
+    } else {
+        ctx->in.udata = NULL;
+    }
 
     ctx->in.read_more = bytestream_read_more;
 

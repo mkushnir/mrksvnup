@@ -50,7 +50,7 @@ pack_string(bytestream_t *out, size_t sz, const char *str)
 }
 
 int
-pack_list(bytestream_t *out, svnproto_cb_t cb, svnc_ctx_t *ctx, void *udata)
+pack_list(bytestream_t *out, svnc_cb_t cb, svnc_ctx_t *ctx, void *udata)
 {
     if (bytestream_nprintf(out, 3, "( ") != 0) {
         TRRET(PACK_LIST + 1);

@@ -22,7 +22,7 @@
 static int
 auth_response(UNUSED svnc_ctx_t *ctx,
               bytestream_t *out,
-              UNUSED svnproto_state_t *v,
+              UNUSED void *v,
               UNUSED void *udata)
 {
     if (pack_word(out, strlen(SVNPROTO_ANON), SVNPROTO_ANON) != 0) {
@@ -68,7 +68,7 @@ int svnproto_check_auth(svnc_ctx_t *ctx)
     char *realm = NULL;
     char **ss = NULL;
 
-    svnproto_init_string_array(&auth_mechs);
+    init_string_array(&auth_mechs);
 
     /* auth request */
     if (svnproto_command_response(ctx, "((w*)s)", &auth_mechs, &realm) != 0) {

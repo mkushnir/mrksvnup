@@ -12,68 +12,6 @@
 #include "mrksvnup/svnproto.h"
 #include "mrkcommon/bytestream.h"
 
-/* data helpers */
-
-static int
-dump_long(long *v, UNUSED void *udata)
-{
-    TRACE("v=%ld", *v);
-    return 0;
-}
-
-void
-svnproto_init_long_array(array_t *ar)
-{
-    if (array_init(ar, sizeof(long), 0,
-                   NULL, NULL) != 0) {
-        FAIL("array_init");
-    }
-}
-
-void
-svnproto_dump_long_array(array_t *ar) {
-    array_traverse(ar, (array_traverser_t)dump_long, NULL);
-}
-
-static int
-init_string(const char **v)
-{
-    *v = NULL;
-    return 0;
-}
-
-static int
-fini_string(char **v)
-{
-    if (*v != NULL) {
-        free(*v);
-        *v = NULL;
-    }
-    return 0;
-}
-
-static int
-dump_string(const char **v, UNUSED void *udata)
-{
-    TRACE("v=%s", *v);
-    return 0;
-}
-
-void
-svnproto_init_string_array(array_t *ar)
-{
-    if (array_init(ar, sizeof(char *), 0,
-                   (array_initializer_t)init_string,
-                   (array_finalizer_t)fini_string) != 0) {
-        FAIL("array_init");
-    }
-}
-
-void
-svnproto_dump_string_array(array_t *ar) {
-    array_traverse(ar, (array_traverser_t)dump_string, NULL);
-}
-
 static int
 parse_one_value(bytestream_t *in, svnproto_state_t *st)
 {
@@ -604,10 +542,10 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 }
 
             } else if (ch == 'S') {
-                svnproto_cb_t cb;
+                svnc_cb_t cb;
                 void *udata;
 
-                cb = va_arg(ap, svnproto_cb_t);
+                cb = va_arg(ap, svnc_cb_t);
                 udata = va_arg(ap, void *);
 
 
@@ -723,11 +661,11 @@ END_S_STAR:
                 }
 
             } else if (ch == 'r') {
-                svnproto_cb_t cb;
+                svnc_cb_t cb;
                 void *udata;
                 off_t recycled;
 
-                cb = va_arg(ap, svnproto_cb_t);
+                cb = va_arg(ap, svnc_cb_t);
                 udata = va_arg(ap, void *);
 
                 /*

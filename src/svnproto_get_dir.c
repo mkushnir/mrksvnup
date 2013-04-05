@@ -4,6 +4,7 @@
 //#define TRRET_DEBUG
 #include "mrkcommon/dumpm.h"
 
+#include "mrksvnup/svnc.h"
 #include "mrksvnup/svnproto.h"
 #include "mrkcommon/bytestream.h"
 
@@ -42,7 +43,7 @@
 static int
 pack4(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       UNUSED void *udata)
 {
     const char *fields[] = {
@@ -62,7 +63,7 @@ pack4(UNUSED svnc_ctx_t *ctx,
 static int
 pack3(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       UNUSED void *udata)
 {
     struct {
@@ -79,7 +80,7 @@ pack3(UNUSED svnc_ctx_t *ctx,
 static int
 pack2(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       UNUSED void *udata)
 {
     struct {
@@ -114,7 +115,7 @@ pack2(UNUSED svnc_ctx_t *ctx,
 static int
 pack1(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       UNUSED void *udata)
 {
     if (pack_word(out, strlen("get-dir"), "get-dir") != 0) {
@@ -129,7 +130,7 @@ pack1(UNUSED svnc_ctx_t *ctx,
 }
 
 static int
-dirent_init(svnproto_dirent_t *e)
+dirent_init(svnc_dirent_t *e)
 {
     e->name = NULL;
     e->kind = -1;
@@ -139,7 +140,7 @@ dirent_init(svnproto_dirent_t *e)
 }
 
 static int
-dirent_fini(svnproto_dirent_t *e)
+dirent_fini(svnc_dirent_t *e)
 {
     if (e->name != NULL) {
         free(e->name);
@@ -152,17 +153,17 @@ dirent_fini(svnproto_dirent_t *e)
 }
 
 static int
-dirent_dump(svnproto_dirent_t *e)
+dirent_dump(svnc_dirent_t *e)
 {
     TRACE("dirent name=%s rev=%ld kind=%s size=%zd",
-           BDATA(e->name), e->rev, svnproto_kind2str(e->kind), e->size);
+           BDATA(e->name), e->rev, svnc_kind2str(e->kind), e->size);
     return 0;
 }
 
 void
 svnproto_init_dirent_array(array_t *ar)
 {
-    if (array_init(ar, sizeof(svnproto_dirent_t), 0,
+    if (array_init(ar, sizeof(svnc_dirent_t), 0,
                    (array_initializer_t)dirent_init,
                    (array_finalizer_t)dirent_fini) != 0) {
         FAIL("array_init");
@@ -198,7 +199,7 @@ unpack2(svnc_ctx_t *ctx,
     char *kind_str = NULL;
     long size;
     array_t *dirents = udata;
-    svnproto_dirent_t *e;
+    svnc_dirent_t *e;
 
 
     res = svnproto_unpack(ctx, in, "(swnwn(s?)(s?))", &name, &kind_str, &size,
@@ -211,7 +212,7 @@ unpack2(svnc_ctx_t *ctx,
             FAIL("array_incr");
         }
         e->name = name;
-        e->kind = svnproto_kind2int(kind_str);
+        e->kind = svnc_kind2int(kind_str);
         e->size = size;
     }
     if (kind_str != NULL) {
@@ -260,7 +261,7 @@ svnproto_get_dir(svnc_ctx_t *ctx,
         long rev;
     } params = {path, rev};
     long orev;
-    svnproto_dirent_t *de;
+    svnc_dirent_t *de;
     array_iter_t it;
 
     if (pack_list(&ctx->out, pack1, NULL, &params) != 0) {

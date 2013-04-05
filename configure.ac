@@ -55,6 +55,10 @@ AC_CHECK_FUNCS([rmdir])
 AC_CHECK_FUNCS([ftruncate])
 AC_CHECK_FUNCS([getcwd])
 AC_CHECK_FUNCS([strrchr])
+AC_CHECK_FUNCS([memchr])
+AC_CHECK_FUNCS([strcasecmp])
+AC_CHECK_FUNCS([strncasecmp])
+
 
 AC_PRESERVE_HELP_ORDER
 

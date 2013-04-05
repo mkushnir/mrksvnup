@@ -6,9 +6,9 @@
 
 typedef int (*svncdir_cb_t) (svnc_ctx_t *,
                              const char *,
-                             svnproto_dirent_t *,
+                             svnc_dirent_t *,
                              const char *,
-                             svnproto_fileent_t *,
+                             svnc_fileent_t *,
                              void *);
 int svncdir_walk(svnc_ctx_t *, const char *, svncdir_cb_t, void *udata);
 

@@ -5,6 +5,7 @@
 //#define TRRET_DEBUG
 #include "mrkcommon/dumpm.h"
 
+#include "mrksvnup/svnc.h"
 #include "mrksvnup/svnproto.h"
 #include "mrkcommon/bytestream.h"
 
@@ -21,7 +22,7 @@
 static int
 pack3(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       UNUSED void *udata)
 {
     struct {
@@ -40,7 +41,7 @@ pack3(UNUSED svnc_ctx_t *ctx,
 static int
 pack2(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       void *udata)
 {
     struct {
@@ -62,7 +63,7 @@ pack2(UNUSED svnc_ctx_t *ctx,
 static int
 pack1(svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       void *udata)
 {
     if (pack_word(out, strlen("check-path"), "check-path") != 0) {
@@ -102,7 +103,7 @@ svnproto_check_path(svnc_ctx_t *ctx, const char *path, long rev, int *kind)
         TRRET(SVNPROTO_CHECK_PATH + 9);
     }
 
-    *kind = svnproto_kind2int(kind_str);
+    *kind = svnc_kind2int(kind_str);
 
     bytestream_rewind(&ctx->out);
 

@@ -22,7 +22,7 @@
 static int
 pack2(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       void *udata)
 {
     struct {
@@ -39,7 +39,7 @@ pack2(UNUSED svnc_ctx_t *ctx,
 static int
 pack1(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       void *udata)
 {
     if (pack_word(out, strlen("reparent"), "reparent") != 0) {

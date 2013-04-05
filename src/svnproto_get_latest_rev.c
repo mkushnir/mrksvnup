@@ -19,7 +19,7 @@
 static int
 pack1(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *v,
+      UNUSED void *v,
       UNUSED void *udata)
 {
     if (pack_word(out,

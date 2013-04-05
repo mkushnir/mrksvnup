@@ -10,11 +10,25 @@ dist_HEADERS = unittest.h
 BUILT_SOURCES = ../diag.c ../diag.h
 
 CFLAGS = -Wall -Wextra -Werror -std=c99 -I.. -g -O0 -ftrapv -fcatch-undefined-behavior -I$(includedir)
-LDFLAGS += -L$(libdir) -lmrkcommon -lz -lmd
+LDFLAGS += -L$(libdir) -lmrkcommon -lz -lmd -lbsdxml
+
+nobase_include_HEADERS = ../mrksvnup/svnc.h \
+			 ../mrksvnup/svncdir.h \
+			 ../mrksvnup/svndiff.h \
+			 ../mrksvnup/svnproto.h \
+			 ../mrksvnup/svnproto_bytes.h \
+			 ../mrksvnup/http.h \
+			 ../mrksvnup/httpproto.h \
+			 ../mrksvnup/dav.h \
+			 ../mrksvnup/xmatch.h \
+			 ../mrksvnup/version.h
 
 nodist_testfoo_SOURCES = ../diag.c
 testfoo_SOURCES = ../svnc.c \
 		  ../http.c \
+		  ../httpproto.c \
+		  ../dav.c \
+		  ../xmatch.c \
 		  ../svnc_util.c \
 		  ../svncdir.c \
 		  ../svndiff.c \

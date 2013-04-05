@@ -16,6 +16,9 @@ nobase_include_HEADERS = mrksvnup/svnc.h \
 			 mrksvnup/svnproto.h \
 			 mrksvnup/svnproto_bytes.h \
 			 mrksvnup/http.h \
+			 mrksvnup/httpproto.h \
+			 mrksvnup/dav.h \
+			 mrksvnup/xmatch.h \
 			 mrksvnup/version.h
 
 libmrksvnup_la_SOURCES = svnc.c \
@@ -23,6 +26,9 @@ libmrksvnup_la_SOURCES = svnc.c \
 			 svncdir.c \
 			 svndiff.c \
 			 http.c \
+			 httpproto.c \
+			 dav.c \
+			 xmatch.c \
 			 svnproto.c \
 			 svnproto_bytes.c \
 			 svnproto_unpack.c \
@@ -41,7 +47,7 @@ libmrksvnup_la_SOURCES = svnc.c \
 
 nodist_libmrksvnup_la_SOURCES = diag.c
 libmrksvnup_la_CFLAGS = -Wall -Wextra -Werror -g -std=c99 -I$(includedir) -O0 -ftrapv -fcatch-undefined-behavior
-libmrksvnup_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon -lz -lmd
+libmrksvnup_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon -lz -lmd -lbsdxml
 
 bin_PROGRAMS = svnup
 

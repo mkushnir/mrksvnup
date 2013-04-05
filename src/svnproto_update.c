@@ -22,9 +22,9 @@
  */
 
 static int
-pack4(svnc_ctx_t *ctx,
+pack4(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       UNUSED void *udata)
 {
 
@@ -32,7 +32,7 @@ pack4(svnc_ctx_t *ctx,
         TRRET(SVNPROTO_UPDATE + 1);
     }
 
-    if (pack_list(out, NULL, ctx, NULL) != 0) {
+    if (pack_list(out, NULL, NULL, NULL) != 0) {
         TRRET(SVNPROTO_UPDATE + 2);
     }
 
@@ -42,7 +42,7 @@ pack4(svnc_ctx_t *ctx,
 static int
 pack3(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       void *udata)
 {
     struct {
@@ -65,7 +65,7 @@ pack3(UNUSED svnc_ctx_t *ctx,
 static int
 pack2(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       void *udata)
 {
     struct {
@@ -106,7 +106,7 @@ pack2(UNUSED svnc_ctx_t *ctx,
 static int
 pack1(UNUSED svnc_ctx_t *ctx,
       bytestream_t *out,
-      UNUSED svnproto_state_t *st,
+      UNUSED void *st,
       void *udata)
 {
     if (pack_word(out, strlen("update"), "update") != 0) {
@@ -126,7 +126,7 @@ svnproto_update(svnc_ctx_t *ctx,
                 const char *target,
                 svn_depth_t depth,
                 long flags,
-                svnproto_cb_t cb,
+                svnc_cb_t cb,
                 void *udata)
 {
     int res = 0;

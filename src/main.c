@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <err.h>
 #include <libgen.h>
 #include <stdlib.h>
@@ -21,7 +22,7 @@ const char *_malloc_options = "J";
 static int
 update_cb(svnc_ctx_t *ctx,
           UNUSED bytestream_t *stream,
-          UNUSED svnproto_state_t *st,
+          UNUSED void *st,
           void *udata)
 {
     struct {
@@ -30,9 +31,10 @@ update_cb(svnc_ctx_t *ctx,
         long set_path_flags;
     } *params = udata;
 
-    if (svnproto_set_path(ctx, params->path, params->source_rev,
-                          NULL, SVN_DEPTH_INFINITY,
-                          params->set_path_flags) != 0) {
+    assert(ctx->set_path != NULL);
+    if (ctx->set_path(ctx, params->path, params->source_rev,
+                      NULL, SVN_DEPTH_INFINITY,
+                      params->set_path_flags) != 0) {
         errx(1, "svnproto_set_path");
     }
 
@@ -40,7 +42,8 @@ update_cb(svnc_ctx_t *ctx,
         LTRACE(0, "set-path OK");
     }
 
-    if (svnproto_finish_report(ctx) != 0) {
+    assert(ctx->finish_report != NULL);
+    if (ctx->finish_report(ctx) != 0) {
         errx(1, "svnproto_finish_report");
     }
 
@@ -48,9 +51,10 @@ update_cb(svnc_ctx_t *ctx,
         LTRACE(0, "finish-report OK");
     }
 
-    if (svnproto_editor(ctx) != 0) {
+    assert(ctx->editor != NULL);
+    if (ctx->editor(ctx) != 0) {
         svnc_print_last_error(ctx);
-        errx(1, "svnproto_editor");
+        errx(1, "editor");
     }
 
     return 0;
@@ -148,8 +152,9 @@ run(const char *url,
     }
 
     if (target_rev <= 0) {
-        if (svnproto_get_latest_rev(ctx, &target_rev) != 0) {
-            errx(1, "svnproto_get_latest_rev");
+        assert(ctx->get_latest_rev != NULL);
+        if (ctx->get_latest_rev(ctx, &target_rev) != 0) {
+            errx(1, "get_latest_rev");
         }
     }
 
@@ -163,14 +168,15 @@ run(const char *url,
         /* for update */
     }
 
-    if (svnproto_check_path(ctx, update_params.path,
+    assert(ctx->check_path != NULL);
+    if (ctx->check_path(ctx, update_params.path,
                             target_rev, &kind) != 0) {
-        errx(1, "svnproto_check_path");
+        errx(1, "check_path");
     }
 
-    //TRACE("check_path kind=%s", svnproto_kind2str(kind));
+    //TRACE("check_path kind=%s", svnc_kind2str(kind));
     
-    if (kind != SVNP_KIND_DIR) {
+    if (kind != SVNC_KIND_DIR) {
         errx(1, "Remote path is not a directory: %s", update_params.path);
     }
 
@@ -179,9 +185,10 @@ run(const char *url,
      */
     update_params.source_rev = source_rev;
 
-    if (svnproto_update(ctx, target_rev, update_params.path, 0,
+    assert(ctx->update != NULL);
+    if (ctx->update(ctx, target_rev, update_params.path, 0,
                         UPFLAG_RECURSE, update_cb, &update_params) != 0) {
-        errx(1, "svnproto_update");
+        errx(1, "update");
     }
 
     /*
@@ -228,7 +235,7 @@ static void
 usage(const char *progname)
 {
     printf("Usage: %s -u URL -l PATH "
-           "[ -r REV ] [ -f ] [ -L ] [ -v LEVEL ]\n\n", basename(progname));
+           "[ -r REV ] [ -f ] [ -v LEVEL ]\n\n", basename(progname));
     printf("Usage: %s -h\n\n", basename(progname));
     printf("Usage: %s -V\n\n", basename(progname));
 }
