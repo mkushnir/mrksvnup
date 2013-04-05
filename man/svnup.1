@@ -1,0 +1,59 @@
+.Dd 2013
+.Dt svnup 1
+.Os
+.Sh NAME
+.Nm svnup
+.Nd A fast SVN update
+.Sh SYNOPSIS
+.Nm
+.Op Fl r Ar REV
+.Op Fl v Ar LEVEL
+.Ar URL
+.Op Ar DIR
+.Nm
+.Op Fl h
+.Nm
+.Op Fl V
+.Sh DESCRIPTION
+.Pp
+Given a URL, a path to the local directory (the current directory will be used if not
+supplied), and an optional SVN revision, check out a fresh tree from the
+SVN server, or update the existing one.
+.Pp
+If the diretory doesn't exist, it will be created. If the supplied path is
+not a directory, the program will exit with an error.
+.Pp
+The following command line options may be used:
+.Bl -tag
+.It Fl r Ar REV
+The revision to check out or update to. If not specified, the latest
+revision will be assumed.
+.It Fl v Ar LEVEL
+The amount of verbosity to print. Specify 0 to silent the program
+completely. 1 will produce a line for each affected file. 2 will
+additionally print actions taken to fix up the file, and other
+diagnostics. 3 or more will also print protocol details (useful for
+debugigng).
+.It Fl h
+Print help message and exit.
+.It Fl V
+Print verion and exit.
+.El
+.Sh EXIT STATUS
+The
+.Nm
+utility returns 0 upon successful operation, and >0 in case of an error.
+.Sh AUTHORS
+This program and the man page was writted by
+.An Markiyan Kushnir
+.Aq markiyan.kushnir@gmail.com
+.Sh BUGS
+.Pp
+The
+.Nm
+utility is not compatible with other SVN client software. The users should
+not mix using of 
+.Nm
+and other SVN programs.
+.Pp
+Diagnostic is not always comprehensable.

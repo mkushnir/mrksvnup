@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = foreign
 
 distdir = ../$(PACKAGE)-$(VERSION)/src
-dist_HEADERS = svnc_private.h
+dist_HEADERS = svnc_private.h httpproto_private.h
 
 BUILT_SOURCES = diag.c diag.h
 EXTRA_DIST = diag.txt gen-diag
