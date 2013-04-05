@@ -64,6 +64,7 @@ AC_PRESERVE_HELP_ORDER
 
 AC_CHECK_LIB(z, compress, [], [AC_MSG_FAILURE(libz.so is required.)]) 
 AC_CHECK_LIB(md, MD5Init, [], [AC_MSG_FAILURE(libmd.so is required.)]) 
+AC_CHECK_LIB(bsdxml, XML_ParserCreateNS, [], [AC_MSG_FAILURE(libbsdxml.so is required.)]) 
 # pass LDFLAGS=-L${LOCALBASE}/lib in the environment
 AC_CHECK_LIB(mrkcommon, _fini, [], [AC_MSG_FAILURE(libmrkcommon.so is required. Please find it at git@github.com:mkushnir/mrkcommon.git)]) 
 AC_OUTPUT
