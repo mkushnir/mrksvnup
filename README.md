@@ -22,15 +22,17 @@ updating between _source_ and _target_ revisions. The solution I think was
 in the direction of Dag-Erling's experiment.
 
 _mrksvnup_ includes a simplified (and limited) implementation of the [SVN
-RA protocol][1], and the [svndiff1][2] editor. The supported transports are
-currently restricted to the _svn://_ only. The utility behaves more
-like a traditional svn client.  It tracks the latest checked out revision
-in a dotfile in the root directory.  It then can update to a different
-revision _relative to the current one_ using svndiff documents downloaded
-from the server. When it's done on a regular basis, it's really fast. The
-utility doesn't delete files not being tracked on the remote side (for
-example, it won't wipe out custom kernel configurations during update)
-unless the containing directory was removed on the server.
+RA protocol][1], and the [svndiff1][2] editor. The supported transports
+are currently restricted to the _svn://_ only. Support of _http://_
+transport is under development. It will be based on a simple WebDAV
+implementation. The utility behaves more like a traditional svn client.
+It tracks the latest checked out revision in a dotfile in the root
+directory.  It then can update to a different revision _relative to the
+current one_ using svndiff documents downloaded from the server. When it's
+done on a regular basis, it's really fast. The utility doesn't delete
+files not being tracked on the remote side (for example, it won't wipe out
+custom kernel configurations during update) unless the containing
+directory was removed on the server.
 
 During update procedure an _svndiff_ document is obtained given the source
 and target revisions, and the files are edited along with this document.
