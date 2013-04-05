@@ -167,6 +167,14 @@ svnc_new(const char *url,
     ctx->editor = NULL;
     ctx->udata = NULL;
 
+    if (bytestream_init(&ctx->in) != 0) {
+        FAIL("bytestream_init");
+    }
+
+    if (bytestream_init(&ctx->out) != 0) {
+        FAIL("bytestream_init");
+    }
+
 
     if ((ctx->url = strdup(url)) == NULL) {
         TRRETNULL(SVNC_NEW + 2);
@@ -282,10 +290,6 @@ svnc_connect(svnc_ctx_t *ctx)
         TRRET(SVNC_CONNECT + 1);
     }
 
-    if (bytestream_init(&ctx->in) != 0) {
-        TRRET(SVNC_CONNECT + 2);
-    }
-
     ctx->in.read_more = bytestream_recv_more;
 
     if (ctx->scheme == SVNC_SCHEME_SVN) {
@@ -294,10 +298,6 @@ svnc_connect(svnc_ctx_t *ctx)
         ctx->in.udata = http_ctx_new();
     } else {
         ctx->in.udata = NULL;
-    }
-
-    if (bytestream_init(&ctx->out) != 0) {
-        TRRET(SVNC_CONNECT + 3);
     }
 
     ctx->out.write = bytestream_send;

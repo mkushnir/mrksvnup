@@ -234,8 +234,8 @@ run(const char *url,
 static void
 usage(const char *progname)
 {
-    printf("Usage: %s -u URL -l PATH "
-           "[ -r REV ] [ -f ] [ -v LEVEL ]\n\n", basename(progname));
+    printf("Usage: %s [ -r REV ] [ -f ] [ -v LEVEL ] "
+           "URL [ PATH ]\n\n", basename(progname));
     printf("Usage: %s -h\n\n", basename(progname));
     printf("Usage: %s -V\n\n", basename(progname));
 }
@@ -249,6 +249,7 @@ version(UNUSED const char *progname)
 int
 main(int argc, char *argv[])
 {
+    const char *progname;
     int res = 0;
     char ch;
     char *url = NULL;
@@ -257,7 +258,9 @@ main(int argc, char *argv[])
     unsigned int flags = SVNC_NNOCHECK;
     int debug_level = 1;
 
-    while ((ch = getopt(argc, argv, "fhl:r:Ru:v:V")) != -1) {
+    progname = argv[0];
+
+    while ((ch = getopt(argc, argv, "fhr:Rv:V")) != -1) {
         switch (ch) {
         case 'f':
             /* flush cache */
@@ -265,12 +268,8 @@ main(int argc, char *argv[])
             break;
 
         case 'h':
-            usage(argv[0]);
+            usage(progname);
             exit(0);
-            break;
-
-        case 'l':
-            localroot = optarg;
             break;
 
         case 'r':
@@ -282,33 +281,38 @@ main(int argc, char *argv[])
             flags &= ~SVNC_NNOCHECK;
             break;
 
-        case 'u':
-            url = optarg;
-            break;
-
         case 'v':
-            /* not yet implemented */
+            /* partially implemented */
             debug_level = strtol(optarg, NULL, 10);
             break;
 
         case 'V':
-            version(argv[0]);
-            break;
+            version(progname);
+            exit(0);
 
         default:
-            usage(argv[0]);
+            usage(progname);
             exit(1);
 
         }
     }
 
-    if (url == NULL) {
-        usage(argv[0]);
-        errx(1, "Missing URL");
+    argc -= optind;
+    argv += optind;
+
+    if (argc < 1) {
+        errx(1, "URL is required.");
     }
-    if (localroot == NULL) {
-        usage(argv[0]);
-        errx(1, "Missing local path");
+    url = argv[0];
+
+    if (argc > 1) {
+        localroot = argv[1];
+    } else {
+        localroot = ".";
+    }
+
+    if (*localroot == '-') {
+        errx(1, "Invalid local root: %s.", localroot);
     }
 
     //TRACE("command-line arguments: %s %ld %s", url, target_rev, localroot);
