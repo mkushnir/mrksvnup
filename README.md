@@ -34,11 +34,12 @@ files not being tracked on the remote side (for example, it won't wipe out
 custom kernel configurations during update) unless the containing
 directory was removed on the server.
 
-During update procedure an _svndiff_ document is obtained given the source
-and target revisions, and the files are edited along with this document.
-When something went wrong, a full copy of an individual file is checked
-out from the server using the _get-file_ svn command.  Each file's remote
-path and final checksum is saved in the database.
+During an update procedure the server "pushes" _svndiff_ documents to the
+client given the source and target revisions. The client modifies the
+corresponding files along with these documents.  When something went
+wrong, a full copy of an individual file is checked out from the server
+using the _get-file_ svn command.  Each file's remote path and final
+checksum is saved in the database.
 
 The _mrksvnup_ utility can also repair a corrupted tree (to some extent)
 using some minimal state about each tracked file: its remote path and the
@@ -46,7 +47,7 @@ checksum as a key/value pair saved in a local database during update.
 Repairment stage can be entered at an option, and performs a double check
 of the local tree against the hash database. During this stage the known
 tracked files that might possibly be deleted/modified locally, but not
-listed remotely in the svndiff document (because they wouldn't change),
+listed remotely in the svndiff documents (because they wouldn't change),
 will be restored using the _get-file_ command. It takes much longer, since
 the local copy of the repository is fully traversed.  In many cases this
 stage is not actually needed.  If it is known that the local files were
