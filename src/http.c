@@ -302,7 +302,10 @@ process_header(http_ctx_t *ctx, bytestream_t *in)
 }
 
 static int
-process_body(http_ctx_t *ctx, bytestream_t *in)
+process_body(http_ctx_t *ctx,
+             bytestream_t *in,
+             http_cb_t body_cb,
+             void *udata)
 {
     //TRACE("flags=%d body sz=%d start=%ld end=%ld",
     //      ctx->flags, ctx->bodysz, ctx->body.start, ctx->body.end);
@@ -311,8 +314,10 @@ process_body(http_ctx_t *ctx, bytestream_t *in)
     if (ctx->flags & PS_FLAG_CHUNKED) {
         if (ctx->chunk_parser_state == PS_CHUNK_SIZE) {
             char *end, *tmp = NULL;
+
             //D8(SDATA(in, ctx->current_chunk.start),
             //   SEOD(in) - ctx->current_chunk.start);
+
             if ((end = findcrlf(SDATA(in, ctx->current_chunk.start),
                                 SEOD(in) - ctx->current_chunk.start))
                 == NULL) {
@@ -323,8 +328,8 @@ process_body(http_ctx_t *ctx, bytestream_t *in)
                         ctx->current_chunk.start), &tmp, 16);
 
             if (tmp != end || ctx->current_chunk_size  < 0) {
-                D8(SDATA(in, ctx->current_chunk.start), 32);
-                return 1;
+                //D32(SDATA(in, ctx->current_chunk.start), 32);
+                TRRET(PROCESS_BODY + 1);
             }
 
             //TRACE("tmp=%p end=%p", tmp, end);
@@ -332,7 +337,7 @@ process_body(http_ctx_t *ctx, bytestream_t *in)
 
             SADVANCEPOS(in, end - SPDATA(in) + 2);
             ctx->current_chunk.start = SPOS(in);
-            ctx->current_chunk.end = SEOD(in);
+            ctx->current_chunk.end = ctx->current_chunk.start;
             ctx->chunk_parser_state = PS_CHUNK_DATA;
 
             return PARSE_NEED_MORE;
@@ -347,24 +352,33 @@ process_body(http_ctx_t *ctx, bytestream_t *in)
 
             if (needed > 0) {
                 int incr = MIN(needed, navail);
-                ctx->current_chunk.end += incr;
-                SADVANCEPOS(in, incr);
+
                 //TRACE("chunk incomplete: sz=%d/%ld",
                 //      ctx->current_chunk_size,
                 //      ctx->current_chunk.end - ctx->current_chunk.start);
+
+                ctx->current_chunk.end += incr;
+                SADVANCEPOS(in, incr);
                 return PARSE_NEED_MORE;
 
             } else {
                 //TRACE("chunk complete: sz=%d/%ld",
                 //      ctx->current_chunk_size,
                 //      ctx->current_chunk.end - ctx->current_chunk.start);
-                //D16(SDATA(in, ctx->current_chunk.start),
+                //D32(SDATA(in, ctx->current_chunk.start),
                 //    ctx->current_chunk.end - ctx->current_chunk.start);
+
+                if (body_cb != NULL) {
+                    if (body_cb(ctx, in, udata) != 0) {
+                        TRRET(PROCESS_BODY + 2);
+                    }
+                }
 
                 /* prepare to the next chunk */
                 ctx->chunk_parser_state = PS_CHUNK_SIZE;
                 /* account for \r\n */
-                ctx->current_chunk.start = ctx->current_chunk.end + 2;
+                SADVANCEPOS(in, 2);
+                ctx->current_chunk.start = SPOS(in);
                 ctx->current_chunk.end = ctx->current_chunk.start;
 
                 if (ctx->current_chunk_size > 0) {
@@ -386,16 +400,21 @@ process_body(http_ctx_t *ctx, bytestream_t *in)
         //      SEOD(in));
         //D16(SPDATA(in), navail);
 
-        SADVANCEPOS(in, SEOD(in));
+        SADVANCEPOS(in, navail);
 
         if (navail < ctx->bodysz) {
             return PARSE_NEED_MORE;
         } else {
+            if (body_cb != NULL) {
+                if (body_cb(ctx, in, udata) != 0) {
+                    TRRET(PROCESS_BODY + 3);
+                }
+            }
             return 0;
         }
     }
     
-    TRRET(PROCESS_BODY + 1);
+    TRRET(PROCESS_BODY + 4);
 }
 
 
@@ -574,38 +593,28 @@ http_parse_response(int fd,
 
             ctx->body.end = SEOD(in);
 
-            if ((res = process_body(ctx, in)) != 0) {
+            if ((res = process_body(ctx, in, body_cb, udata)) != 0) {
                 if (res != PARSE_NEED_MORE) {
                     TRRET(HTTP_PARSE_RESPONSE + 11);
                 }
             }
 
-            if (body_cb != NULL) {
-                if (body_cb(ctx, in, udata) != 0) {
-                    TRRET(HTTP_PARSE_RESPONSE + 12);
-                }
-            }
-
+            //D32(SDATA(in, ctx->current_chunk.start),
+            //          ctx->current_chunk.end - ctx->current_chunk.start);
             ctx->parser_state = PS_BODY;
-            SADVANCEPOS(in, SEOD(in) - SPOS(in));
 
         } else if (ctx->parser_state == PS_BODY) {
 
             ctx->body.end = SEOD(in);
 
-            if ((res = process_body(ctx, in)) != 0) {
+            if ((res = process_body(ctx, in, body_cb, udata)) != 0) {
                 if (res != PARSE_NEED_MORE) {
                     TRRET(HTTP_PARSE_RESPONSE + 13);
                 }
             }
 
-            if (body_cb != NULL) {
-                if (body_cb(ctx, in, udata) != 0) {
-                    TRRET(HTTP_PARSE_RESPONSE + 14);
-                }
-            }
-
-            SADVANCEPOS(in, SEOD(in) - SPOS(in));
+            //D32(SDATA(in, ctx->current_chunk.start),
+            //          ctx->current_chunk.end - ctx->current_chunk.start);
 
         } else {
             //TRACE("state=%s", PSSTR(ctx->parser_state));

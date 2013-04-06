@@ -16,6 +16,7 @@
 #include "mrkcommon/traversedir.h"
 
 #include "mrksvnup/svnc.h"
+#include "mrksvnup/svnedit.h"
 #include "mrksvnup/svncdir.h"
 #include "mrksvnup/svnproto.h"
 #include "mrksvnup/http.h"
@@ -170,7 +171,7 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
                 if ((fd = open(lp, O_RDWR)) < 0) {
                     errx(1, "open");
                 }
-                if (svnproto_editor_verify_checksum(fd, cs) != 0) {
+                if (svnedit_verify_checksum(fd, cs) != 0) {
                     need_file = 1;
                 }
             } else {

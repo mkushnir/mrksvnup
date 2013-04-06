@@ -14,19 +14,19 @@
 void
 debug_ns_start(UNUSED void *udata, const XML_Char *prefix, const XML_Char *uri)
 {
-    TRACE("ns start prefix=%s uri=%s", prefix, uri);
+    TRACE("ns >>> prefix=%s uri=%s", prefix, uri);
 }
 
 void
 debug_ns_end(UNUSED void *udata, const XML_Char *prefix)
 {
-    TRACE("ns end prefix=%s", prefix);
+    TRACE("ns <<< prefix=%s", prefix);
 }
 
 void
 debug_el_start(UNUSED void *udata, const XML_Char *name, const XML_Char **atts)
 {
-    TRACE("el start name=%s", name);
+    TRACE("el >>> name=%s", name);
     while (*atts != NULL) {
         TRACE("attr=%s", *atts);
         ++atts;
@@ -37,14 +37,14 @@ debug_el_start(UNUSED void *udata, const XML_Char *name, const XML_Char **atts)
 void
 debug_el_end(UNUSED void *udata, const XML_Char *name)
 {
-    TRACE("el end name=%s", name);
+    TRACE("el <<< name=%s", name);
 }
 
 void
 debug_chardata(UNUSED void *udata, const XML_Char *s, int len)
 {
     TRACE("character data:");
-    D8(s, len);
+    D32(s, len);
 }
 
 void
@@ -212,9 +212,11 @@ dav_pack_header_fields(svnc_ctx_t *ctx, svn_depth_t depth, size_t bodylen)
         TRRET(DAV_PACK_HEADER_FIELDS + 6);
     }
 
-    snprintf(buf, 64, "%d", depth);
-    if (http_add_header_field(&ctx->out, "Depth", buf) != 0) {
-        TRRET(DAV_PACK_HEADER_FIELDS + 7);
+    if (depth > SVN_DEPTH_NONE) {
+        snprintf(buf, 64, "%d", depth);
+        if (http_add_header_field(&ctx->out, "Depth", buf) != 0) {
+            TRRET(DAV_PACK_HEADER_FIELDS + 7);
+        }
     }
 
     if (http_add_header_field(&ctx->out, "User-Agent", RA_CLIENT) != 0) {
@@ -234,14 +236,21 @@ dav_pack_header_fields(svnc_ctx_t *ctx, svn_depth_t depth, size_t bodylen)
     return 0;
 }
 
+struct _extra_header {
+    const char *name;
+    const char *value;
+};
 int
 dav_request(svnc_ctx_t *ctx,
             const char *method,
             const char *uri,
             svn_depth_t depth,
             const char *body,
-            size_t bodylen)
+            size_t bodylen,
+            const struct _extra_header extra_headers[])
 {
+    const struct _extra_header *eh;
+
     if (http_start_request(&ctx->out, method, uri) != 0) {
         TRRET(DAV_REQUEST + 1);
     }
@@ -252,6 +261,15 @@ dav_request(svnc_ctx_t *ctx,
 
     if (dav_pack_header_fields(ctx, depth, bodylen) != 0) {
         TRRET(DAV_REQUEST + 2);
+    }
+
+    if (extra_headers != NULL) {
+        for (eh = extra_headers; eh->name != NULL; ++eh) {
+            if (http_add_header_field(&ctx->out, eh->name, eh->value) != 0) {
+                TRRET(DAV_REQUEST + 3);
+            }
+
+        }
     }
 
     if (http_end_of_header(&ctx->out) != 0) {

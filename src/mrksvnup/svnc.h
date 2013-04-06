@@ -23,6 +23,7 @@
 #define CACHEFILE ".svnup.cache"
 
 typedef enum _svn_depth {
+    SVN_DEPTH_NONE = -1,
     SVN_DEPTH_UNKNOWN,
     SVN_DEPTH_EXCLUDE,
     SVN_DEPTH_EMPTY,

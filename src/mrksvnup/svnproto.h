@@ -126,6 +126,5 @@ int svnproto_abort_report(svnc_ctx_t *);
 
 /* Editor */
 int svnproto_editor(svnc_ctx_t *);
-int svnproto_editor_verify_checksum(int, const svnproto_bytes_t *);
 
 #endif

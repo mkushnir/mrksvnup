@@ -234,10 +234,10 @@ run(const char *url,
 static void
 usage(const char *progname)
 {
-    printf("Usage: %s [ -r REV ] [ -f ] [ -v LEVEL ] "
-           "URL [ PATH ]\n\n", basename(progname));
-    printf("Usage: %s -h\n\n", basename(progname));
-    printf("Usage: %s -V\n\n", basename(progname));
+    printf("Usage:\n");
+    printf("   %s [-r REV] [-v LEVEL] URL [DIR]\n", progname);
+    printf("   %s [-h]\n", progname);
+    printf("   %s [-V]\n", progname);
 }
 
 static void

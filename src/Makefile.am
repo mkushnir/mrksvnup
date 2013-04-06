@@ -13,6 +13,7 @@ lib_LTLIBRARIES = libmrksvnup.la
 nobase_include_HEADERS = mrksvnup/svnc.h \
 			 mrksvnup/svncdir.h \
 			 mrksvnup/svndiff.h \
+			 mrksvnup/svnedit.h \
 			 mrksvnup/svnproto.h \
 			 mrksvnup/svnproto_bytes.h \
 			 mrksvnup/http.h \
@@ -25,6 +26,7 @@ libmrksvnup_la_SOURCES = svnc.c \
 			 svnc_util.c \
 			 svncdir.c \
 			 svndiff.c \
+			 svnedit.c \
 			 http.c \
 			 httpproto.c \
 			 dav.c \

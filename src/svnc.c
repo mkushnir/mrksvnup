@@ -11,7 +11,7 @@
 
 #include "diag.h"
 #include "mrkcommon/util.h"
-//#define TRRET_DEBUG
+#define TRRET_DEBUG
 #include "mrkcommon/dumpm.h"
 #include "mrkcommon/traversedir.h"
 
@@ -240,6 +240,9 @@ svnc_new(const char *url,
                                    0600,
                                    DB_HASH,
                                    NULL)) == NULL) {
+            if (debug_level > 0) {
+                LTRACE(0, FRED("Failed to open cache db: %s"), ctx->cachepath);
+            }
             svnc_destroy(ctx);
             free(ctx);
             TRRETNULL(SVNC_NEW + 9);
@@ -255,6 +258,7 @@ svnc_new(const char *url,
         ctx->get_file = svnproto_get_file;
         ctx->update = svnproto_update;
         ctx->editor = svnproto_editor;
+
     } else if (ctx->scheme == SVNC_SCHEME_HTTP) {
         ctx->get_latest_rev = httpproto_get_latest_rev;
         ctx->check_path = httpproto_check_path;

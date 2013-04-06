@@ -15,6 +15,7 @@ LDFLAGS += -L$(libdir) -lmrkcommon -lz -lmd -lbsdxml
 nobase_include_HEADERS = ../mrksvnup/svnc.h \
 			 ../mrksvnup/svncdir.h \
 			 ../mrksvnup/svndiff.h \
+			 ../mrksvnup/svnedit.h \
 			 ../mrksvnup/svnproto.h \
 			 ../mrksvnup/svnproto_bytes.h \
 			 ../mrksvnup/http.h \
@@ -32,6 +33,7 @@ testfoo_SOURCES = ../svnc.c \
 		  ../svnc_util.c \
 		  ../svncdir.c \
 		  ../svndiff.c \
+		  ../svnedit.c \
 		  ../svnproto.c \
 		  ../svnproto_bytes.c \
 		  ../svnproto_pack.c \
