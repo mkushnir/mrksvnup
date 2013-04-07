@@ -25,7 +25,13 @@ typedef struct _dav_ctx {
     long flags;
     /* weak ref to svnc_ctx_t */
     svnc_ctx_t *svnctx;
-    array_t cwd;
+    array_t cwp;
+
+    /* xml parser context */
+#define XPS_SET_PROP 1
+    int xml_parser_state;
+    bytes_t *set_prop_name;
+    bytes_t *text_checksum;
 
 } dav_ctx_t;
 
@@ -47,8 +53,9 @@ void pattern_match_el_end(void *, const XML_Char *);
 
 dav_ctx_t *dav_ctx_new(void);
 void dav_setup_xml_parser(dav_ctx_t *, dav_xml_cb_t *, void *, const char *);
-void dav_dir_enter(dav_ctx_t *, const char *);
-void dav_dir_leave(dav_ctx_t *);
+void dav_cwp_enter(dav_ctx_t *, const char *);
+void dav_cwp_leave(dav_ctx_t *);
+bytes_t * dav_cwp(dav_ctx_t *);
 void dav_ctx_destroy(dav_ctx_t *);
 
 #endif

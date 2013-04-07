@@ -180,6 +180,8 @@ void init_bytes_array(array_t *ar);
 void fini_bytes_array(array_t *ar);
 void dump_bytes_array(array_t *ar);
 bytes_t *bytes_from_str(const char *);
+bytes_t *bytes_from_strn(const char *, size_t);
+bytes_t *bytes_from_mem(const char *, size_t);
 
 /* Protocol API flags */
 

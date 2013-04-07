@@ -596,7 +596,7 @@ svnedit_close_file(svnc_ctx_t *ctx,
     svndiff_wnd_t *wnd;
     ssize_t total_len;
 
-    if (BDATA(file_token) && BDATA(doc.ft)) {
+    if ((BDATA(file_token) != NULL) && (BDATA(doc.ft) != NULL)) {
         if (strcmp(BDATA(file_token), BDATA(doc.ft)) != 0) {
             res = SVNEDIT_CLOSE_FILE + 1;
             goto END;

@@ -407,7 +407,49 @@ bytes_t *
 bytes_from_str(const char *s)
 {
     bytes_t *b = NULL;
-    size_t sz = strlen(s);
+    size_t sz;
+
+    if (s == NULL) {
+        return NULL;
+    }
+
+    sz = strlen(s);
+
+    if ((b = malloc(sizeof(bytes_t) + sz + 1)) == NULL) {
+        FAIL("malloc");
+    }
+    b->sz = sz;
+    memcpy(b->data, s, sz);
+    (b->data)[sz] = '\0';
+    return b;
+}
+
+bytes_t *
+bytes_from_strn(const char *s, size_t sz)
+{
+    bytes_t *b = NULL;
+
+    if (s == NULL) {
+        return NULL;
+    }
+
+    if ((b = malloc(sizeof(bytes_t) + sz + 1)) == NULL) {
+        FAIL("malloc");
+    }
+    b->sz = sz;
+    memcpy(b->data, s, sz);
+    (b->data)[sz] = '\0';
+    return b;
+}
+
+bytes_t *
+bytes_from_mem(const char *s, size_t sz)
+{
+    bytes_t *b = NULL;
+
+    if (s == NULL) {
+        return NULL;
+    }
 
     if ((b = malloc(sizeof(bytes_t) + sz)) == NULL) {
         FAIL("malloc");

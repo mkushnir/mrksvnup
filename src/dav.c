@@ -1,7 +1,7 @@
 #include <bsdxml.h>
 
 #include "mrkcommon/bytestream.h"
-#define TRRET_DEBUG
+//#define TRRET_DEBUG
 #include "mrkcommon/dumpm.h"
 #include "mrkcommon/util.h"
 
@@ -48,16 +48,18 @@ debug_chardata(UNUSED void *udata, const XML_Char *s, int len)
 }
 
 void
-pattern_match_el_start(void *udata, const XML_Char *name, const XML_Char **atts)
+pattern_match_el_start(void *udata,
+                       const XML_Char *name,
+                       UNUSED const XML_Char **atts)
 {
     dav_ctx_t *davctx = udata;
     int match;
 
     //TRACE("el >>> name=%s", name);
-    while (*atts != NULL) {
-        //TRACE("attr=%s", *atts);
-        ++atts;
-    }
+    //while (*atts != NULL) {
+    //    TRACE("attr=%s", *atts);
+    //    ++atts;
+    //}
     xmatch_push(&davctx->xmatch, name);
     if ((match = xmatch_matches(&davctx->xmatch)) == 0) {
         davctx->match_result = 0;
@@ -102,29 +104,60 @@ dav_setup_xml_parser(dav_ctx_t *ctx,
         XML_SetUserData(ctx->p, udata);
     }
 
-    if (pattern != NULL) {
-        xmatch_fini(&ctx->xmatch);
-        xmatch_init(&ctx->xmatch, pattern);
-    }
+    xmatch_fini(&ctx->xmatch);
+    xmatch_init(&ctx->xmatch, pattern);
 }
 
 void
-dav_dir_enter(dav_ctx_t *ctx, const char *dir)
+dav_cwp_enter(dav_ctx_t *ctx, const char *dir)
 {
     bytes_t **s;
 
-    if ((s = array_incr(&ctx->cwd)) == NULL) {
+    if ((s = array_incr(&ctx->cwp)) == NULL) {
         FAIL("array_incr");
     }
     *s = bytes_from_str(dir);
 }
 
 void
-dav_dir_leave(dav_ctx_t *ctx)
+dav_cwp_leave(dav_ctx_t *ctx)
 {
-    if (array_decr(&ctx->cwd)) {
-        FAIL("array_decr");
+    if (ctx->cwp.elnum > 0) {
+        if (array_decr(&ctx->cwp) != 0) {
+            FAIL("array_decr");
+        }
     }
+}
+
+bytes_t *
+dav_cwp(dav_ctx_t *ctx)
+{
+    bytes_t *res;
+    size_t sz = 0;
+    bytes_t **e;
+    array_iter_t it;
+    char *d;
+
+    for (e = array_first(&ctx->cwp, &it);
+         e != NULL;
+         e = array_next(&ctx->cwp, &it)) {
+        sz += (*e)->sz;
+    }
+    sz += ctx->cwp.elnum;
+    if ((res = malloc(sizeof(bytes_t) + sz + 1)) == NULL) {
+        FAIL("malloc");
+    }
+    res->sz = sz;
+    d = res->data;
+    for (e = array_first(&ctx->cwp, &it);
+         e != NULL;
+         e = array_next(&ctx->cwp, &it)) {
+        *d++ = '/';
+        memcpy(d, (*e)->data, (*e)->sz);
+        d += (*e)->sz;
+    }
+    *d = '\0';
+    return res;
 }
 
 
@@ -159,7 +192,9 @@ dav_ctx_new(void)
     ctx->target = NULL;
     ctx->flags = 0;
     ctx->svnctx = NULL;
-    init_bytes_array(&ctx->cwd);
+    init_bytes_array(&ctx->cwp);
+    ctx->set_prop_name = NULL;
+    ctx->text_checksum = NULL;
 
 END:
     return ctx;
@@ -198,7 +233,15 @@ dav_ctx_destroy(dav_ctx_t *ctx)
     ctx->target = NULL;
     ctx->flags = 0;
     ctx->svnctx = NULL;
-    fini_bytes_array(&ctx->cwd);
+    fini_bytes_array(&ctx->cwp);
+    if (ctx->set_prop_name != NULL) {
+        free(ctx->set_prop_name);
+        ctx->set_prop_name = NULL;
+    }
+    if (ctx->text_checksum != NULL) {
+        free(ctx->text_checksum);
+        ctx->text_checksum = NULL;
+    }
     free(ctx);
 }
 

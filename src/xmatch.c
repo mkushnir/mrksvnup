@@ -1,7 +1,7 @@
 #include <string.h>
 #include <sys/stddef.h> /* ptrdiff_t */
 
-#define TRRET_DEBUG
+//#define TRRET_DEBUG
 #include "mrkcommon/dumpm.h"
 #include "mrkcommon/util.h"
 #include "mrkcommon/array.h"
@@ -92,6 +92,18 @@ xmatch_pop(xmatch_t *xmatch)
     if (array_decr(&xmatch->input_stack) != 0) {
         FAIL("array_decr");
     }
+}
+
+const char *
+xmatch_top(xmatch_t *xmatch, int idx)
+{
+    const char **e;
+
+    if ((e = array_get(&xmatch->input_stack,
+                       xmatch->input_stack.elnum - 1 - idx)) == NULL) {
+        return NULL;
+    }
+    return *e;
 }
 
 int

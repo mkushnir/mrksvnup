@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#define TRRET_DEBUG
+//#define TRRET_DEBUG
 //#define TRRET_DEBUG_VERBOSE
 #include "mrkcommon/dumpm.h"
 #include "mrkcommon/bytestream.h"
@@ -325,6 +325,8 @@ editor_el_start(UNUSED void *udata, const XML_Char *name, UNUSED const XML_Char 
 
     //TRACE("cmd=%s", name);
 
+    xmatch_push(&davctx->xmatch, name);
+
     if (strcmp(name, "svn:open-directory") == 0) {
         const char *dname = NULL;
         long rev = 0;
@@ -345,18 +347,35 @@ editor_el_start(UNUSED void *udata, const XML_Char *name, UNUSED const XML_Char 
         }
 
         if (dname == NULL) {
-            TRACE("open-root rev %ld", rev);
-            dname = davctx->svnctx->localroot;
+            if (davctx->svnctx->debug_level > 3) {
+                LTRACE(1, "open-root rev=%ld", rev);
+            }
 
             if (svnedit_open_root(davctx->svnctx, 0, NULL) != 0) {
                 TRRETVOID(EDITOR_EL_START + 1);
             }
 
         } else {
-            TRACE("open-dir name %s rev %ld", dname, rev);
-        }
+            bytes_t *path = NULL;
 
-        dav_dir_enter(davctx, dname);
+            dav_cwp_enter(davctx, dname);
+
+            if ((path = dav_cwp(davctx)) == NULL) {
+                TRRETVOID(EDITOR_EL_START + 2);
+            }
+
+            if (svnedit_open_dir(davctx->svnctx, path) != 0) {
+                TRRETVOID(EDITOR_EL_START + 3);
+            }
+
+            if (davctx->svnctx->debug_level > 3) {
+                LTRACE(1, "open-dir path=%s", BDATA(path));
+            }
+
+            free(path);
+            path = NULL;
+
+        }
 
     } else if (strcmp(name, "svn:add-directory") == 0) {
         const char *dname = NULL;
@@ -377,15 +396,190 @@ editor_el_start(UNUSED void *udata, const XML_Char *name, UNUSED const XML_Char 
             TRACE(FRED("invalid add-directory, ignoring"));
 
         } else {
-            TRACE("add-dir name %s", dname);
-            dav_dir_enter(davctx, dname);
+            bytes_t *path = NULL;
+
+            dav_cwp_enter(davctx, dname);
+
+            if ((path = dav_cwp(davctx)) == NULL) {
+                TRRETVOID(EDITOR_EL_START + 4);
+            }
+
+            if (svnedit_add_dir(davctx->svnctx, path) != 0) {
+                TRRETVOID(EDITOR_EL_START + 5);
+            }
+
+            if (davctx->svnctx->debug_level > 3) {
+                LTRACE(1, "add-dir path=%s", BDATA(path));
+            }
+
+            free(path);
+            path = NULL;
+        }
+
+    } else if (strcmp(name, "svn:open-file") == 0) {
+        svndiff_doc_t *doc;
+        const char *fname = NULL;
+
+        while (*atts != NULL) {
+            if (strcmp(*atts, "name") == 0) {
+                ++atts;
+                fname = *atts;
+                break;
+
+            } else {
+                ++atts;
+            }
+            ++atts;
+        }
+
+        if (fname == NULL) {
+            TRACE(FRED("invalid open-file, ignoring"));
+
+        } else {
+            if ((doc = svnedit_clear_doc()) == NULL) {
+                TRRETVOID(EDITOR_EL_START + 6);
+            }
+
+            dav_cwp_enter(davctx, fname);
+
+            /* doc->rp */
+
+            if ((doc->rp = dav_cwp(davctx)) == NULL) {
+                TRRETVOID(EDITOR_EL_START + 7);
+            }
+
+            if (davctx->svnctx->debug_level > 3) {
+                LTRACE(1, "open-file path=%s", BDATA(doc->rp));
+            }
+
+            if (svnedit_open_file(davctx->svnctx) != 0) {
+                TRRETVOID(EDITOR_EL_START + 8);
+            }
 
         }
 
     } else if (strcmp(name, "svn:add-file") == 0) {
+        svndiff_doc_t *doc;
+        const char *fname = NULL;
+
+        while (*atts != NULL) {
+            if (strcmp(*atts, "name") == 0) {
+                ++atts;
+                fname = *atts;
+                break;
+
+            } else {
+                ++atts;
+            }
+            ++atts;
+        }
+
+        if (fname == NULL) {
+            TRACE(FRED("invalid add-file, ignoring"));
+
+        } else {
+            if ((doc = svnedit_clear_doc()) == NULL) {
+                TRRETVOID(EDITOR_EL_START + 9);
+            }
+
+            dav_cwp_enter(davctx, fname);
+
+            /* doc->rp */
+
+            if ((doc->rp = dav_cwp(davctx)) == NULL) {
+                TRRETVOID(EDITOR_EL_START + 10);
+            }
+
+            if (davctx->svnctx->debug_level > 3) {
+                LTRACE(1, "add-file path=%s", BDATA(doc->rp));
+            }
+
+            if (svnedit_add_file(davctx->svnctx) != 0) {
+                TRRETVOID(EDITOR_EL_START + 11);
+            }
+
+        }
+
+    } else if (strcmp(name, "svn:set-prop") == 0 ||
+               strcmp(name, "svn:remove-prop") == 0) {
+
+        while (*atts != NULL) {
+            if (strcmp(*atts, "name") == 0) {
+                ++atts;
+                davctx->set_prop_name = bytes_from_str(*atts);
+                break;
+
+            } else {
+                ++atts;
+            }
+            ++atts;
+        }
+
+    } else if (strcmp(name, "svn:txdelta") == 0) {
+        svndiff_doc_t *doc;
+
+        doc = svnedit_get_doc();
+
+        while (*atts != NULL) {
+            if (strcmp(*atts, "base-checksum") == 0) {
+                ++atts;
+                doc->base_checksum = bytes_from_str(*atts);
+                if (davctx->svnctx->debug_level > 3) {
+                    LTRACE(1, "txdelta base-checksum=%s",
+                           BDATA(doc->base_checksum));
+                }
+                break;
+
+            } else {
+                ++atts;
+            }
+            ++atts;
+        }
+
+    } else if (strcmp(name, "svn:delete-entry") == 0) {
+        const char *ename = NULL;
+
+        while (*atts != NULL) {
+            if (strcmp(*atts, "name") == 0) {
+                ++atts;
+                ename = *atts;
+                break;
+
+            } else {
+                ++atts;
+            }
+            ++atts;
+        }
+
+        if (ename == NULL) {
+            TRACE(FRED("invalid delete-entry, ignoring"));
+
+        } else {
+            bytes_t *path;
+
+            dav_cwp_enter(davctx, ename);
+
+            if ((path = dav_cwp(davctx)) == NULL) {
+                TRRETVOID(EDITOR_EL_START + 12);
+            }
+
+            if (davctx->svnctx->debug_level > 3) {
+                LTRACE(1, "delete-entry path=%s", BDATA(path));
+            }
+
+            if (svnedit_delete_entry(davctx->svnctx, path, 0, NULL) != 0) {
+                TRRETVOID(EDITOR_EL_START + 13);
+            }
+
+            free(path);
+            path = NULL;
+            dav_cwp_leave(davctx);
+        }
 
     } else {
-        TRACE(FYELLOW("skipping %s"), name);
+        if (davctx->svnctx->debug_level > 3) {
+            LTRACE(1, FYELLOW("skipping %s"), name);
+        }
     }
 }
 
@@ -395,25 +589,105 @@ editor_el_end(UNUSED void *udata, UNUSED const XML_Char *name)
     dav_ctx_t *davctx = udata;
     //TRACE("cmd=%s", name);
 
+    xmatch_pop(&davctx->xmatch);
+
     if (strcmp(name, "svn:open-directory") == 0) {
-        dav_dir_leave(davctx);
+        dav_cwp_leave(davctx);
 
     } else if (strcmp(name, "svn:add-directory") == 0) {
-        dav_dir_leave(davctx);
+        dav_cwp_leave(davctx);
+
+    } else if (strcmp(name, "svn:open-file") == 0) {
+        if (svnedit_close_file(davctx->svnctx, NULL,
+                               davctx->text_checksum) != 0) {
+            if (davctx->svnctx->debug_level > 3) {
+                LTRACE(1, FYELLOW("skipping %s"), name);
+            }
+        }
+
+        dav_cwp_leave(davctx);
+
+        if (davctx->text_checksum != NULL) {
+            free(davctx->text_checksum);
+            davctx->text_checksum = NULL;
+        }
 
     } else if (strcmp(name, "svn:add-file") == 0) {
+        if (svnedit_close_file(davctx->svnctx, NULL,
+                               davctx->text_checksum)!= 0) {
+            if (davctx->svnctx->debug_level > 3) {
+                LTRACE(1, FYELLOW("skipping %s"), name);
+            }
+        }
+
+        dav_cwp_leave(davctx);
+
+        if (davctx->text_checksum != NULL) {
+            free(davctx->text_checksum);
+            davctx->text_checksum = NULL;
+        }
+
+
     } else {
-        TRACE(FYELLOW("skipping %s"), name);
+        if (davctx->svnctx->debug_level > 3) {
+            LTRACE(1, FYELLOW("skipping %s"), name);
+        }
     }
 }
 
 void
-editor_chardata(UNUSED void *udata, UNUSED const XML_Char *s, UNUSED int len)
+editor_chardata(UNUSED void *udata, UNUSED const XML_Char *s, int len)
 {
-    //TRACE("character data:");
-    //D32(s, len);
-}
+    dav_ctx_t *davctx = udata;
+    const char *elname;
 
+    elname = xmatch_top(&davctx->xmatch, 0);
+
+    if (elname == NULL) {
+        return;
+
+    } else if (strcmp(elname, "svn:set-prop") == 0 ||
+               strcmp(elname, "svn:remove-prop") == 0) {
+        bytes_t *v;
+
+        v = bytes_from_strn(s, len);
+
+        if (svnedit_change_file_prop(davctx->svnctx,
+                                     davctx->set_prop_name, v) != 0) {
+
+            if (davctx->svnctx->debug_level > 3) {
+                LTRACE(1, FYELLOW("skipping %s=%s"),
+                      BDATA(davctx->set_prop_name), BDATA(v));
+            }
+        } else {
+            if (davctx->svnctx->debug_level > 3) {
+                LTRACE(1, "set-prop %s=%s",
+                       BDATA(davctx->set_prop_name), BDATA(v));
+            }
+        }
+
+        if (davctx->set_prop_name != NULL) {
+            free(davctx->set_prop_name);
+            davctx->set_prop_name = NULL;
+        }
+
+        if (v != NULL) {
+            free(v);
+            v = NULL;
+        }
+
+    } else if (strcmp(elname,
+               "http://subversion.tigris.org/xmlns/dav/md5-checksum") == 0) {
+
+        davctx->text_checksum = bytes_from_strn(s, len);
+
+    } else {
+        if (davctx->svnctx->debug_level > 4) {
+            TRACE(" unhandled char data of %s", elname);
+        }
+    }
+
+}
 
 static int
 editor_header_cb(http_ctx_t *ctx,
@@ -499,12 +773,14 @@ httpproto_editor(svnc_ctx_t *ctx)
         goto END;
     }
 
-    TRACE("source_rev=%ld target_rev=%ld depth=%s target=%s flags=%08lx",
-          davctx->source_rev,
-          davctx->target_rev,
-          SVN_DEPTH_STR(davctx->depth),
-          davctx->target,
-          davctx->flags);
+    if (davctx->svnctx->debug_level > 4) {
+        TRACE("source_rev=%ld target_rev=%ld depth=%s target=%s flags=%08lx",
+              davctx->source_rev,
+              davctx->target_rev,
+              SVN_DEPTH_STR(davctx->depth),
+              davctx->target,
+              davctx->flags);
+    }
 
     /* XXX consult svnc.h */
     sz = strlen(body) + strlen(ctx->path) +

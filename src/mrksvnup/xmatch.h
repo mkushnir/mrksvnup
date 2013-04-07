@@ -13,6 +13,7 @@ int xmatch_init(xmatch_t *, const char *);
 int xmatch_fini(xmatch_t *);
 void xmatch_push(xmatch_t *, const char *);
 void xmatch_pop(xmatch_t *);
+const char *xmatch_top(xmatch_t *, int);
 int xmatch_matches(xmatch_t *);
 
 #endif

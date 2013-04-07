@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TRRET_DEBUG
+//#define TRRET_DEBUG
 #include "mrkcommon/dumpm.h"
 #include "mrkcommon/bytestream.h"
 #include "mrkcommon/util.h"
