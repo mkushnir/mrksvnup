@@ -212,15 +212,15 @@ read_one_value(int fd, bytestream_t *in, svnproto_state_t *st)
     TRRET(res);
 }
 
-static svnproto_bytes_t *
+static bytes_t *
 byte_chunk(bytestream_t *in, svnproto_state_t *st)
 {
     char *res = NULL;
-    svnproto_bytes_t *b = NULL;
+    bytes_t *b = NULL;
 
     if ((res = malloc(st->r.end - st->r.start +
-                      sizeof(svnproto_bytes_t) + 1)) != NULL) {
-        b = (svnproto_bytes_t *)res;
+                      sizeof(bytes_t) + 1)) != NULL) {
+        b = (bytes_t *)res;
         b->sz = st->r.end - st->r.start;
         memcpy(b->data, SDATA(in, st->r.start), b->sz);
         b->data[b->sz] = '\0';
@@ -470,7 +470,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
 
             } else if (ch == 's') {
                 array_t *ar;
-                svnproto_bytes_t **pv;
+                bytes_t **pv;
 
                 if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                     /* read error */
@@ -510,7 +510,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                     //TRACE("backtrack @ s*");
 
                 } else if (ch1 == '?') {
-                    pv = va_arg(ap, svnproto_bytes_t **);
+                    pv = va_arg(ap, bytes_t **);
 
                     if (st->tokenizer_state == TS_STRING_OUT) {
                         if (pv != NULL) {
@@ -528,7 +528,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 } else {
                     if (st->tokenizer_state == TS_STRING_OUT) {
 
-                        pv = va_arg(ap, svnproto_bytes_t **);
+                        pv = va_arg(ap, bytes_t **);
                         if (pv != NULL) {
                             *pv = byte_chunk(in, st);
                         }

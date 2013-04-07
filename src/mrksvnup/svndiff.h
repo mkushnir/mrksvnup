@@ -40,7 +40,7 @@ typedef struct _svndiff_wnd {
     long orig_inslen;
     ssize_t inslen_check;
     array_t insns;
-    svnproto_bytes_t *bytes;
+    bytes_t *bytes;
     char *tview;
 } svndiff_wnd_t;
 
@@ -57,15 +57,15 @@ typedef struct _svndiff_doc {
 #define SD_STATE_BYTES 8
     int parse_state;
     svndiff_wnd_t *current_wnd;
-    svnproto_bytes_t *base_checksum;
+    bytes_t *base_checksum;
     /*
      * The currently opened file under edit (remote path, rev, mode, token, local path,
      * descriptor)
      */
-    svnproto_bytes_t *rp;
+    bytes_t *rp;
     long rev;
     unsigned int mod;
-    svnproto_bytes_t *ft;
+    bytes_t *ft;
     char *lp;
     int fd;
 #define SD_FLAG_MOD_SET 0x01

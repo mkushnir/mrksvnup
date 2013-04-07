@@ -84,7 +84,7 @@ decode_insn(const char *start, const char *end, svndiff_insn_t *insn)
 
 static const char *
 decode_bytes(const char *start, const char *end,
-             size_t encoded_len, svnproto_bytes_t **out)
+             size_t encoded_len, bytes_t **out)
 {
     long orig_len;
     const char *savedstart = start;
@@ -96,7 +96,7 @@ decode_bytes(const char *start, const char *end,
     }
     encoded_len -= (start - savedstart);
 
-    if ((*out = malloc(sizeof(svnproto_bytes_t) + orig_len)) == NULL) {
+    if ((*out = malloc(sizeof(bytes_t) + orig_len)) == NULL) {
         FAIL("malloc");
     }
     (*out)->sz = orig_len;
@@ -392,7 +392,7 @@ svndiff_parse_doc(const char *start,
             }
 
         } else if (doc->parse_state == SD_STATE_INSNS) {
-            svnproto_bytes_t *b = NULL;
+            bytes_t *b = NULL;
 
             if ((start = decode_bytes(start, end, end - start, &b)) == NULL) {
                 res = SVNDIFF_PARSE_DOC + 7;

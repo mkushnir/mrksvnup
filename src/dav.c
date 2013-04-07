@@ -108,6 +108,25 @@ dav_setup_xml_parser(dav_ctx_t *ctx,
     }
 }
 
+void
+dav_dir_enter(dav_ctx_t *ctx, const char *dir)
+{
+    bytes_t **s;
+
+    if ((s = array_incr(&ctx->cwd)) == NULL) {
+        FAIL("array_incr");
+    }
+    *s = bytes_from_str(dir);
+}
+
+void
+dav_dir_leave(dav_ctx_t *ctx)
+{
+    if (array_decr(&ctx->cwd)) {
+        FAIL("array_decr");
+    }
+}
+
 
 dav_ctx_t *
 dav_ctx_new(void)
@@ -137,9 +156,10 @@ dav_ctx_new(void)
     ctx->target_rev = -1;
     ctx->depth = SVN_DEPTH_UNKNOWN;
     /* weak ref */
-    ctx->path = NULL;
+    ctx->target = NULL;
     ctx->flags = 0;
-
+    ctx->svnctx = NULL;
+    init_bytes_array(&ctx->cwd);
 
 END:
     return ctx;
@@ -175,8 +195,10 @@ dav_ctx_destroy(dav_ctx_t *ctx)
     ctx->target_rev = -1;
     ctx->depth = SVN_DEPTH_UNKNOWN;
     /* weak ref */
-    ctx->path = NULL;
+    ctx->target = NULL;
     ctx->flags = 0;
+    ctx->svnctx = NULL;
+    fini_bytes_array(&ctx->cwd);
     free(ctx);
 }
 

@@ -15,7 +15,6 @@ nobase_include_HEADERS = mrksvnup/svnc.h \
 			 mrksvnup/svndiff.h \
 			 mrksvnup/svnedit.h \
 			 mrksvnup/svnproto.h \
-			 mrksvnup/svnproto_bytes.h \
 			 mrksvnup/http.h \
 			 mrksvnup/httpproto.h \
 			 mrksvnup/dav.h \
@@ -32,7 +31,6 @@ libmrksvnup_la_SOURCES = svnc.c \
 			 dav.c \
 			 xmatch.c \
 			 svnproto.c \
-			 svnproto_bytes.c \
 			 svnproto_unpack.c \
 			 svnproto_pack.c \
 			 svnproto_auth.c \

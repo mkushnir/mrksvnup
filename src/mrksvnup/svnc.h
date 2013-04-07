@@ -8,9 +8,9 @@
 #include <fcntl.h>
 #include <limits.h>
 
+#include "mrkcommon/array.h"
 #include "mrkcommon/bytestream.h"
 
-#include "mrksvnup/svnproto_bytes.h"
 #include "mrksvnup/version.h"
 
 #define SVN_DEFAULT_PORT 3690
@@ -40,20 +40,33 @@ typedef enum _svn_depth {
      (d) == SVN_DEPTH_INFINITY ? "infinity" : \
      "unknown")
 
+typedef struct _bytes {
+    size_t sz;
+    char data[];
+} bytes_t;
+/*
+ * This macro is also defined in bytestream.h for a different structure.
+ * Surprisingly, it appears to be exactly the same.
+ *
+ */
+#ifndef BDATA
+#   define BDATA(b) ((b) != NULL ? (b)->data : NULL)
+#endif
+
 typedef struct _svnc_prop {
-    svnproto_bytes_t *name;
-    svnproto_bytes_t *value;
+    bytes_t *name;
+    bytes_t *value;
 } svnc_prop_t;
 
 typedef struct _svnc_fileent {
-    svnproto_bytes_t *checksum;
+    bytes_t *checksum;
     long rev;
     array_t props;
     array_t contents;
 } svnc_fileent_t;
 
 typedef struct _svnc_dirent {
-    svnproto_bytes_t *name;
+    bytes_t *name;
     long rev; /* copied from get-dir response */
     int kind;
     ssize_t size;
@@ -98,8 +111,8 @@ typedef struct _svnc_ctx {
 
     struct _error_info {
         long apr_error;
-        svnproto_bytes_t *message;
-        svnproto_bytes_t *file;
+        bytes_t *message;
+        bytes_t *file;
         long line;
     } last_error;
 
@@ -147,10 +160,10 @@ void svnc_clear_last_error(svnc_ctx_t *);
 void svnc_print_last_error(svnc_ctx_t *);
 int svnc_close(svnc_ctx_t *);
 int svnc_destroy(svnc_ctx_t *);
-int svnc_save_checksum(svnc_ctx_t *, const char *, svnproto_bytes_t *);
+int svnc_save_checksum(svnc_ctx_t *, const char *, bytes_t *);
 int svnc_delete_checksum(svnc_ctx_t *, const char *);
-int svnc_first_checksum(svnc_ctx_t *, char **, svnproto_bytes_t **);
-int svnc_next_checksum(svnc_ctx_t *, char **, svnproto_bytes_t **);
+int svnc_first_checksum(svnc_ctx_t *, char **, bytes_t **);
+int svnc_next_checksum(svnc_ctx_t *, char **, bytes_t **);
 int svnc_debug_open(svnc_ctx_t *, const char *);
 
 /* Utilities */
@@ -163,6 +176,10 @@ void init_long_array(array_t *);
 void dump_long_array(array_t *);
 void init_string_array(array_t *);
 void dump_string_array(array_t *);
+void init_bytes_array(array_t *ar);
+void fini_bytes_array(array_t *ar);
+void dump_bytes_array(array_t *ar);
+bytes_t *bytes_from_str(const char *);
 
 /* Protocol API flags */
 

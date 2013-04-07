@@ -104,7 +104,7 @@ unpack3(UNUSED svnc_ctx_t *ctx,
               UNUSED void *udata)
 {
     int res = 0;
-    svnproto_bytes_t **b;
+    bytes_t **b;
     array_t *ar = udata;
     ssize_t sz;
 
@@ -123,7 +123,7 @@ unpack3(UNUSED svnc_ctx_t *ctx,
             FAIL("array_incr");
         }
 
-        if ((*b = malloc(sizeof(svnproto_bytes_t) + sz)) == NULL) {
+        if ((*b = malloc(sizeof(bytes_t) + sz)) == NULL) {
             FAIL("malloc");
         }
         (*b)->sz = sz;
@@ -154,7 +154,7 @@ unpack1(svnc_ctx_t *ctx,
         UNUSED void *udata)
 {
     int res;
-    svnproto_bytes_t *name = NULL, *value = NULL;
+    bytes_t *name = NULL, *value = NULL;
     svnc_fileent_t *e = udata;
     svnc_prop_t *p;
 

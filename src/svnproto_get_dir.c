@@ -195,7 +195,7 @@ unpack2(svnc_ctx_t *ctx,
         UNUSED void *udata)
 {
     int res;
-    svnproto_bytes_t *name = NULL;
+    bytes_t *name = NULL;
     char *kind_str = NULL;
     long size;
     array_t *dirents = udata;
@@ -232,7 +232,7 @@ unpack1(svnc_ctx_t *ctx,
         UNUSED void *udata)
 {
     int res;
-    svnproto_bytes_t *key = NULL, *value = NULL;
+    bytes_t *key = NULL, *value = NULL;
 
     res = svnproto_unpack(ctx, in, "(ss)", &key, &value);
     //TRACE("key=%s value=%s", BDATA(key), BDATA(value));

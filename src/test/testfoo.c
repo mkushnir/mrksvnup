@@ -17,7 +17,6 @@
 #include "mrksvnup/http.h"
 #include "mrksvnup/svncdir.h"
 #include "mrksvnup/svnproto.h"
-#include "mrksvnup/svnproto_bytes.h"
 
 static int
 mystrcmp(const char *a, const char *b)
@@ -222,7 +221,7 @@ str_cb(UNUSED svnc_ctx_t *ctx,
        UNUSED void *udata)
 {
     int res = 0;
-    svnproto_bytes_t **b;
+    bytes_t **b;
     array_t *ar = udata;
 
 
@@ -235,7 +234,7 @@ str_cb(UNUSED svnc_ctx_t *ctx,
             FAIL("array_incr");
         }
 
-        if ((*b = malloc(sizeof(svnproto_bytes_t) + st->r.end - st->r.start)) == NULL) {
+        if ((*b = malloc(sizeof(bytes_t) + st->r.end - st->r.start)) == NULL) {
             FAIL("malloc");
         }
         (*b)->sz = st->r.end - st->r.start;
@@ -380,7 +379,7 @@ test_unpack(void)
         assert(0);
     }
 
-    svnproto_init_bytes_array(&ar);
+    init_bytes_array(&ar);
     res = svnproto_unpack(ctx, &ctx->in, "S*", str_cb, &ar);
 
     if (res == PARSE_EOD) {
@@ -390,8 +389,8 @@ test_unpack(void)
         assert(0);
     }
 
-    svnproto_dump_bytes_array(&ar);
-    array_fini(&ar);
+    dump_bytes_array(&ar);
+    fini_bytes_array(&ar);
 
     if (svnproto_unpack(ctx, &ctx->in, "(w)", &s1) != 0) {
         assert(0);
@@ -711,7 +710,7 @@ walk_cb(svnc_ctx_t *ctx,
         if (lstat(localpath, &sb) != 0) {
             int fd;
             svnc_fileent_t ffe;
-            svnproto_bytes_t **chunk;
+            bytes_t **chunk;
             array_iter_t it;
 
             if ((fd = open(localpath, O_RDWR|O_CREAT)) < 0) {
@@ -778,7 +777,7 @@ test_conn2(void)
     struct stat sb;
     const char *localroot = "qwe";
     char *p = NULL;
-    svnproto_bytes_t *c = NULL;
+    bytes_t *c = NULL;
     int i;
 
     if ((ctx =

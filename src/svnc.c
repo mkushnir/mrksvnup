@@ -34,7 +34,7 @@ UNUSED static const char *svn_depth_str[] = {
 int
 svnc_save_checksum(svnc_ctx_t *ctx,
                    const char *path,
-                   svnproto_bytes_t *checksum)
+                   bytes_t *checksum)
 {
     int res = 0;
     DBT k, v;
@@ -67,7 +67,7 @@ svnc_delete_checksum(svnc_ctx_t *ctx,
 int
 svnc_first_checksum(svnc_ctx_t *ctx,
                      char **path,
-                     svnproto_bytes_t **checksum)
+                     bytes_t **checksum)
 {
     int res = 0;
     DBT k, v;
@@ -86,7 +86,7 @@ svnc_first_checksum(svnc_ctx_t *ctx,
     memcpy(*path, k.data, k.size);
     *((*path) + k.size) = '\0';
 
-    if ((*checksum = malloc(sizeof(svnproto_bytes_t) + v.size)) == NULL) {
+    if ((*checksum = malloc(sizeof(bytes_t) + v.size)) == NULL) {
         FAIL("malloc");
     }
     (*checksum)->sz = v.size;
@@ -98,7 +98,7 @@ svnc_first_checksum(svnc_ctx_t *ctx,
 int
 svnc_next_checksum(svnc_ctx_t *ctx,
                    char **path,
-                   svnproto_bytes_t **checksum)
+                   bytes_t **checksum)
 {
     int res = 0;
     DBT k, v;
@@ -117,7 +117,7 @@ svnc_next_checksum(svnc_ctx_t *ctx,
     memcpy(*path, k.data, k.size);
     *((*path) + k.size) = '\0';
 
-    if ((*checksum = malloc(sizeof(svnproto_bytes_t) + v.size)) == NULL) {
+    if ((*checksum = malloc(sizeof(bytes_t) + v.size)) == NULL) {
         FAIL("malloc");
     }
     (*checksum)->sz = v.size;

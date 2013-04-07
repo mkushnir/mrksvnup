@@ -3,6 +3,8 @@
 
 #include <bsdxml.h>
 
+#include "mrkcommon/array.h"
+
 #include "mrksvnup/svnc.h"
 #include "mrksvnup/xmatch.h"
 
@@ -19,8 +21,11 @@ typedef struct _dav_ctx {
     long target_rev;
     svn_depth_t depth;
     /* weak ref */
-    const char *path;
+    const char *target;
     long flags;
+    /* weak ref to svnc_ctx_t */
+    svnc_ctx_t *svnctx;
+    array_t cwd;
 
 } dav_ctx_t;
 
@@ -42,6 +47,8 @@ void pattern_match_el_end(void *, const XML_Char *);
 
 dav_ctx_t *dav_ctx_new(void);
 void dav_setup_xml_parser(dav_ctx_t *, dav_xml_cb_t *, void *, const char *);
+void dav_dir_enter(dav_ctx_t *, const char *);
+void dav_dir_leave(dav_ctx_t *);
 void dav_ctx_destroy(dav_ctx_t *);
 
 #endif

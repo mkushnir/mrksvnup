@@ -5,7 +5,6 @@
 #include "mrkcommon/bytestream.h"
 
 #include "mrksvnup/svnc.h"
-#include "mrksvnup/svnproto_bytes.h"
 
 #include "diag.h"
 /*
@@ -19,12 +18,12 @@
  * w    read char *
  * w?   read char *
  * w*   read array_t of char *
- * s    read svnproto_bytes_t *
- * s?   read svnproto_bytes_t *
- * s*   read array_t of svnproto_bytes_t *
- * S    cb, udata (read svnproto_bytes_t *)
- * S?   cb, udata (read svnproto_bytes_t *)
- * S*   cb, udata (read svnproto_bytes_t *)
+ * s    read bytes_t *
+ * s?   read bytes_t *
+ * s*   read array_t of bytes_t *
+ * S    cb, udata (read bytes_t *)
+ * S?   cb, udata (read bytes_t *)
+ * S*   cb, udata (read bytes_t *)
  * r    cb, udata (no read)
  * r?   cb, udata (no read)
  * r*   cb, udata (no read)
@@ -103,8 +102,6 @@ int pack_list(bytestream_t *, svnc_cb_t, svnc_ctx_t *, void *);
  */
 void svnproto_init_dirent_array(array_t *ar);
 void svnproto_dump_dirent_array(array_t *ar);
-void svnproto_init_bytes_array(array_t *ar);
-void svnproto_dump_bytes_array(array_t *ar);
 
 /*
  * Protocol.

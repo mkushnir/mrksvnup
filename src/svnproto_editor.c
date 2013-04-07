@@ -25,7 +25,7 @@ open_root(svnc_ctx_t *ctx,
 {
     int res = 0;
     long rev = -1;
-    svnproto_bytes_t *token = NULL;
+    bytes_t *token = NULL;
 
     res = svnproto_unpack(ctx, in, "((n?)s)", &rev, &token);
     if (res != 0) {
@@ -55,9 +55,9 @@ delete_entry(svnc_ctx_t *ctx,
              bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *path = NULL;
+    bytes_t *path = NULL;
     long rev = -1;
-    svnproto_bytes_t *token = NULL;
+    bytes_t *token = NULL;
 
     res = svnproto_unpack(ctx, in, "(s(n?)s)", &path, &rev, &token);
     if (res != 0) {
@@ -90,10 +90,10 @@ add_dir(svnc_ctx_t *ctx,
         bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *path = NULL;
-    svnproto_bytes_t *parent_token = NULL;
-    svnproto_bytes_t *child_token = NULL;
-    svnproto_bytes_t *copy_path = NULL;
+    bytes_t *path = NULL;
+    bytes_t *parent_token = NULL;
+    bytes_t *child_token = NULL;
+    bytes_t *copy_path = NULL;
     long copy_rev = -1;
 
     /*
@@ -140,9 +140,9 @@ open_dir(svnc_ctx_t *ctx,
          bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *path = NULL;
-    svnproto_bytes_t *parent_token = NULL;
-    svnproto_bytes_t *child_token = NULL;
+    bytes_t *path = NULL;
+    bytes_t *parent_token = NULL;
+    bytes_t *child_token = NULL;
     long rev = -1;
 
     res = svnproto_unpack(ctx, in, "(sss(n))",
@@ -181,9 +181,9 @@ change_dir_prop(svnc_ctx_t *ctx,
                 bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *token = NULL;
-    svnproto_bytes_t *name = NULL;
-    svnproto_bytes_t *value = NULL;
+    bytes_t *token = NULL;
+    bytes_t *name = NULL;
+    bytes_t *value = NULL;
 
     res = svnproto_unpack(ctx, in, "(ss(s?))", &token, &name, &value);
     if (res != 0) {
@@ -216,7 +216,7 @@ close_dir(svnc_ctx_t *ctx,
           bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *token = NULL;
+    bytes_t *token = NULL;
 
     res = svnproto_unpack(ctx, in, "(s)", &token);
     if (res != 0) {
@@ -241,8 +241,8 @@ absent_dir(svnc_ctx_t *ctx,
            bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *path = NULL;
-    svnproto_bytes_t *parent_token = NULL;
+    bytes_t *path = NULL;
+    bytes_t *parent_token = NULL;
 
     res = svnproto_unpack(ctx, in, "(ss)", &path, &parent_token);
     if (res != 0) {
@@ -271,8 +271,8 @@ add_file(svnc_ctx_t *ctx,
          bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *dir_token = NULL;
-    svnproto_bytes_t *copy_path = NULL;
+    bytes_t *dir_token = NULL;
+    bytes_t *copy_path = NULL;
     long copy_rev = -1;
     svndiff_doc_t *doc;
 
@@ -322,7 +322,7 @@ open_file(svnc_ctx_t *ctx,
           bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *dir_token = NULL;
+    bytes_t *dir_token = NULL;
     svndiff_doc_t *doc;
 
     if ((doc = svnedit_clear_doc()) == NULL) {
@@ -361,7 +361,7 @@ apply_textdelta(svnc_ctx_t *ctx,
                 bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *file_token = NULL;
+    bytes_t *file_token = NULL;
     svndiff_doc_t *doc;
 
     if ((doc = svnedit_get_doc()) == NULL) {
@@ -417,7 +417,7 @@ textdelta_chunk(svnc_ctx_t *ctx,
                 bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *file_token = NULL;
+    bytes_t *file_token = NULL;
     svndiff_doc_t *doc;
 
     if ((doc = svnedit_get_doc()) == NULL) {
@@ -449,7 +449,7 @@ textdelta_end(svnc_ctx_t *ctx,
               bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *file_token = NULL;
+    bytes_t *file_token = NULL;
 
     res = svnproto_unpack(ctx, in, "(s)", &file_token);
     if (res != 0) {
@@ -475,9 +475,9 @@ change_file_prop(svnc_ctx_t *ctx,
                  bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *file_token = NULL;
-    svnproto_bytes_t *name = NULL;
-    svnproto_bytes_t *value = NULL;
+    bytes_t *file_token = NULL;
+    bytes_t *name = NULL;
+    bytes_t *value = NULL;
 
     res = svnproto_unpack(ctx, in, "(ss(s?))",
                         &file_token, &name, &value);
@@ -520,8 +520,8 @@ close_file(svnc_ctx_t *ctx,
            bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *file_token = NULL;
-    svnproto_bytes_t *text_checksum = NULL;
+    bytes_t *file_token = NULL;
+    bytes_t *text_checksum = NULL;
 
     res = svnproto_unpack(ctx, in, "(s(s?))",
                         &file_token, &text_checksum);
@@ -556,8 +556,8 @@ absent_file(svnc_ctx_t *ctx,
             bytestream_t *in)
 {
     int res = 0;
-    svnproto_bytes_t *path = NULL;
-    svnproto_bytes_t *parent_token = NULL;
+    bytes_t *path = NULL;
+    bytes_t *parent_token = NULL;
 
     res = svnproto_unpack(ctx, in, "(ss)", &path, &parent_token);
     if (res != 0) {

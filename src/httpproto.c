@@ -9,6 +9,7 @@
 #include "mrkcommon/util.h"
 
 #include "mrksvnup/svnc.h"
+#include "mrksvnup/svnedit.h"
 #include "mrksvnup/http.h"
 #include "mrksvnup/dav.h"
 
@@ -97,16 +98,22 @@ setup_body_cb(http_ctx_t *ctx, bytestream_t *in, void *udata)
 int
 httpproto_setup(UNUSED svnc_ctx_t *ctx)
 {
+    dav_ctx_t *davctx = NULL;
     const char *body =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         "<D:options xmlns:D=\"DAV:\">"
             "<D:activity-collection-set/>"
         "</D:options>";
 
-    assert(ctx->udata == NULL);
-    if ((ctx->udata = dav_ctx_new()) == NULL) {
+    if ((davctx = dav_ctx_new()) == NULL) {
         TRRET(HTTPPROTO_SETUP + 1);
     }
+
+    /* a weak ref */
+    davctx->svnctx = ctx;
+
+    assert(ctx->udata == NULL);
+    ctx->udata = davctx;
 
     if (dav_request(ctx, "OPTIONS", ctx->path, SVN_DEPTH_UNKNOWN,
                     body, strlen(body), NULL) != 0) {
@@ -284,7 +291,7 @@ httpproto_update(svnc_ctx_t *ctx,
     dav_ctx_t *davctx = ctx->udata;
     davctx->target_rev = rev;
     davctx->depth = depth;
-    davctx->path = target;
+    davctx->target = target;
     davctx->flags |= flags;
 
     if (cb != NULL) {
@@ -296,16 +303,16 @@ httpproto_update(svnc_ctx_t *ctx,
 }
 
 int
-httpproto_set_path(UNUSED svnc_ctx_t *ctx,
-                   UNUSED const char *path,
-                   UNUSED long rev,
+httpproto_set_path(svnc_ctx_t *ctx,
+                   const char *path,
+                   long rev,
                    UNUSED const char *lock_token,
-                   UNUSED svn_depth_t depth,
-                   UNUSED long flags)
+                   svn_depth_t depth,
+                   long flags)
 {
     dav_ctx_t *davctx = ctx->udata;
     davctx->source_rev = rev;
-    davctx->path = path;
+    davctx->target = path;
     davctx->depth = depth;
     davctx->flags |= flags;
     TRRET(0);
@@ -314,15 +321,90 @@ httpproto_set_path(UNUSED svnc_ctx_t *ctx,
 void
 editor_el_start(UNUSED void *udata, const XML_Char *name, UNUSED const XML_Char **atts)
 {
-    UNUSED dav_ctx_t *davctx = udata;
-    TRACE("cmd=%s", name);
+    dav_ctx_t *davctx = udata;
+
+    //TRACE("cmd=%s", name);
+
+    if (strcmp(name, "svn:open-directory") == 0) {
+        const char *dname = NULL;
+        long rev = 0;
+
+        while (*atts != NULL) {
+            if (strcmp(*atts, "name") == 0) {
+                ++atts;
+                dname = *atts;
+
+            } else if (strcmp(*atts, "rev") == 0) {
+                ++atts;
+                rev = strtol(*atts, NULL, 10);
+
+            } else {
+                ++atts;
+            }
+            ++atts;
+        }
+
+        if (dname == NULL) {
+            TRACE("open-root rev %ld", rev);
+            dname = davctx->svnctx->localroot;
+
+            if (svnedit_open_root(davctx->svnctx, 0, NULL) != 0) {
+                TRRETVOID(EDITOR_EL_START + 1);
+            }
+
+        } else {
+            TRACE("open-dir name %s rev %ld", dname, rev);
+        }
+
+        dav_dir_enter(davctx, dname);
+
+    } else if (strcmp(name, "svn:add-directory") == 0) {
+        const char *dname = NULL;
+
+        while (*atts != NULL) {
+            if (strcmp(*atts, "name") == 0) {
+                ++atts;
+                dname = *atts;
+                break;
+
+            } else {
+                ++atts;
+            }
+            ++atts;
+        }
+
+        if (dname == NULL) {
+            TRACE(FRED("invalid add-directory, ignoring"));
+
+        } else {
+            TRACE("add-dir name %s", dname);
+            dav_dir_enter(davctx, dname);
+
+        }
+
+    } else if (strcmp(name, "svn:add-file") == 0) {
+
+    } else {
+        TRACE(FYELLOW("skipping %s"), name);
+    }
 }
 
 void
 editor_el_end(UNUSED void *udata, UNUSED const XML_Char *name)
 {
-    //dav_ctx_t *davctx = udata;
+    dav_ctx_t *davctx = udata;
     //TRACE("cmd=%s", name);
+
+    if (strcmp(name, "svn:open-directory") == 0) {
+        dav_dir_leave(davctx);
+
+    } else if (strcmp(name, "svn:add-directory") == 0) {
+        dav_dir_leave(davctx);
+
+    } else if (strcmp(name, "svn:add-file") == 0) {
+    } else {
+        TRACE(FYELLOW("skipping %s"), name);
+    }
 }
 
 void
@@ -370,10 +452,9 @@ editor_body_cb(http_ctx_t *ctx, bytestream_t *in, void *udata)
                     ctx->current_chunk.end - ctx->current_chunk.start,
                     ctx->current_chunk_size > 0 ? 0 : 1);
 
-    TRACE("res=%d", res);
-    //if (res != 1) {
-    //    TRRET(EDITOR_BODY_CB + 1);
-    //}
+    if (res != 1) {
+        TRRET(EDITOR_BODY_CB + 1);
+    }
     //if (davctx->match_result != 0) {
     //    TRRET(EDITOR_BODY_CB + 2);
     //}
@@ -391,10 +472,7 @@ httpproto_editor(svnc_ctx_t *ctx)
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         "<S:update-report send-all=\"true\" xmlns:S=\"svn:\">"
             "<S:src-path>%s</S:src-path>"
-            "<S:entry "
-                "rev=\"%ld\" "
-                "depth=\"%s\" "
-                "start-empty=\"%s\">"
+            "<S:entry rev=\"%ld\" depth=\"%s\"%s>"
             "</S:entry>"
             "<S:target-revision>%ld</S:target-revision>"
             "<S:depth>%s</S:depth>"
@@ -416,18 +494,23 @@ httpproto_editor(svnc_ctx_t *ctx)
         //    "</S:entry>"
         //"</S:update-report>"
 
-    TRACE("source_rev=%ld target_rev=%ld depth=%s path=%s flags=%08lx",
+    if (svnedit_init(ctx) != 0) {
+        res = HTTPPROTO_EDITOR + 1;
+        goto END;
+    }
+
+    TRACE("source_rev=%ld target_rev=%ld depth=%s target=%s flags=%08lx",
           davctx->source_rev,
           davctx->target_rev,
           SVN_DEPTH_STR(davctx->depth),
-          davctx->path,
+          davctx->target,
           davctx->flags);
 
     /* XXX consult svnc.h */
     sz = strlen(body) + strlen(ctx->path) +
          16 /* entry rev */ +
          10 /* entry depth longest immediates */ +
-          5 /* start-empty true|false */ +
+         19 /* start-empty SP start-empty="true" */ +
          16 /* target-revision */ +
          10 /* depth longest "immediates" */ +
           1 /* null terminator */;
@@ -441,17 +524,17 @@ httpproto_editor(svnc_ctx_t *ctx)
                              davctx->source_rev,
                              SVN_DEPTH_STR(davctx->depth),
                              (davctx->flags & SETPFLAG_START_EMPTY) ?
-                                "true" : "false",
+                                " start-empty=\"true\"" : "",
                              davctx->target_rev,
                              "unknown")) >= sz) {
-        res = HTTPPROTO_EDITOR + 1;
+        res = HTTPPROTO_EDITOR + 2;
         goto END;
 
     }
 
     if (dav_request(ctx, "REPORT", davctx->me, -1,
                     buf, nwritten, eh) != 0) {
-        res = HTTPPROTO_EDITOR + 2;
+        res = HTTPPROTO_EDITOR + 3;
         goto END;
     }
 
@@ -459,7 +542,7 @@ httpproto_editor(svnc_ctx_t *ctx)
                             editor_header_cb,
                             editor_body_cb, davctx) != 0) {
 
-        res = HTTPPROTO_EDITOR + 3;
+        res = HTTPPROTO_EDITOR + 4;
         goto END;
     }
 
@@ -469,6 +552,8 @@ httpproto_editor(svnc_ctx_t *ctx)
     }
 
 END:
+    svnedit_fini();
+
     if (buf != NULL) {
         free(buf);
         buf = NULL;
