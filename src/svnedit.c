@@ -431,7 +431,7 @@ create_symlink(svndiff_doc_t *doc, svnc_fileent_t *fe)
          s = array_next(&fe->contents, &it)) {
 
         array_ensure_len(&lnk, lnk.elnum + (*s)->sz, ARRAY_FLAG_SAVE);
-        memcpy((char *)array_get(&lnk, lnk.elnum), (*s)->data, (*s)->sz);
+        memcpy((char *)array_get(&lnk, lnk.elnum - (*s)->sz), (*s)->data, (*s)->sz);
     }
     /* terminator */
     array_incr(&lnk);
@@ -558,7 +558,7 @@ END:
 }
 
 int
-svnedit_change_file_prop(svnc_ctx_t *ctx,
+svnedit_change_file_prop(UNUSED svnc_ctx_t *ctx,
                          bytes_t *name,
                          bytes_t *value)
 {
@@ -566,7 +566,7 @@ svnedit_change_file_prop(svnc_ctx_t *ctx,
      * XXX The below logic is quite simplistic. It should eventually be
      * improved.
      */
-    if (strcmp(BDATA(name), ctx->executable_prop_name) == 0) {
+    if (strcmp(BDATA(name), "svn:executable") == 0) {
         if (value == NULL) {
             doc.mod = 0644;
         } else {
@@ -575,7 +575,7 @@ svnedit_change_file_prop(svnc_ctx_t *ctx,
         doc.flags |= SD_FLAG_MOD_SET;
     }
 
-    if (strcmp(BDATA(name), ctx->special_prop_name) == 0) {
+    if (strcmp(BDATA(name), "svn:special") == 0) {
         doc.flags |= SD_FLAG_SYMLINK_SET;
     }
 

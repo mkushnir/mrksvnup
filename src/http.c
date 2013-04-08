@@ -315,13 +315,14 @@ process_body(http_ctx_t *ctx,
         if (ctx->chunk_parser_state == PS_CHUNK_SIZE) {
             char *end, *tmp = NULL;
 
-            //D8(SDATA(in, ctx->current_chunk.start),
-            //   SEOD(in) - ctx->current_chunk.start);
-
             if ((end = findcrlf(SDATA(in, ctx->current_chunk.start),
                                 SEOD(in) - ctx->current_chunk.start))
                 == NULL) {
 
+                //D8(SDATA(in, ctx->current_chunk.start),
+                //   MIN(128, SEOD(in) - ctx->current_chunk.start));
+
+                SADVANCEPOS(in, SEOD(in) - SPOS(in));
                 TRRET(PARSE_NEED_MORE);
             }
             ctx->current_chunk_size = strtol(SDATA(in,

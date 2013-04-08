@@ -48,6 +48,7 @@ typedef struct _dav_xml_cb {
     XML_CharacterDataHandler chardata;
 } dav_xml_cb_t;
 
+int all_spaces(const char *, size_t);
 void debug_ns_start(void *, const XML_Char *, const XML_Char *);
 void debug_ns_end(void *, const XML_Char *);
 void debug_el_start(void *, const XML_Char *, const XML_Char **);

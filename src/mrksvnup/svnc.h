@@ -179,6 +179,7 @@ void init_long_array(array_t *);
 void dump_long_array(array_t *);
 void init_string_array(array_t *);
 void dump_string_array(array_t *);
+void fini_string_array(array_t *);
 void init_bytes_array(array_t *ar);
 void fini_bytes_array(array_t *ar);
 void dump_bytes_array(array_t *ar);

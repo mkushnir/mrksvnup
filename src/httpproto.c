@@ -1,5 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
 
 //#define TRRET_DEBUG
 //#define TRRET_DEBUG_VERBOSE
@@ -597,6 +599,36 @@ editor_el_end(UNUSED void *udata, UNUSED const XML_Char *name)
         }
 
 
+    } else if (strcmp(name, "svn:txdelta") == 0) {
+        svndiff_doc_t *doc;
+        BIO *b64, *bio;
+        char *decoded;
+        int nread;
+
+        doc = svnedit_get_doc();
+
+        b64 = BIO_new(BIO_f_base64());
+        bio = BIO_new_mem_buf(doc->txdelta.data, doc->txdelta.elnum);
+        bio = BIO_push(b64, bio);
+
+        decoded = malloc(doc->txdelta.elnum);
+        nread = BIO_read(bio, decoded, doc->txdelta.elnum);
+
+
+        //D32(doc->txdelta.data, doc->txdelta.elnum);
+        //TRACE("Parsing");
+        //D32(decoded, nread);
+
+        if (svndiff_parse_doc(decoded, decoded + nread, doc) != 0) {
+            TRACE("Failed to parse");
+            svndiff_doc_dump(doc);
+            //TRACE("%ld/%d", doc->txdelta.elnum, nread);
+        }
+
+        BIO_free(b64);
+        BIO_free(bio);
+        free(decoded);
+
     } else {
         if (davctx->svnctx->debug_level > 3) {
             LTRACE(1, FYELLOW("skipping %s"), name);
@@ -614,6 +646,7 @@ editor_chardata(void *udata,
 
     elname = xmatch_top(&davctx->xmatch, 0);
 
+    /* XXX handle multiline data */
     if (elname == NULL) {
         return;
 
@@ -622,6 +655,12 @@ editor_chardata(void *udata,
         bytes_t *v;
 
         v = bytes_from_strn(s, len);
+
+        if (BDATA(davctx->set_prop_name) == NULL) {
+            //TRACE("elname=%s %s=%s", elname,
+            //      BDATA(davctx->set_prop_name), BDATA(v));
+            return;
+        }
 
         if (svnedit_change_file_prop(davctx->svnctx,
                                      davctx->set_prop_name, v) != 0) {
@@ -651,6 +690,18 @@ editor_chardata(void *udata,
                "http://subversion.tigris.org/xmlns/dav/md5-checksum") == 0) {
 
         davctx->text_checksum = bytes_from_strn(s, len);
+
+    } else if (strcmp(elname, "svn:txdelta") == 0) {
+        svndiff_doc_t *doc;
+
+        doc = svnedit_get_doc();
+
+        array_ensure_len(&doc->txdelta,
+                         doc->txdelta.elnum + len,
+                         ARRAY_FLAG_SAVE);
+
+        memcpy((char *)array_get(&doc->txdelta, doc->txdelta.elnum - len),
+               s, len);
 
     } else {
         if (davctx->svnctx->debug_level > 4) {

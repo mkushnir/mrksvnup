@@ -44,6 +44,8 @@ get_file_props_chardata(void *udata,
     svnc_fileent_t *fe = davctx->fe;
     svnc_prop_t *p;
 
+    /* XXX handle multiline data */
+
     if (davctx->set_prop_name != NULL) {
         if (strcmp(BDATA(davctx->set_prop_name),
                    "http://subversion.tigris.org/"

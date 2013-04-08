@@ -7,7 +7,7 @@
 #include "diag.h"
 #include "mrkcommon/array.h"
 #include "mrkcommon/util.h"
-//#define TRRET_DEBUG
+#define TRRET_DEBUG
 #include "mrkcommon/dumpm.h"
 
 #include "mrksvnup/svnc.h"
@@ -94,6 +94,7 @@ decode_bytes(const char *start, const char *end,
         TRRETNULL(DECODE_BYTES + 1);
 
     }
+    //TRACE("orig_len=%ld", orig_len);
     encoded_len -= (start - savedstart);
 
     if ((*out = malloc(sizeof(bytes_t) + orig_len)) == NULL) {
@@ -114,7 +115,7 @@ decode_bytes(const char *start, const char *end,
             free(*out);
             *out = NULL;
 
-            //TRACE("encoded_len=%ld orig_len=%ld", encoded_len, orig_len);
+            TRACE("encoded_len=%ld orig_len=%ld", encoded_len, orig_len);
 
             TRRETNULL(DECODE_BYTES + 2);
         }
@@ -259,6 +260,9 @@ svndiff_doc_init(svndiff_doc_t *doc)
     doc->fd = -1;
     doc->mod = 0644;
     init_wnd_array(&doc->wnd);
+    if (array_init(&doc->txdelta, sizeof(char), 0, NULL, NULL) != 0) {
+        FAIL("array_init");
+    }
     doc->flags = 0;
     return 0;
 }
@@ -297,6 +301,9 @@ svndiff_doc_fini(svndiff_doc_t *doc)
     clear_current_file(doc);
     doc->mod = 0644;
     fini_wnd_array(&doc->wnd);
+    if (array_fini(&doc->txdelta) != 0) {
+        FAIL("array_fini");
+    }
     doc->flags = 0;
     return 0;
 }
@@ -394,7 +401,11 @@ svndiff_parse_doc(const char *start,
         } else if (doc->parse_state == SD_STATE_INSNS) {
             bytes_t *b = NULL;
 
-            if ((start = decode_bytes(start, end, end - start, &b)) == NULL) {
+            if ((start = decode_bytes(start,
+                                      end,
+                                      doc->current_wnd->inslen,
+                                      &b)) == NULL) {
+
                 res = SVNDIFF_PARSE_DOC + 7;
 
             } else {
@@ -434,8 +445,12 @@ svndiff_parse_doc(const char *start,
         } else if (doc->parse_state == SD_STATE_BYTES) {
 
             //TRACE("start before decode_bytes: %p", start);
+            //if (doc->current_wnd->newlen != (end - start)) {
+            //    TRACE("newlen=%ld avail=%ld", doc->current_wnd->newlen, (end - start));
+            //}
+
             if ((start = decode_bytes(start, end,
-                                      end - start,
+                                      doc->current_wnd->newlen,
                                       &doc->current_wnd->bytes)) == NULL) {
 
                 res = SVNDIFF_PARSE_DOC + 8;

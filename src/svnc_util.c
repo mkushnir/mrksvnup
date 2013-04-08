@@ -351,6 +351,14 @@ dump_string_array(array_t *ar) {
     array_traverse(ar, (array_traverser_t)dump_string, NULL);
 }
 
+void
+fini_string_array(array_t *ar)
+{
+    if (array_fini(ar) != 0) {
+        FAIL("array_fini");
+    }
+}
+
 static int
 init_bytes(bytes_t **v)
 {

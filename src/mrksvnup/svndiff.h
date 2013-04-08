@@ -74,6 +74,8 @@ typedef struct _svndiff_doc {
     struct stat sb;
     /* svndiff windows */
     array_t wnd;
+    /* raw txdelta from http */
+    array_t txdelta;
 } svndiff_doc_t;
 
 int svndiff_parse_doc(const char *, const char *, svndiff_doc_t *);

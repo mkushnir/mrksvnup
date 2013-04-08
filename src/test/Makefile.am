@@ -10,7 +10,7 @@ dist_HEADERS = unittest.h
 BUILT_SOURCES = ../diag.c ../diag.h
 
 CFLAGS = -Wall -Wextra -Werror -std=c99 -I.. -g -O0 -ftrapv -fcatch-undefined-behavior -I$(includedir)
-LDFLAGS += -L$(libdir) -lmrkcommon -lz -lmd -lbsdxml
+LDFLAGS += -L$(libdir) -lmrkcommon -lz -lmd -lbsdxml -lcrypto
 
 nobase_include_HEADERS = ../mrksvnup/svnc.h \
 			 ../mrksvnup/svncdir.h \
