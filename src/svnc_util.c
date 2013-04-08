@@ -251,7 +251,7 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
                      prop != NULL;
                      prop = array_next(&fe.props, &it)) {
 
-                    if (strcmp(BDATA(prop->name), "svn:executable") == 0) {
+                    if (strcmp(BDATA(prop->name), ctx->executable_prop_name) == 0) {
                         if (fchmod(fd, 0755) != 0) {
                             errx(1, "fchmod");
                         }
@@ -523,6 +523,6 @@ svnc_fileent_dump(svnc_fileent_t *e)
     TRACE("checksum=%s rev=%ld", BDATA(e->checksum), e->rev);
     array_traverse(&e->props,
                    (array_traverser_t)prop_dump, NULL);
-    dump_string_array(&e->contents);
+    dump_bytes_array(&e->contents);
 }
 

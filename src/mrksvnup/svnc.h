@@ -128,6 +128,9 @@ typedef struct _svnc_ctx {
                   long, svnc_cb_t, void *);
     int (*editor)(struct _svnc_ctx *);
 
+    const char *executable_prop_name;
+    const char *special_prop_name;
+
     /* this is not controlled by svnc module */
     void *udata;
 

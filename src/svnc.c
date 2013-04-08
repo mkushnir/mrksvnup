@@ -258,6 +258,8 @@ svnc_new(const char *url,
         ctx->get_file = svnproto_get_file;
         ctx->update = svnproto_update;
         ctx->editor = svnproto_editor;
+        ctx->executable_prop_name = "svn:executable";
+        ctx->special_prop_name = "svn:special";
 
     } else if (ctx->scheme == SVNC_SCHEME_HTTP) {
         ctx->get_latest_rev = httpproto_get_latest_rev;
@@ -268,6 +270,8 @@ svnc_new(const char *url,
         ctx->get_file = httpproto_get_file;
         ctx->update = httpproto_update;
         ctx->editor = httpproto_editor;
+        ctx->executable_prop_name = "http://subversion.tigris.org/xmlns/svn/executable";
+        ctx->special_prop_name = "http://subversion.tigris.org/xmlns/svn/special";
     }
 
     return (ctx);

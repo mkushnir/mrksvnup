@@ -28,6 +28,7 @@ libmrksvnup_la_SOURCES = svnc.c \
 			 svnedit.c \
 			 http.c \
 			 httpproto.c \
+			 httpproto_get_file.c \
 			 dav.c \
 			 xmatch.c \
 			 svnproto.c \

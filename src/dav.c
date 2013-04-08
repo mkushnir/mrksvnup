@@ -301,6 +301,48 @@ dav_pack_header_fields(svnc_ctx_t *ctx, svn_depth_t depth, size_t bodylen)
     return 0;
 }
 
+char *
+dav_rvr_path(dav_ctx_t *ctx,
+             const char *fullpath,
+             long rev)
+{
+    char *davpath = NULL;
+    char *p;
+    size_t pathsz;
+    size_t rootsz;
+
+    pathsz = strlen(fullpath) + strlen(ctx->revroot) + 64;
+    rootsz = strlen(ctx->reproot);
+
+    if ((p = strstr(fullpath, ctx->reproot)) == NULL) {
+        goto ERR;
+    }
+
+    if (p != fullpath) {
+        goto ERR;
+    }
+
+    if ((davpath = malloc(pathsz)) == NULL) {
+        FAIL("malloc");
+    }
+
+    snprintf(davpath, pathsz, "%s/%ld%s",
+             ctx->revroot,
+             rev,
+             p + rootsz);
+
+END:
+    return davpath;
+
+ERR:
+    if (davpath != NULL) {
+        free(davpath);
+        davpath = NULL;
+    }
+    goto END;
+}
+
+
 struct _extra_header {
     const char *name;
     const char *value;

@@ -5,8 +5,8 @@
 #include "mrksvnup/svndiff.h"
 
 int svnedit_verify_checksum(int, const bytes_t *);
-int svnedit_init(svnc_ctx_t *);
-void svnedit_fini(void);
+int svnedit_init_shadow_ctx(svnc_ctx_t *);
+void svnedit_close_shadow_ctx(void);
 svndiff_doc_t * svnedit_clear_doc(void);
 svndiff_doc_t * svnedit_get_doc(void);
 

@@ -17,33 +17,38 @@
 
 #define VCBUFSZ (PAGE_SIZE * 512)
 
-static svnc_ctx_t *shadow_ctx;
+static svnc_ctx_t *shadow_ctx = NULL;
 static long target_rev;
 static svndiff_doc_t doc;
 
 int
-svnedit_init(svnc_ctx_t *ctx)
+svnedit_init_shadow_ctx(svnc_ctx_t *ctx)
 {
+    assert(shadow_ctx == NULL);
+
     if ((shadow_ctx = svnc_new(ctx->url,
                                ctx->localroot,
                                SVNC_NNOCACHE,
                                ctx->debug_level)) == NULL) {
-        TRRET(SVNEDIT_INIT + 1);
+        TRRET(SVNEDIT_INIT_SHADOW_CTX + 1);
     }
 
     if (svnc_connect(shadow_ctx) != 0) {
-        TRRET(SVNEDIT_INIT + 2);
+        TRRET(SVNEDIT_INIT_SHADOW_CTX + 2);
     }
 
     TRRET(0);
 }
 
 void
-svnedit_fini(void)
+svnedit_close_shadow_ctx(void)
 {
-    svnc_close(shadow_ctx);
-    svnc_destroy(shadow_ctx);
-    free(shadow_ctx);
+    if (shadow_ctx != NULL) {
+        svnc_close(shadow_ctx);
+        svnc_destroy(shadow_ctx);
+        free(shadow_ctx);
+        shadow_ctx = NULL;
+    }
 }
 
 svndiff_doc_t *
@@ -460,7 +465,7 @@ END:
 }
 
 static int
-checkout_file(svndiff_doc_t *doc, long rev)
+checkout_file(svnc_ctx_t *ctx, svndiff_doc_t *doc, long rev)
 {
     int res = 0;
     svnc_fileent_t fe;
@@ -488,7 +493,7 @@ checkout_file(svndiff_doc_t *doc, long rev)
          prop != NULL;
          prop = array_next(&fe.props, &it)) {
 
-        if (strcmp(BDATA(prop->name), "svn:executable") == 0) {
+        if (strcmp(BDATA(prop->name), ctx->executable_prop_name) == 0) {
             if (prop->value == NULL) {
                 doc->mod = 0644;
             } else {
@@ -496,7 +501,7 @@ checkout_file(svndiff_doc_t *doc, long rev)
             }
             doc->flags |= SD_FLAG_MOD_SET;
         }
-        if (strcmp(BDATA(prop->name), "svn:special") == 0) {
+        if (strcmp(BDATA(prop->name), ctx->special_prop_name) == 0) {
             doc->flags |= SD_FLAG_SYMLINK_SET;
         }
     }
@@ -542,7 +547,7 @@ svnedit_open_file(svnc_ctx_t *ctx)
         }
         /* The file exists. */
     } else {
-        if (checkout_file(&doc, doc.rev) != 0) {
+        if (checkout_file(ctx, &doc, doc.rev) != 0) {
             res = SVNEDIT_OPEN_FILE + 3;
             goto END;
         }
@@ -553,7 +558,7 @@ END:
 }
 
 int
-svnedit_change_file_prop(UNUSED svnc_ctx_t *ctx,
+svnedit_change_file_prop(svnc_ctx_t *ctx,
                          bytes_t *name,
                          bytes_t *value)
 {
@@ -561,7 +566,7 @@ svnedit_change_file_prop(UNUSED svnc_ctx_t *ctx,
      * XXX The below logic is quite simplistic. It should eventually be
      * improved.
      */
-    if (strcmp(BDATA(name), "svn:executable") == 0) {
+    if (strcmp(BDATA(name), ctx->executable_prop_name) == 0) {
         if (value == NULL) {
             doc.mod = 0644;
         } else {
@@ -570,7 +575,7 @@ svnedit_change_file_prop(UNUSED svnc_ctx_t *ctx,
         doc.flags |= SD_FLAG_MOD_SET;
     }
 
-    if (strcmp(BDATA(name), "svn:special") == 0) {
+    if (strcmp(BDATA(name), ctx->special_prop_name) == 0) {
         doc.flags |= SD_FLAG_SYMLINK_SET;
     }
 
@@ -629,7 +634,7 @@ svnedit_close_file(svnc_ctx_t *ctx,
                 close(doc.fd);
                 doc.fd = -1;
 
-                if (checkout_file(&doc, target_rev) != 0) {
+                if (checkout_file(ctx, &doc, target_rev) != 0) {
                     res = SVNEDIT_CLOSE_FILE + 2;
                     goto END;
                 }
@@ -683,7 +688,7 @@ svnedit_close_file(svnc_ctx_t *ctx,
             close(doc.fd);
             doc.fd = -1;
 
-            if (checkout_file(&doc, target_rev) != 0) {
+            if (checkout_file(ctx, &doc, target_rev) != 0) {
                 res = SVNEDIT_CLOSE_FILE + 5;
                 goto END;
             }

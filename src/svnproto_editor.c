@@ -802,7 +802,7 @@ svnproto_editor(svnc_ctx_t *ctx)
 
     cmd = NULL;
 
-    if (svnedit_init(ctx) != 0) {
+    if (svnedit_init_shadow_ctx(ctx) != 0) {
         TRRET(SVNPROTO_EDITOR + 25);
     }
 
@@ -814,7 +814,7 @@ svnproto_editor(svnc_ctx_t *ctx)
         cmd = NULL;
     }
 
-    svnedit_fini();
+    svnedit_close_shadow_ctx();
 
     TRRET(res);
 }

@@ -27,6 +27,7 @@ nodist_testfoo_SOURCES = ../diag.c
 testfoo_SOURCES = ../svnc.c \
 		  ../http.c \
 		  ../httpproto.c \
+		  ../httpproto_get_file.c \
 		  ../dav.c \
 		  ../xmatch.c \
 		  ../svnc_util.c \

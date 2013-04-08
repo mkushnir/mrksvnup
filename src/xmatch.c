@@ -89,8 +89,10 @@ xmatch_push(xmatch_t *xmatch, const char *entry)
 void
 xmatch_pop(xmatch_t *xmatch)
 {
-    if (array_decr(&xmatch->input_stack) != 0) {
-        FAIL("array_decr");
+    if (xmatch->input_stack.elnum > 0) {
+        if (array_decr(&xmatch->input_stack) != 0) {
+            FAIL("array_decr");
+        }
     }
 }
 

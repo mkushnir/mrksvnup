@@ -907,6 +907,17 @@ test_get_file(void)
 
 }
 
+static int
+mychunkcb(http_ctx_t *ctx,
+            UNUSED bytestream_t *in,
+            UNUSED void *udata)
+{
+    TRACE("%ld-%ld=%ld", ctx->current_chunk.end, ctx->current_chunk.start,
+          ctx->current_chunk.end - ctx->current_chunk.start);
+    return 0;
+}
+
+
 UNUSED static void
 test_http_simple(void)
 {
@@ -944,7 +955,61 @@ test_http_simple(void)
 
     bytestream_rewind(&ctx->out);
 
-    res = http_parse_response(ctx->fd, &ctx->in, NULL, NULL, NULL);
+    res = http_parse_response(ctx->fd, &ctx->in, NULL, mychunkcb, NULL);
+    TRACE("res=%s", diag_str(res));
+
+
+    svnc_close(ctx);
+    svnc_destroy(ctx);
+    free(ctx);
+}
+
+static int
+mybigbodycb(http_ctx_t *ctx,
+            UNUSED bytestream_t *in,
+            UNUSED void *udata)
+{
+    TRACE("%ld-%ld=%ld", ctx->body.end, ctx->body.start,
+          ctx->body.end - ctx->body.start);
+    TRACE("%ld-%ld=%ld", ctx->current_chunk.end, ctx->current_chunk.start,
+          ctx->current_chunk.end - ctx->current_chunk.start);
+    return 0;
+}
+
+
+UNUSED static void
+test_http_bigbody(void)
+{
+    int res = 0;
+
+    svnc_ctx_t *ctx;
+    if ((ctx =
+            svnc_new("http://localhost/mysvn", "qwe", 0, 0)) == NULL) {
+        assert(0);
+    }
+    if (svnc_debug_open(ctx, "testhttpbigbody") != 0) {
+        assert(0);
+    }
+
+    if (http_start_request(&ctx->out, "GET", "/") != 0) {
+        assert(0);
+    }
+
+    if (http_add_header_field(&ctx->out, "Host", "localhost") != 0) {
+        assert(0);
+    }
+
+    if (http_end_of_header(&ctx->out) != 0) {
+        assert(0);
+    }
+
+    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+        assert(0);
+    }
+
+    bytestream_rewind(&ctx->out);
+
+    res = http_parse_response(ctx->fd, &ctx->in, NULL, mybigbodycb, NULL);
     TRACE("res=%s", diag_str(res));
 
 
@@ -987,6 +1052,42 @@ test_conn3(void)
 
 }
 
+UNUSED static void
+test_get_file_http(void)
+{
+    svnc_ctx_t *ctx;
+    svnc_fileent_t fe;
+
+    if ((ctx =
+            svnc_new("http://localhost:8001/repos/mysvn", "qwe", 0, 0)) == NULL) {
+            //svnc_new("svn://localhost/mysvn", "qwe", 0, 0)) == NULL) {
+        assert(0);
+    }
+
+    if (svnc_connect(ctx) != 0) {
+        assert(0);
+    }
+
+    assert(ctx->get_file != NULL);
+    svnc_fileent_init(&fe);
+    ctx->get_file(ctx, "asd/ASDASD", 58, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
+    //ctx->get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
+    //ctx->get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
+    //ctx->get_file(ctx, "qweqwe", 12, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
+    svnc_fileent_dump(&fe);
+    svnc_fileent_fini(&fe);
+
+    svnc_fileent_init(&fe);
+    ctx->get_file(ctx, "asd/ERT", 58, GETFLAG_WANT_CONTENTS|GETFLAG_WANT_PROPS, &fe);
+    svnc_fileent_dump(&fe);
+    svnc_fileent_fini(&fe);
+
+    svnc_close(ctx);
+    svnc_destroy(ctx);
+    free(ctx);
+
+}
+
 int
 main(void)
 {
@@ -1000,10 +1101,12 @@ main(void)
     //test_cache();
     //
     //test_http_simple();
+    //test_http_bigbody();
 
     //test_conn2();
-    test_conn3();
+    //test_conn3();
     //test_get_file();
+    test_get_file_http();
 
     /* broken, need to fix test data */
     //test_simple();

@@ -322,13 +322,13 @@ process_body(http_ctx_t *ctx,
                                 SEOD(in) - ctx->current_chunk.start))
                 == NULL) {
 
-                return PARSE_NEED_MORE;
+                TRRET(PARSE_NEED_MORE);
             }
             ctx->current_chunk_size = strtol(SDATA(in,
                         ctx->current_chunk.start), &tmp, 16);
 
             if (tmp != end || ctx->current_chunk_size  < 0) {
-                //D32(SDATA(in, ctx->current_chunk.start), 32);
+                D32(SDATA(in, ctx->current_chunk.start), 32);
                 TRRET(PROCESS_BODY + 1);
             }
 
@@ -340,7 +340,7 @@ process_body(http_ctx_t *ctx,
             ctx->current_chunk.end = ctx->current_chunk.start;
             ctx->chunk_parser_state = PS_CHUNK_DATA;
 
-            return PARSE_NEED_MORE;
+            TRRET(PARSE_NEED_MORE);
 
         } else if (ctx->chunk_parser_state == PS_CHUNK_DATA) {
             int needed, navail;
@@ -359,7 +359,8 @@ process_body(http_ctx_t *ctx,
 
                 ctx->current_chunk.end += incr;
                 SADVANCEPOS(in, incr);
-                return PARSE_NEED_MORE;
+
+                TRRET(PARSE_NEED_MORE);
 
             } else {
                 //TRACE("chunk complete: sz=%d/%ld",
@@ -382,35 +383,47 @@ process_body(http_ctx_t *ctx,
                 ctx->current_chunk.end = ctx->current_chunk.start;
 
                 if (ctx->current_chunk_size > 0) {
-                    return PARSE_NEED_MORE;
+                    TRRET(PARSE_NEED_MORE);
                 } else {
-                    return 0;
+                    TRRET(0);
                 }
             }
         }
     } else {
-        ssize_t navail;
+        ssize_t navail, accumulated, needed, incr;
 
         navail = SEOD(in) - SPOS(in);
-        //TRACE("navail=%ld/%ld bodysz=%d DPOS=%ld SEOD=%ld",
-        //      navail,
-        //      ctx->body.end - ctx->body.start,
-        //      ctx->bodysz,
-        //      SPOS(in),
-        //      SEOD(in));
+        accumulated = ctx->body.end - ctx->body.start;
+        needed = ctx->bodysz - accumulated;
+        incr = MIN(navail, needed);
+
+        ctx->body.end += incr;
+        ctx->current_chunk.end = ctx->body.end;
+        SADVANCEPOS(in, incr);
+        accumulated = ctx->body.end - ctx->body.start;
+
+
+#ifdef TRRET_DEBUG
+        TRACE("bodysz=%d navail=%ld accumulated=%ld incr=%ld "
+              "SPOS=%ld SEOD=%ld",
+              ctx->bodysz,
+              navail,
+              accumulated,
+              incr,
+              SPOS(in),
+              SEOD(in));
+#endif
         //D16(SPDATA(in), navail);
 
-        SADVANCEPOS(in, navail);
-
-        if (navail < ctx->bodysz) {
-            return PARSE_NEED_MORE;
+        if (accumulated < ctx->bodysz) {
+            TRRET(PARSE_NEED_MORE);
         } else {
             if (body_cb != NULL) {
                 if (body_cb(ctx, in, udata) != 0) {
                     TRRET(PROCESS_BODY + 3);
                 }
             }
-            return 0;
+            TRRET(0);
         }
     }
     
@@ -550,8 +563,10 @@ http_parse_response(int fd,
                 /* empty line */
                 SPOS(in) += 2;
                 ctx->body.start = SPOS(in);
+                ctx->body.end = ctx->body.start;
                 /* in case the body is chunked */
                 ctx->current_chunk.start = SPOS(in);
+                ctx->current_chunk.end = ctx->current_chunk.start;
                 ctx->parser_state = PS_BODY_IN;
 
             } else {
@@ -591,8 +606,6 @@ http_parse_response(int fd,
 
         } else if (ctx->parser_state == PS_BODY_IN) {
 
-            ctx->body.end = SEOD(in);
-
             if ((res = process_body(ctx, in, body_cb, udata)) != 0) {
                 if (res != PARSE_NEED_MORE) {
                     TRRET(HTTP_PARSE_RESPONSE + 11);
@@ -605,11 +618,9 @@ http_parse_response(int fd,
 
         } else if (ctx->parser_state == PS_BODY) {
 
-            ctx->body.end = SEOD(in);
-
             if ((res = process_body(ctx, in, body_cb, udata)) != 0) {
                 if (res != PARSE_NEED_MORE) {
-                    TRRET(HTTP_PARSE_RESPONSE + 13);
+                    TRRET(HTTP_PARSE_RESPONSE + 12);
                 }
             }
 
@@ -618,7 +629,7 @@ http_parse_response(int fd,
 
         } else {
             //TRACE("state=%s", PSSTR(ctx->parser_state));
-            TRRET(HTTP_PARSE_RESPONSE + 15);
+            TRRET(HTTP_PARSE_RESPONSE + 13);
         }
     }
 

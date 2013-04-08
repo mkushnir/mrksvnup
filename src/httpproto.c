@@ -20,16 +20,7 @@
 int
 httpproto_finish_report(UNUSED svnc_ctx_t *ctx)
 {
-    TRRET(0);
-}
-
-int
-httpproto_get_file(UNUSED svnc_ctx_t *ctx,
-                   UNUSED const char *path,
-                   UNUSED long rev,
-                   UNUSED int flags,
-                   UNUSED svnc_fileent_t *e)
-{
+    /* noop in http */
     TRRET(0);
 }
 
@@ -155,7 +146,7 @@ check_path_header_cb(http_ctx_t *ctx,
     };
 
     //TRACE("status=%d", ctx->status);
-    if (!(ctx->status != 200 || ctx->status != 207)) {
+    if (ctx->status != 207) {
         TRRET(CHECK_PATH_HEADER_CB + 1);
     }
 
@@ -198,11 +189,8 @@ httpproto_check_path(svnc_ctx_t *ctx,
 {
     int res = 0;
     dav_ctx_t *davctx = ctx->udata;
-    char *davpath = NULL;
     char *fullpath = NULL;
-    size_t pathsz;
-    size_t rootsz;
-    char *p;
+    char *davpath = NULL;
 
     const char *body =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -223,28 +211,7 @@ httpproto_check_path(svnc_ctx_t *ctx,
     }
 
     fullpath = path_join(ctx->path, path);
-
-    pathsz = strlen(fullpath) + strlen(davctx->revroot) + 64;
-    rootsz = strlen(davctx->reproot);
-
-    if ((p = strstr(fullpath, davctx->reproot)) == NULL) {
-        res = HTTPPROTO_CHECK_PATH + 2;
-        goto END;
-    }
-
-    if (p != fullpath) {
-        res = HTTPPROTO_CHECK_PATH + 2;
-        goto END;
-    }
-
-    if ((davpath = malloc(pathsz)) == NULL) {
-        FAIL("malloc");
-    }
-
-    snprintf(davpath, pathsz, "%s/%ld%s",
-             davctx->revroot,
-             rev,
-             p + rootsz);
+    davpath = dav_rvr_path(davctx, fullpath, rev);
 
     //TRACE("davpath=%s", davpath);
 
@@ -319,7 +286,9 @@ httpproto_set_path(svnc_ctx_t *ctx,
 }
 
 void
-editor_el_start(UNUSED void *udata, const XML_Char *name, UNUSED const XML_Char **atts)
+editor_el_start(void *udata,
+                const XML_Char *name,
+                const XML_Char **atts)
 {
     dav_ctx_t *davctx = udata;
 
@@ -636,7 +605,9 @@ editor_el_end(UNUSED void *udata, UNUSED const XML_Char *name)
 }
 
 void
-editor_chardata(UNUSED void *udata, UNUSED const XML_Char *s, int len)
+editor_chardata(void *udata,
+                const XML_Char *s,
+                int len)
 {
     dav_ctx_t *davctx = udata;
     const char *elname;
@@ -757,18 +728,7 @@ httpproto_editor(svnc_ctx_t *ctx)
         {NULL, NULL},
     };
 
-        //"<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-        //"<S:update-report send-all=\"true\" xmlns:S=\"svn:\">"
-        //    /* not stub, full path */
-        //    "<S:src-path>%s</S:src-path>"
-        //    "<S:depth>%s</S:depth>"
-        //    "<S:entry "
-        //        "rev=\"%ld\" "
-        //        "depth=\"%s\" >"
-        //    "</S:entry>"
-        //"</S:update-report>"
-
-    if (svnedit_init(ctx) != 0) {
+    if (svnedit_init_shadow_ctx(ctx)) {
         res = HTTPPROTO_EDITOR + 1;
         goto END;
     }
@@ -828,7 +788,7 @@ httpproto_editor(svnc_ctx_t *ctx)
     }
 
 END:
-    svnedit_fini();
+    svnedit_close_shadow_ctx();
 
     if (buf != NULL) {
         free(buf);
@@ -837,19 +797,19 @@ END:
     TRRET(res);
 }
 
-UNUSED static const char *get_locations_req =
-    "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    "<S:get-locations xmlns:S=\"svn:\" xmlns:D=\"DAV:\">"
-        "<S:path></S:path>"
-        "<S:peg-revision>%ld</S:peg-revision>"
-        "<S:location-revision>%ld</S:location-revision>"
-    "</S:get-locations>";
-
-UNUSED static const char *get_locations_resp =
-    "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-    "<S:get-locations-report xmlns:S=\"svn:\" xmlns:D=\"DAV:\">"
-        "<S:location rev=\"248000\" path=\"/user/des/svnsup/bin/apply\"/>"
-    "</S:get-locations-report>";
+//UNUSED static const char *get_locations_req =
+//    "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+//    "<S:get-locations xmlns:S=\"svn:\" xmlns:D=\"DAV:\">"
+//        "<S:path></S:path>"
+//        "<S:peg-revision>%ld</S:peg-revision>"
+//        "<S:location-revision>%ld</S:location-revision>"
+//    "</S:get-locations>";
+//
+//UNUSED static const char *get_locations_resp =
+//    "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+//    "<S:get-locations-report xmlns:S=\"svn:\" xmlns:D=\"DAV:\">"
+//        "<S:location rev=\"248000\" path=\"/user/des/svnsup/bin/apply\"/>"
+//    "</S:get-locations-report>";
 
 
 
