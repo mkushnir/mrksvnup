@@ -110,7 +110,6 @@ run(const char *cmdline_url,
     unsigned int flags,
     int debug_level)
 {
-    char *absroot;
     char *revfile = NULL;
     char *repofile = NULL;
     long source_rev = -1;
@@ -125,18 +124,7 @@ run(const char *cmdline_url,
         long set_path_flags;
     } update_params = {"", -1, 0};
 
-    /* set up local root */
-    if ((absroot = abspath(localroot)) == NULL) {
-        errx(1, "abspath");
-    }
-
-    if (lstat(absroot, &sb) == 0) {
-        if (!S_ISDIR(sb.st_mode)) {
-            errx(1, "Not a directory: %s", absroot);
-        }
-    }
-
-    if ((repofile = path_join(absroot, REPOFILE)) == NULL) {
+    if ((repofile = path_join(localroot, REPOFILE)) == NULL) {
         errx(1, "path_join()");
     }
     if (cmdline_url == NULL) {
@@ -162,7 +150,7 @@ run(const char *cmdline_url,
     }
 
     /* source revision is in a revfile (previously saved target revision) */
-    if ((revfile = path_join(absroot, REVFILE)) == NULL) {
+    if ((revfile = path_join(localroot, REVFILE)) == NULL) {
         errx(1, "path_join() issue");
     }
 
@@ -190,7 +178,7 @@ run(const char *cmdline_url,
         }
     }
 
-    if ((ctx = svnc_new(url, absroot, flags, debug_level)) == NULL) {
+    if ((ctx = svnc_new(url, localroot, flags, debug_level)) == NULL) {
         errx(1, "svnc_new");
     }
 
@@ -293,7 +281,6 @@ run(const char *cmdline_url,
     svnc_close(ctx);
     svnc_destroy(ctx);
     free(ctx);
-    free(absroot);
     free(revfile);
     free(repofile);
     free(url);
@@ -323,6 +310,7 @@ main(int argc, char *argv[])
     char *url = NULL;
     long target_rev = -1;
     char *localroot = NULL;
+    char *absroot;
     char *lockfile = NULL;
     unsigned int flags = SVNC_NNOCHECK;
     int debug_level = 1;
@@ -389,10 +377,26 @@ main(int argc, char *argv[])
         errx(1, "Invalid local root: %s.", localroot);
     }
 
+    /* set up local root */
+    if ((absroot = abspath(localroot)) == NULL) {
+        errx(1, "abspath");
+    }
+
+    if (lstat(absroot, &sb) == 0) {
+        if (!S_ISDIR(sb.st_mode)) {
+            errx(1, "Not a directory: %s", absroot);
+        }
+    } else {
+        if (svncdir_mkdirs(absroot) != 0) {
+            perror("svnc_mkdirs");
+            errx(1, "Could not make directory: %s", absroot);
+        }
+    }
+
     //TRACE("command-line arguments: %s %ld %s", url, target_rev, localroot);
 
     /* check and obtain lock */
-    if ((lockfile = path_join(localroot, LOCKFILE)) == NULL) {
+    if ((lockfile = path_join(absroot, LOCKFILE)) == NULL) {
         FAIL("path_join");
     }
     if (lstat(lockfile, &sb) == 0) {
@@ -408,12 +412,13 @@ main(int argc, char *argv[])
     sigaction(SIGTERM, &act, NULL);
     sigaction(SIGINT, &act, NULL);
 
-    run(url, target_rev, localroot, flags, debug_level);
+    run(url, target_rev, absroot, flags, debug_level);
 
     if (unlink(lockfile) != 0) {
         perror("[ignoring] unlink");
     }
     free(lockfile);
+    free(absroot);
     lockfile = NULL;
 
     return res;
