@@ -1,12 +1,16 @@
 include/mrksvnup/svnc.h
 include/mrksvnup/svncdir.h
 include/mrksvnup/svndiff.h
+include/mrksvnup/svnedit.h
 include/mrksvnup/svnproto.h
-include/mrksvnup/svnproto_bytes.h
+include/mrksvnup/http.h
+include/mrksvnup/httpproto.h
+include/mrksvnup/dav.h
+include/mrksvnup/xmatch.h
 include/mrksvnup/version.h
 @dirrm include/mrksvnup
 lib/libmrksvnup.so.0
 lib/libmrksvnup.so
 lib/libmrksvnup.la
 lib/libmrksvnup.a
-
+share/man/man1/svnup.1

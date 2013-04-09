@@ -12,7 +12,7 @@
 #
 make distclean
 autoreconf
-./configure --prefix=$HOME
+./configure --prefix=$HOME --enable-fcolor
 make
 
 # Before checking in to git: don't forget to update the port.
