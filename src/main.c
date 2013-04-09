@@ -38,7 +38,7 @@ atexit_cb(void)
     if (ctx != NULL) {
         svnc_close(ctx);
         svnc_destroy(ctx);
-        free(ctx);
+        //free(ctx);
         ctx = NULL;
     }
     free(absroot);
@@ -293,7 +293,7 @@ run(const char *cmdline_url,
 
     svnc_close(ctx);
     svnc_destroy(ctx);
-    free(ctx);
+    //free(ctx);
     free(revfile);
     free(repofile);
     free(url);
