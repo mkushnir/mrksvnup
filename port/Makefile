@@ -19,4 +19,13 @@ USE_LDCONFIG=	yes
 GNU_CONFIGURE=	yes
 CONFIGURE_ENV=	LDFLAGS=-L${LOCALBASE}/lib
 
+OPTIONS_DEFINE=	FCOLOR
+FCOLOR_DESC=	Enable colored output
+
+.include <bsd.port.options.mk>
+
+.if ${PORT_OPTIONS:MFCOLOR}
+CONFIGURE_ARGS+= --enable-fcolor
+.endif
+
 .include <bsd.port.mk>

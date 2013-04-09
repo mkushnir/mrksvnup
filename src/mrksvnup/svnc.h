@@ -20,7 +20,9 @@
 #define RA_CLIENT (PACKAGE_NAME "/" PACKAGE_VERSION)
 
 #define REVFILE ".svnup.rev"
+#define REPOFILE ".svnup.repo"
 #define CACHEFILE ".svnup.cache"
+#define LOCKFILE ".svnup.lock"
 
 typedef enum _svn_depth {
     SVN_DEPTH_NONE = -1,
@@ -162,6 +164,7 @@ const char *svnc_kind2str(int);
 int svnc_kind2int(const char *);
 svnc_ctx_t *svnc_new(const char *, const char *, unsigned int, int);
 int svnc_connect(svnc_ctx_t *);
+int svnc_socket_reconnect(svnc_ctx_t *);
 void svnc_clear_last_error(svnc_ctx_t *);
 void svnc_print_last_error(svnc_ctx_t *);
 int svnc_close(svnc_ctx_t *);

@@ -12,6 +12,7 @@
 #include "diag.h"
 #include "mrkcommon/util.h"
 //#define TRRET_DEBUG
+//#define TRRET_DEBUG_VERBOSE
 #include "mrkcommon/dumpm.h"
 #include "mrkcommon/traversedir.h"
 
@@ -43,6 +44,12 @@ svnc_save_checksum(svnc_ctx_t *ctx,
     v.size = checksum->sz;
     v.data = checksum->data;
 
+#ifdef TRRET_DEBUG_VERBOSE
+    TRACE("saving checksum path=%p data=%p", path, v.data);
+    TRACE("saving checksum path=%s", path);
+    D32(v.data, v.size);
+    TRACE();
+#endif
     if (ctx->cachedb->put(ctx->cachedb, &k, &v, 0) != 0) {
         res = SVNC_SAVE_CHECKSUM + 1;
     }
@@ -137,7 +144,7 @@ svnc_new(const char *url,
     char portstr[32];
 
     if ((ctx = malloc(sizeof(svnc_ctx_t))) == NULL) {
-        TRRETNULL(SVNC_NEW + 1);
+        FAIL("malloc");
     }
 
     /* XXX manually initialize it here */
@@ -177,22 +184,22 @@ svnc_new(const char *url,
 
 
     if ((ctx->url = strdup(url)) == NULL) {
-        TRRETNULL(SVNC_NEW + 2);
+        FAIL("strdup");
     }
 
     if ((ctx->localroot = strdup(localroot)) == NULL) {
-        TRRETNULL(SVNC_NEW + 3);
+        FAIL("strdup");
     }
 
     if (svn_url_parse(ctx->url, &ctx->scheme, &ctx->host, &ctx->port, &ctx->path)) {
         LTRACE(1, "URL could not be accepted: %s", ctx->url);
-        TRRETNULL(SVNC_NEW + 4);
+        TRRETNULL(SVNC_NEW + 1);
     }
 
     if (snprintf(portstr ,sizeof(portstr), "%d", ctx->port) <= 0) {
         svnc_destroy(ctx);
         free(ctx);
-        TRRETNULL(SVNC_NEW + 5);
+        TRRETNULL(SVNC_NEW + 2);
     }
 
     memset(&hints, '\0', sizeof(hints));
@@ -202,9 +209,10 @@ svnc_new(const char *url,
     hints.ai_flags = AI_NUMERICSERV;
 
     if (getaddrinfo(ctx->host, portstr, &hints, &ctx->ai) != 0) {
+        LTRACE(1, "Invalid parameters to getaddrinfo: host '%s' port '%s'", ctx->host, portstr);
         svnc_destroy(ctx);
         free(ctx);
-        TRRETNULL(SVNC_NEW + 6);
+        TRRETNULL(SVNC_NEW + 3);
     }
 
     if (!(flags & SVNC_NNOCACHE)) {
@@ -217,13 +225,13 @@ svnc_new(const char *url,
         if (svncdir_mkdirs(ctx->cacheroot) != 0) {
             svnc_destroy(ctx);
             free(ctx);
-            TRRETNULL(SVNC_NEW + 7);
+            TRRETNULL(SVNC_NEW + 4);
         }
 
         if ((ctx->cachepath = path_join(ctx->cacheroot, CACHEFILE)) == NULL) {
             svnc_destroy(ctx);
             free(ctx);
-            TRRETNULL(SVNC_NEW + 8);
+            TRRETNULL(SVNC_NEW + 5);
         }
 
         if (flags & SVNC_NFLUSHCACHE) {
@@ -245,7 +253,7 @@ svnc_new(const char *url,
             }
             svnc_destroy(ctx);
             free(ctx);
-            TRRETNULL(SVNC_NEW + 9);
+            TRRETNULL(SVNC_NEW + 6);
         }
     }
 
@@ -278,6 +286,38 @@ svnc_new(const char *url,
 }
 
 int
+svnc_socket_reconnect(svnc_ctx_t *ctx)
+{
+    struct addrinfo *ai;
+
+    if (ctx->fd != -1) {
+        if (close(ctx->fd) != 0) {
+            /* ignore */
+            ;
+        }
+    }
+
+    for (ai = ctx->ai; ai != NULL; ai = ai->ai_next) {
+        if ((ctx->fd = socket(ai->ai_family, ai->ai_socktype,
+                              ai->ai_protocol)) >= 0) {
+            if (connect(ctx->fd, ai->ai_addr, ai->ai_addrlen) == 0) {
+                break;
+            } else {
+                close(ctx->fd);
+                ctx->fd = -1;
+            }
+        }
+    }
+
+    if (ctx->fd < 0) {
+        LTRACE(1, "Could not connect to %s:%d", ctx->host, ctx->port);
+        TRRET(SVNC_SOCKET_RECONNECT + 1);
+    }
+
+    TRRET(0);
+}
+
+int
 svnc_connect(svnc_ctx_t *ctx)
 {
     struct addrinfo *ai;
@@ -294,10 +334,6 @@ svnc_connect(svnc_ctx_t *ctx)
         }
     }
 
-    if (ctx->fd < 0) {
-        TRRET(SVNC_CONNECT + 1);
-    }
-
     ctx->in.read_more = bytestream_recv_more;
 
     if (ctx->scheme == SVNC_SCHEME_SVN) {
@@ -312,7 +348,7 @@ svnc_connect(svnc_ctx_t *ctx)
 
     assert(ctx->setup != NULL);
     if (ctx->setup(ctx) != 0) {
-        TRRET(SVNC_CONNECT + 5);
+        TRRET(SVNC_CONNECT + 1);
     }
 
     return (0);
@@ -430,6 +466,16 @@ svnc_destroy(svnc_ctx_t *ctx)
     ctx->get_file = NULL;
     ctx->update = NULL;
     ctx->editor = NULL;
+
+    if (ctx->udata != NULL) {
+        if (ctx->scheme == SVNC_SCHEME_SVN) {
+        } else if (ctx->scheme == SVNC_SCHEME_HTTP) {
+            dav_ctx_destroy((dav_ctx_t *)(ctx->udata));
+        } else {
+            ;
+        }
+        ctx->udata = NULL;
+    }
 
     return (0);
 }

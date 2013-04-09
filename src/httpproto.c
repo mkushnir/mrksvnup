@@ -91,6 +91,7 @@ setup_body_cb(http_ctx_t *ctx, bytestream_t *in, void *udata)
 int
 httpproto_setup(UNUSED svnc_ctx_t *ctx)
 {
+    int res = 0;
     dav_ctx_t *davctx = NULL;
     const char *body =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -108,21 +109,35 @@ httpproto_setup(UNUSED svnc_ctx_t *ctx)
     assert(ctx->udata == NULL);
     ctx->udata = davctx;
 
+DO_REQUEST:
     if (dav_request(ctx, "OPTIONS", ctx->path, SVN_DEPTH_UNKNOWN,
                     body, strlen(body), NULL) != 0) {
 
         TRRET(HTTPPROTO_SETUP + 2);
     }
 
-    if (http_parse_response(ctx->fd, &ctx->in,
-                            NULL,
-                            setup_header_cb,
-                            setup_body_cb, ctx->udata) != 0) {
+    if ((res = http_parse_response(ctx->fd, &ctx->in,
+                                   NULL,
+                                   setup_header_cb,
+                                   setup_body_cb, ctx->udata)) != 0) {
 
-        TRRET(HTTPPROTO_SETUP + 3);
+        if (res == PARSE_EMPTY) {
+            res = 0;
+            goto TRY_RECONNECT;
+        } else {
+            TRRET(HTTPPROTO_SETUP + 3);
+        }
     }
 
     TRRET(0);
+
+TRY_RECONNECT:
+    //TRACE("Reconnecting ...");
+    //sleep(1);
+    if ((res = svnc_socket_reconnect(ctx)) != 0) {
+        TRRET(HTTPPROTO_SETUP + 4);
+    }
+    goto DO_REQUEST;
 }
 
 int
@@ -249,6 +264,7 @@ httpproto_check_path(svnc_ctx_t *ctx,
 
     //TRACE("davpath=%s", davpath);
 
+DO_REQUEST:
     if (dav_request(ctx, "PROPFIND", davpath, SVN_DEPTH_UNKNOWN,
                     body, strlen(body), NULL) != 0) {
         res = HTTPPROTO_CHECK_PATH + 2;
@@ -256,12 +272,17 @@ httpproto_check_path(svnc_ctx_t *ctx,
     }
 
 
-    if (http_parse_response(ctx->fd, &ctx->in,
-                            check_path_status_cb,
-                            NULL,
-                            check_path_body_cb, davctx) != 0) {
+    if ((res = http_parse_response(ctx->fd, &ctx->in,
+                                   check_path_status_cb,
+                                   NULL,
+                                   check_path_body_cb, davctx)) != 0) {
 
-        res = HTTPPROTO_CHECK_PATH + 3;
+        if (res == PARSE_EMPTY) {
+            res = 0;
+            goto TRY_RECONNECT;
+        } else {
+            res = HTTPPROTO_CHECK_PATH + 3;
+        }
         goto END;
     }
 
@@ -279,6 +300,15 @@ END:
     }
 
     TRRET(res);
+
+TRY_RECONNECT:
+    //TRACE("Reconnecting ...");
+    //sleep(1);
+    if ((res = svnc_socket_reconnect(ctx)) != 0) {
+        res = HTTPPROTO_CHECK_PATH + 4;
+        goto END;
+    }
+    goto DO_REQUEST;
 }
 
 int
@@ -296,6 +326,9 @@ httpproto_update(svnc_ctx_t *ctx,
     davctx->target = target;
     davctx->flags |= flags;
 
+    if (svnedit_target_rev(ctx, davctx->target_rev) != 0) {
+        TRRET(HTTPPROTO_UPDATE + 1);
+    }
     if (cb != NULL) {
         if (cb(ctx, NULL, NULL, udata) != 0) {
             TRRET(HTTPPROTO_UPDATE + 1);
@@ -423,12 +456,16 @@ editor_el_start(void *udata,
     } else if (strcmp(name, "svn:open-file") == 0) {
         svndiff_doc_t *doc;
         const char *fname = NULL;
+        const char *rev = NULL;
 
         while (*atts != NULL) {
             if (strcmp(*atts, "name") == 0) {
                 ++atts;
                 fname = *atts;
-                break;
+
+            } else if (strcmp(*atts, "rev") == 0) {
+                ++atts;
+                rev = *atts;
 
             } else {
                 ++atts;
@@ -451,6 +488,8 @@ editor_el_start(void *udata,
             if ((doc->rp = dav_cwp(davctx)) == NULL) {
                 TRRETVOID(EDITOR_EL_START + 7);
             }
+
+            doc->rev = strtol(rev, NULL, 10);
 
             if (davctx->svnctx->debug_level > 3) {
                 LTRACE(1, "open-file path=%s", BDATA(doc->rp));
@@ -865,11 +904,6 @@ httpproto_editor(svnc_ctx_t *ctx)
 
         res = HTTPPROTO_EDITOR + 4;
         goto END;
-    }
-
-    if (ctx->udata != NULL) {
-        dav_ctx_destroy((dav_ctx_t *)(ctx->udata));
-        ctx->udata = NULL;
     }
 
 END:

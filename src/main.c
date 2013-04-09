@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -19,6 +20,26 @@
 #include "mrksvnup/svnproto.h"
 
 const char *_malloc_options = "J";
+
+static svnc_ctx_t *ctx;
+
+static void
+sigterm_handler(UNUSED int sig)
+{
+    char *lockfile;
+
+    if ((lockfile = path_join(ctx->localroot, LOCKFILE)) == NULL) {
+        FAIL("path_join");
+    }
+    if (unlink(lockfile) != 0) {
+        perror("[ignoring] unlink");
+    }
+    svnc_close(ctx);
+    svnc_destroy(ctx);
+    free(ctx);
+    LTRACE(0, "Interrupted.");
+    _exit(1);
+}
 
 static int
 update_cb(svnc_ctx_t *ctx,
@@ -83,7 +104,7 @@ abspath(const char *path)
 }
 
 static void
-run(const char *url,
+run(const char *cmdline_url,
     long target_rev,
     const char *localroot,
     unsigned int flags,
@@ -91,12 +112,13 @@ run(const char *url,
 {
     char *absroot;
     char *revfile = NULL;
+    char *repofile = NULL;
     long source_rev = -1;
-    svnc_ctx_t *ctx;
     struct stat sb;
     int fd;
     int kind = -1;
     char buf[64];
+    char *url = NULL;
     struct {
         const char *path;
         long source_rev;
@@ -114,6 +136,31 @@ run(const char *url,
         }
     }
 
+    if ((repofile = path_join(absroot, REPOFILE)) == NULL) {
+        errx(1, "path_join()");
+    }
+    if (cmdline_url == NULL) {
+        if (lstat(repofile, &sb) == 0 && S_ISREG(sb.st_mode)) {
+            if ((fd = open(repofile, O_RDONLY)) >= 0) {
+                if ((url = malloc(sb.st_size + 1)) == NULL) {
+                    FAIL("malloc");
+                }
+                ssize_t nread;
+                if ((nread = read(fd, url, sb.st_size)) > 0) {
+                    url[sb.st_size] = '\0';
+                }
+                close(fd);
+                if (debug_level > 0) {
+                    LTRACE(0, "Found saved URL: %s", url);
+                }
+            }
+        } else {
+            errx(1, "Cannot find URL.");
+        }
+    } else {
+        url = strdup(cmdline_url);
+    }
+
     /* source revision is in a revfile (previously saved target revision) */
     if ((revfile = path_join(absroot, REVFILE)) == NULL) {
         errx(1, "path_join() issue");
@@ -127,7 +174,6 @@ run(const char *url,
     } else {
         if (lstat(revfile, &sb) == 0 && S_ISREG(sb.st_mode)) {
             if ((fd = open(revfile, O_RDONLY)) >= 0) {
-                char buf[64];
                 ssize_t nread;
                 if ((nread = read(fd, buf, 64)) > 0) {
                     buf[nread] = '\0';
@@ -196,7 +242,7 @@ run(const char *url,
     /*
      * 2. Check local integrity and possibly check out corrupt files.
      */
-    if (debug_level > 0) {
+    if (debug_level > 1) {
         LTRACE(0, "Checking integrity (lengthy) ...");
     }
 
@@ -223,21 +269,41 @@ run(const char *url,
 
     if (debug_level > 0) {
         LTRACE(0, "Saved revision: %ld", target_rev);
-        LTRACE(0, "OK");
     }
 
+    /*
+     * 4. Save URL.
+     */
+
+    if ((fd = open(repofile, O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0) {
+        err(1, "open");
+    }
+
+    if (write(fd, url, strlen(url)) < 0) {
+        err(1, "write");
+    }
+
+    close(fd);
+
+    if (debug_level > 0) {
+        LTRACE(0, "Saved URL: %s", url);
+        LTRACE(0, "OK");
+    }
 
     svnc_close(ctx);
     svnc_destroy(ctx);
     free(ctx);
     free(absroot);
+    free(revfile);
+    free(repofile);
+    free(url);
 }
 
 static void
 usage(const char *progname)
 {
     printf("Usage:\n");
-    printf("   %s [-r REV] [-v LEVEL] URL [DIR]\n", progname);
+    printf("   %s [-r REV] [-v LEVEL] [URL] [DIR]\n", progname);
     printf("   %s [-h]\n", progname);
     printf("   %s [-V]\n", progname);
 }
@@ -257,8 +323,15 @@ main(int argc, char *argv[])
     char *url = NULL;
     long target_rev = -1;
     char *localroot = NULL;
+    char *lockfile = NULL;
     unsigned int flags = SVNC_NNOCHECK;
     int debug_level = 1;
+    struct sigaction act = {
+        .sa_handler = sigterm_handler,
+        .sa_flags = 0,
+    };
+    struct stat sb;
+    int lockfd;
 
     progname = argv[0];
 
@@ -302,10 +375,9 @@ main(int argc, char *argv[])
     argc -= optind;
     argv += optind;
 
-    if (argc < 1) {
-        errx(1, "URL is required.");
+    if (argc > 0) {
+        url = argv[0];
     }
-    url = argv[0];
 
     if (argc > 1) {
         localroot = argv[1];
@@ -319,7 +391,30 @@ main(int argc, char *argv[])
 
     //TRACE("command-line arguments: %s %ld %s", url, target_rev, localroot);
 
+    /* check and obtain lock */
+    if ((lockfile = path_join(localroot, LOCKFILE)) == NULL) {
+        FAIL("path_join");
+    }
+    if (lstat(lockfile, &sb) == 0) {
+        LTRACE(0, "Cannot run: another instance is running on %s", localroot);
+        exit(1);
+    }
+    if ((lockfd = open(lockfile, O_WRONLY|O_CREAT|O_TRUNC, 0600)) < 0) {
+        FAIL("open");
+    }
+    close(lockfd);
+
+    sigemptyset(&act.sa_mask);
+    sigaction(SIGTERM, &act, NULL);
+    sigaction(SIGINT, &act, NULL);
+
     run(url, target_rev, localroot, flags, debug_level);
+
+    if (unlink(lockfile) != 0) {
+        perror("[ignoring] unlink");
+    }
+    free(lockfile);
+    lockfile = NULL;
 
     return res;
 }

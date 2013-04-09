@@ -4,9 +4,12 @@
 #include "mrkcommon/bytestream.h"
 #include "mrksvnup/svnc.h"
 
-#define PARSE_NEED_MORE (-1)
+/* bytestream_consume */
+#define PARSE_EOF (-1)
+#define PARSE_NEED_MORE (-2)
 /* end of data */
-#define PARSE_EOD (-2)
+#define PARSE_EOD (-3)
+#define PARSE_EMPTY (-4)
 
 typedef struct _http_ctx {
 #define PS_START 1
@@ -16,6 +19,7 @@ typedef struct _http_ctx {
 #define PS_BODY_IN 5
 #define PS_BODY 6
 #define PSSTR(ps) ( \
+        ps == PS_START ? "START" : \
         ps == PS_STATUS_LINE ? "STATUS_LINE" : \
         ps == PS_HEADER_FIELD_IN ? "HEADER_FIELD_IN" : \
         ps == PS_HEADER_FIELD_OUT ? "HEADER_FIELD_OUT" : \
@@ -26,6 +30,11 @@ typedef struct _http_ctx {
     char parser_state;
 #define PS_CHUNK_SIZE 1
 #define PS_CHUNK_DATA 2
+#define CPSSTR(ps) ( \
+        ps == PS_CHUNK_SIZE ? "CHUNK_SIZE" : \
+        ps == PS_CHUNK_DATA ? "CHUNK_DATA" : \
+        "<unknown>" \
+        )
     char chunk_parser_state;
     byterange_t status_line;
     int version_major;

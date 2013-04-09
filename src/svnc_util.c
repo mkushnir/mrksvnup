@@ -11,6 +11,7 @@
 
 #include "diag.h"
 #include "mrkcommon/array.h"
+//#define TRRET_DEBUG
 #include "mrkcommon/dumpm.h"
 #include "mrkcommon/util.h"
 #include "mrkcommon/traversedir.h"
@@ -175,7 +176,7 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
     size_t counter = 0;
 
     if (ctx->flags & SVNC_NO_CHECK_INTEGRITY) {
-        if (ctx->debug_level > 0) {
+        if (ctx->debug_level > 1) {
             LTRACE(1, FYELLOW("Will not check files against database"));
         }
         return;

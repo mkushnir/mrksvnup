@@ -133,6 +133,32 @@ http_ctx_fini(http_ctx_t *ctx)
     http_ctx_init(ctx);
 }
 
+void
+http_ctx_dump(const http_ctx_t *ctx)
+{
+    TRACE("PS=%s CPS=%s f=%d l=%ld/%ld HTTP/%d.%d %d "
+          "hn=%ld/%ld hv=%ld/%ld b=%d,%ld/%ld c=%d,%ld/%ld",
+          PSSTR(ctx->parser_state),
+          CPSSTR(ctx->chunk_parser_state),
+          ctx->flags,
+          ctx->status_line.start,
+          ctx->status_line.end,
+          ctx->version_major,
+          ctx->version_minor,
+          ctx->status,
+          ctx->current_header_name.start,
+          ctx->current_header_name.end,
+          ctx->current_header_value.start,
+          ctx->current_header_value.end,
+          ctx->bodysz,
+          ctx->body.start,
+          ctx->body.end,
+          ctx->current_chunk_size,
+          ctx->current_chunk.start,
+          ctx->current_chunk.end
+         );
+}
+
 http_ctx_t *
 http_ctx_new(void)
 {
@@ -276,10 +302,12 @@ findnosp(char *s, int sz)
 static int
 process_header(http_ctx_t *ctx, bytestream_t *in)
 {
-    //TRACE("current_header_name=%s",
-    //      SDATA(in, ctx->current_header_name.start));
-    //TRACE("current_header_value=%s",
-    //      SDATA(in, ctx->current_header_value.start));
+#ifdef TRRET_DEBUG
+    TRACE("current_header_name=%s",
+          SDATA(in, ctx->current_header_name.start));
+    TRACE("current_header_value=%s",
+          SDATA(in, ctx->current_header_value.start));
+#endif
 
     if (strcasecmp(SDATA(in, ctx->current_header_name.start),
                    "content-length") == 0) {
@@ -475,8 +503,16 @@ http_parse_response(int fd,
             int lres;
             if ((lres = bytestream_consume_data(in, fd)) != 0) {
                 /* this must be treated as EOF condition */
-                TRACE("consume_data returned %d", lres);
-                lres = 0;
+#ifdef TRRET_DEBUG
+                http_ctx_dump(ctx);
+                TRACE("consume_data returned %08x", lres);
+                perror("consume_data");
+#endif
+                if (lres == PARSE_EOF && ctx->parser_state <= PS_START) {
+                    res = PARSE_EMPTY;
+                } else {
+                    res = 0;
+                }
                 break;
             }
         }
@@ -602,6 +638,7 @@ http_parse_response(int fd,
                 ctx->current_chunk.start = SPOS(in);
                 ctx->current_chunk.end = ctx->current_chunk.start;
                 ctx->parser_state = PS_BODY_IN;
+                goto BODY_IN;
 
             } else {
                 /* next header */
@@ -640,6 +677,7 @@ http_parse_response(int fd,
 
         } else if (ctx->parser_state == PS_BODY_IN) {
 
+BODY_IN:
             if ((res = process_body(ctx, in, body_cb, udata)) != 0) {
                 if (res != PARSE_NEED_MORE) {
                     TRRET(HTTP_PARSE_RESPONSE + 12);

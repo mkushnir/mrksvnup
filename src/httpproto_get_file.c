@@ -171,6 +171,7 @@ httpproto_get_file(svnc_ctx_t *ctx,
     davpath = dav_rvr_path(davctx, fullpath, rev);
     davctx->fe = e;
 
+DO_REQUEST:
     /* props */
     if (flags & GETFLAG_WANT_PROPS) {
         if (dav_request(ctx, "PROPFIND", davpath, SVN_DEPTH_UNKNOWN,
@@ -180,12 +181,17 @@ httpproto_get_file(svnc_ctx_t *ctx,
         }
 
 
-        if (http_parse_response(ctx->fd, &ctx->in,
-                                get_file_props_status_cb,
-                                NULL,
-                                get_file_props_body_cb, davctx) != 0) {
+        if ((res = http_parse_response(ctx->fd, &ctx->in,
+                                       get_file_props_status_cb,
+                                       NULL,
+                                       get_file_props_body_cb, davctx)) != 0) {
 
-            res = HTTPPROTO_GET_FILE + 2;
+            if (res == PARSE_EMPTY) {
+                res = 0;
+                goto TRY_RECONNECT;
+            } else {
+                res = HTTPPROTO_GET_FILE + 2;
+            }
             goto END;
         }
     }
@@ -219,6 +225,15 @@ END:
     }
 
     TRRET(res);
+
+TRY_RECONNECT:
+    //TRACE("Reconnecting ...");
+    //sleep(1);
+    if ((res = svnc_socket_reconnect(ctx)) != 0) {
+        res = HTTPPROTO_GET_FILE + 5;
+        goto END;
+    }
+    goto DO_REQUEST;
 }
 
 

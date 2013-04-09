@@ -7,7 +7,7 @@
 #include "diag.h"
 #include "mrkcommon/array.h"
 #include "mrkcommon/util.h"
-#define TRRET_DEBUG
+//#define TRRET_DEBUG
 #include "mrkcommon/dumpm.h"
 
 #include "mrksvnup/svnc.h"

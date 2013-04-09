@@ -72,9 +72,11 @@ typedef struct _svnproto_state {
 #define ISALPHA(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z'))
 #define ISWORD(c) (ISALPHA(c) || ISDIGIT(c) || (c) == '-')
 
-#define PARSE_NEED_MORE (-1)
+/* bytestream_consume */
+#define PARSE_EOF (-1)
+#define PARSE_NEED_MORE (-2)
 /* end of data */
-#define PARSE_EOD (-2)
+#define PARSE_EOD (-3)
 
 /*
  * Parser

@@ -4,6 +4,8 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 
+//#define TRRET_DEBUG
+//#define TRRET_DEBUG_VERBOSE
 #include "mrkcommon/dumpm.h"
 #include "mrkcommon/bytestream.h"
 #include "mrkcommon/traversedir.h"
@@ -695,7 +697,7 @@ svnedit_close_file(svnc_ctx_t *ctx,
         if (memcmp(s, BDATA(text_checksum), 32) != 0) {
 
             if (ctx->debug_level > 2) {
-                LTRACE(1, FRED("Target checksum mismtach: "
+                LTRACE(1, FRED("Target checksum mismatch: "
                                "expected %s over %s"),
                        BDATA(text_checksum), doc.lp);
             }
