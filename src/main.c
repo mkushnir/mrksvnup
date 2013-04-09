@@ -24,7 +24,7 @@ const char *_malloc_options = "J";
 static svnc_ctx_t *ctx;
 
 static void
-sigterm_handler(UNUSED int sig)
+atexit_cb(void)
 {
     char *lockfile;
 
@@ -34,12 +34,22 @@ sigterm_handler(UNUSED int sig)
     if (unlink(lockfile) != 0) {
         perror("[ignoring] unlink");
     }
-    svnc_close(ctx);
-    svnc_destroy(ctx);
-    free(ctx);
+    if (ctx != NULL) {
+        svnc_close(ctx);
+        svnc_destroy(ctx);
+        free(ctx);
+        ctx = NULL;
+    }
+}
+
+static void
+sigterm_handler(UNUSED int sig)
+{
+    atexit_cb();
     LTRACE(0, "Interrupted.");
     _exit(1);
 }
+
 
 static int
 update_cb(svnc_ctx_t *ctx,
@@ -207,13 +217,13 @@ run(const char *cmdline_url,
     if (ctx->check_path(ctx, update_params.path,
                             target_rev, &kind) != 0) {
         svnc_print_last_error(ctx);
-        errx(1, "check_path");
+        errx(1, "Remote path is not a directory: %s", ctx->path);
     }
 
     //TRACE("check_path kind=%s", svnc_kind2str(kind));
     
     if (kind != SVNC_KIND_DIR) {
-        errx(1, "Remote path is not a directory: %s", update_params.path);
+        errx(1, "Remote path is not a directory: %s", ctx->path);
     }
 
     /*
@@ -394,6 +404,10 @@ main(int argc, char *argv[])
     }
 
     //TRACE("command-line arguments: %s %ld %s", url, target_rev, localroot);
+
+    if (atexit(atexit_cb) != 0) {
+        errx(1, "atexit");
+    }
 
     /* check and obtain lock */
     if ((lockfile = path_join(absroot, LOCKFILE)) == NULL) {
