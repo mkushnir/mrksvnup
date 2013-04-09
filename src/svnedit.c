@@ -1,8 +1,6 @@
 #include <assert.h>
 #include <fcntl.h>
-/* goes before md5.h */
-#include <sys/types.h>
-#include <md5.h>
+#include <openssl/md5.h>
 #include <sys/param.h>
 #include <sys/stat.h>
 
@@ -74,44 +72,51 @@ svnedit_verify_checksum(int fd, const bytes_t *cs)
     char buf[VCBUFSZ];
     ssize_t nread;
     MD5_CTX ctx;
-    char *s = NULL;
+    unsigned char md[16];
+    char s[32];
 
-    MD5Init(&ctx);
-
-    if (lseek(fd, 0, SEEK_SET) != 0) {
-        perror("lseek");
+    if (MD5_Init(&ctx) != 1) {
+        perror("MD5_Init");
         res = SVNEDIT_VERIFY_CHECKSUM + 1;
         goto END;
     }
+    
 
-    while ((nread = read(fd, buf, VCBUFSZ)) > 0) {
-        MD5Update(&ctx, buf, (unsigned int)nread);
-    }
-
-    if (nread < 0) {
-        perror("read");
+    if (lseek(fd, 0, SEEK_SET) != 0) {
+        perror("lseek");
         res = SVNEDIT_VERIFY_CHECKSUM + 2;
         goto END;
     }
 
-    if ((s = MD5End(&ctx, NULL)) == NULL) {
-        perror("ND5End");
-        res = SVNEDIT_VERIFY_CHECKSUM + 3;
-        goto END;
+    while ((nread = read(fd, buf, VCBUFSZ)) > 0) {
+        if (MD5_Update(&ctx, buf, (unsigned long)nread) != 1) {
+            perror("MD5_Update");
+            res = SVNEDIT_VERIFY_CHECKSUM + 3;
+            goto END;
+        }
+        
     }
 
-    //TRACE("s=%s cs=%s", s, cs);
-
-    if (strncmp(s, cs->data, cs->sz) != 0) {
+    if (nread < 0) {
+        perror("read");
         res = SVNEDIT_VERIFY_CHECKSUM + 4;
         goto END;
     }
 
-END:
-    if (s != NULL) {
-        free(s);
-        s = NULL;
+    if ((MD5_Final(md, &ctx)) != 1) {
+        perror("ND5End");
+        res = SVNEDIT_VERIFY_CHECKSUM + 5;
+        goto END;
     }
+
+    bin2hex(s, md, 16);
+
+    if (memcmp(s, cs->data, 32) != 0) {
+        res = SVNEDIT_VERIFY_CHECKSUM + 6;
+        goto END;
+    }
+
+END:
     return res;
 }
 
@@ -585,7 +590,10 @@ svnedit_change_file_prop(UNUSED svnc_ctx_t *ctx,
 static int
 checksum_cb(svndiff_wnd_t *wnd, MD5_CTX *ctx)
 {
-    MD5Update(ctx, wnd->tview, wnd->tview_len);
+    if (MD5_Update(ctx, wnd->tview, wnd->tview_len) != 1) {
+        return 1;
+    }
+    
     return 0;
 }
 
@@ -597,7 +605,6 @@ svnedit_close_file(svnc_ctx_t *ctx,
     int res = 0;
     MD5_CTX mctx;
     array_iter_t it;
-    char *checksum = NULL;
     svndiff_wnd_t *wnd;
     ssize_t total_len;
 
@@ -667,17 +674,25 @@ svnedit_close_file(svnc_ctx_t *ctx,
 
     /* verify target view */
     if (BDATA(text_checksum) != NULL && doc.version != -1) {
+        unsigned char md[16];
+        char s[32];
 
-        MD5Init(&mctx);
-        array_traverse(&doc.wnd, (array_traverser_t)checksum_cb, &mctx);
-
-        if ((checksum = MD5End(&mctx, NULL)) == NULL) {
-            perror("ND5End");
+        if (MD5_Init(&mctx) != 1) {
+            perror("MD5_Init");
             res = SVNEDIT_CLOSE_FILE + 4;
             goto END;
         }
+        array_traverse(&doc.wnd, (array_traverser_t)checksum_cb, &mctx);
 
-        if (strcmp(checksum, BDATA(text_checksum)) != 0) {
+        if (MD5_Final(md, &mctx) != 1) {
+            perror("ND5End");
+            res = SVNEDIT_CLOSE_FILE + 5;
+            goto END;
+        }
+
+        bin2hex(s, md, 16);
+
+        if (memcmp(s, BDATA(text_checksum), 32) != 0) {
 
             if (ctx->debug_level > 2) {
                 LTRACE(1, FRED("Target checksum mismtach: "

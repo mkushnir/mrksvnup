@@ -92,7 +92,7 @@ get_file_props_body_cb(http_ctx_t *ctx,
 }
 
 static int
-get_file_props_header_cb(http_ctx_t *ctx,
+get_file_props_status_cb(http_ctx_t *ctx,
                          UNUSED bytestream_t *in,
                          void *udata)
 {
@@ -116,7 +116,7 @@ get_file_props_header_cb(http_ctx_t *ctx,
 }
 
 static int
-get_file_contents_header_cb(http_ctx_t *ctx,
+get_file_contents_status_cb(http_ctx_t *ctx,
                             UNUSED bytestream_t *in,
                             UNUSED void *udata)
 {
@@ -181,7 +181,8 @@ httpproto_get_file(svnc_ctx_t *ctx,
 
 
         if (http_parse_response(ctx->fd, &ctx->in,
-                                get_file_props_header_cb,
+                                get_file_props_status_cb,
+                                NULL,
                                 get_file_props_body_cb, davctx) != 0) {
 
             res = HTTPPROTO_GET_FILE + 2;
@@ -197,7 +198,8 @@ httpproto_get_file(svnc_ctx_t *ctx,
         }
 
         if (http_parse_response(ctx->fd, &ctx->in,
-                                get_file_contents_header_cb,
+                                get_file_contents_status_cb,
+                                NULL,
                                 get_file_contents_body_cb, davctx) != 0) {
 
             res = HTTPPROTO_GET_FILE + 4;

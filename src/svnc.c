@@ -367,12 +367,9 @@ void
 svnc_print_last_error(svnc_ctx_t *ctx)
 {
     if (BDATA(ctx->last_error.message) != NULL) {
-        TRACE(FRED("E %s (code %ld file '%s' line %ld)"),
-                   BDATA(ctx->last_error.message),
-                   ctx->last_error.apr_error,
-                   BDATA(ctx->last_error.file),
-                   ctx->last_error.line
-                   );
+        LTRACE(0, FRED("E %s (code %ld)"),
+                       BDATA(ctx->last_error.message),
+                       ctx->last_error.apr_error);
     }
 }
 

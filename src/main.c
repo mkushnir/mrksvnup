@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+//#define TRRET_DEBUG
 #include "diag.h"
 #include "mrkcommon/array.h"
 #include "mrkcommon/dumpm.h"
@@ -171,6 +172,7 @@ run(const char *url,
     assert(ctx->check_path != NULL);
     if (ctx->check_path(ctx, update_params.path,
                             target_rev, &kind) != 0) {
+        svnc_print_last_error(ctx);
         errx(1, "check_path");
     }
 

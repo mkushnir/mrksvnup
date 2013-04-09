@@ -301,6 +301,26 @@ process_header(http_ctx_t *ctx, bytestream_t *in)
     return PARSE_NEED_MORE;
 }
 
+void
+recycle_stream_buffer(http_ctx_t *ctx, bytestream_t *in)
+{
+    off_t recycled;
+
+    ctx->status_line.start = 0;
+    ctx->status_line.end = 0;
+    ctx->current_header_name.start = 0;
+    ctx->current_header_name.end = 0;
+    ctx->current_header_value.start = 0;
+    ctx->current_header_value.end = 0;
+    ctx->body.start = 0;
+    ctx->body.end = 0;
+
+    recycled = bytestream_recycle(in, ctx->current_chunk.start);
+
+    ctx->current_chunk.start -= recycled;
+    ctx->current_chunk.end -= recycled;
+}
+
 static int
 process_body(http_ctx_t *ctx,
              bytestream_t *in,
@@ -384,8 +404,12 @@ process_body(http_ctx_t *ctx,
                 ctx->current_chunk.end = ctx->current_chunk.start;
 
                 if (ctx->current_chunk_size > 0) {
+                    /* recycle */
+                    recycle_stream_buffer(ctx, in);
                     TRRET(PARSE_NEED_MORE);
                 } else {
+                    /* recycle */
+                    recycle_stream_buffer(ctx, in);
                     TRRET(0);
                 }
             }
@@ -402,7 +426,6 @@ process_body(http_ctx_t *ctx,
         ctx->current_chunk.end = ctx->body.end;
         SADVANCEPOS(in, incr);
         accumulated = ctx->body.end - ctx->body.start;
-
 
 #ifdef TRRET_DEBUG
         TRACE("bodysz=%d navail=%ld accumulated=%ld incr=%ld "
@@ -424,6 +447,7 @@ process_body(http_ctx_t *ctx,
                     TRRET(PROCESS_BODY + 3);
                 }
             }
+            recycle_stream_buffer(ctx, in);
             TRRET(0);
         }
     }
@@ -435,6 +459,7 @@ process_body(http_ctx_t *ctx,
 int
 http_parse_response(int fd,
                     bytestream_t *in,
+                    http_cb_t status_cb,
                     http_cb_t header_cb,
                     http_cb_t body_cb,
                     void *udata)
@@ -447,14 +472,17 @@ http_parse_response(int fd,
     while (res == PARSE_NEED_MORE) {
 
         if (SNEEDMORE(in)) {
-            if (bytestream_consume_data(in, fd) != 0) {
+            int lres;
+            if ((lres = bytestream_consume_data(in, fd)) != 0) {
                 /* this must be treated as EOF condition */
-                res = 0;
+                TRACE("consume_data returned %d", lres);
+                lres = 0;
                 break;
             }
         }
 
         if (ctx->parser_state == PS_START) {
+
             ctx->status_line.start = SPOS(in);
             ctx->parser_state = PS_STATUS_LINE;
 
@@ -531,6 +559,11 @@ http_parse_response(int fd,
              * Reason phrase (ignore)
              */
 
+            if (status_cb != NULL) {
+                if (status_cb(ctx, in, udata) != 0) {
+                    TRRET(HTTP_PARSE_RESPONSE + 8);
+                }
+            }
             ctx->parser_state = PS_HEADER_FIELD_IN;
             SADVANCEPOS(in, end - SPDATA(in) + 2);
 
@@ -579,7 +612,7 @@ http_parse_response(int fd,
                                   ctx->current_header_value.end -
                                   ctx->current_header_name.start)) == NULL) {
 
-                    TRRET(HTTP_PARSE_RESPONSE + 8);
+                    TRRET(HTTP_PARSE_RESPONSE + 9);
                 }
 
                 ctx->current_header_name.end = SDPOS(in, tmp);
@@ -590,13 +623,13 @@ http_parse_response(int fd,
 
                 if ((res = process_header(ctx, in)) != 0) {
                     if (res != PARSE_NEED_MORE) {
-                        TRRET(HTTP_PARSE_RESPONSE + 9);
+                        TRRET(HTTP_PARSE_RESPONSE + 10);
                     }
                 }
 
                 if (header_cb != NULL) {
                     if (header_cb(ctx, in, udata) != 0) {
-                        TRRET(HTTP_PARSE_RESPONSE + 10);
+                        TRRET(HTTP_PARSE_RESPONSE + 11);
                     }
                 }
 
@@ -609,7 +642,7 @@ http_parse_response(int fd,
 
             if ((res = process_body(ctx, in, body_cb, udata)) != 0) {
                 if (res != PARSE_NEED_MORE) {
-                    TRRET(HTTP_PARSE_RESPONSE + 11);
+                    TRRET(HTTP_PARSE_RESPONSE + 12);
                 }
             }
 
@@ -621,7 +654,7 @@ http_parse_response(int fd,
 
             if ((res = process_body(ctx, in, body_cb, udata)) != 0) {
                 if (res != PARSE_NEED_MORE) {
-                    TRRET(HTTP_PARSE_RESPONSE + 12);
+                    TRRET(HTTP_PARSE_RESPONSE + 13);
                 }
             }
 
@@ -630,7 +663,7 @@ http_parse_response(int fd,
 
         } else {
             //TRACE("state=%s", PSSTR(ctx->parser_state));
-            TRRET(HTTP_PARSE_RESPONSE + 13);
+            TRRET(HTTP_PARSE_RESPONSE + 14);
         }
     }
 

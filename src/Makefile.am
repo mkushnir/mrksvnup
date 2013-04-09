@@ -47,14 +47,22 @@ libmrksvnup_la_SOURCES = svnc.c \
 			 svnproto_editor.c
 
 nodist_libmrksvnup_la_SOURCES = diag.c
+if FCOLOR
 libmrksvnup_la_CFLAGS = -Wall -Wextra -Werror -g -std=c99 -I$(includedir) -O0 -ftrapv -fcatch-undefined-behavior
-libmrksvnup_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon -lz -lmd -lbsdxml -lcrypto
+else
+libmrksvnup_la_CFLAGS = -Wall -Wextra -Werror -g -std=c99 -I$(includedir) -O0 -ftrapv -fcatch-undefined-behavior -DNOFCOLOR
+endif
+libmrksvnup_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon -lz -lbsdxml -lcrypto -ssl
 
 bin_PROGRAMS = svnup
 
 svnup_SOURCES = main.c
 nodist_svnup_SOURCES =
-svnup_CFLAGS = -Wall -Wextra -Werror -g -std=c99 -I$(includedir)
+if FCOLOR
+svnup_CFLAGS = -Wall -Wextra -Werror -g -std=c99 -I$(includedir) -O0 -ftrapv -fcatch-undefined-behavior
+else
+svnup_CFLAGS = -Wall -Wextra -Werror -g -std=c99 -I$(includedir) -O0 -ftrapv -fcatch-undefined-behavior -DNOFCOLOR
+endif
 svnup_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon -lmrksvnup
 
 SUBDIRS = . test

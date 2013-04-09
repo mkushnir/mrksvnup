@@ -29,6 +29,41 @@ static const char *kinds[] = {
 };
 
 int
+all_spaces(const char *s, size_t sz)
+{
+    const char *end;
+
+    for (end = s + sz; s < end; ++s) {
+        if (!(*s == '\n' || *s == ' ' || *s == '\t' || *s == '\r')) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+void
+bin2hex(char *hex, const unsigned char *bin, size_t sz)
+{
+    unsigned i;
+
+    for (i = 0; i < sz; ++i) {
+        unsigned char c = (unsigned char)bin[i];
+        unsigned char cc = c >> 4;
+        if (cc < 10) {
+            hex[i * 2] = '0' + cc;
+        } else {
+            hex[i * 2] = 'a' + cc - 10;
+        }
+        cc = (c & 0x0f);
+        if (cc < 10) {
+            hex[i * 2 + 1] = '0' + cc;
+        } else {
+            hex[i * 2 + 1] = 'a' + cc - 10;
+        }
+    }
+}
+
+int
 svnc_kind2int(const char *kind)
 {
     unsigned i;

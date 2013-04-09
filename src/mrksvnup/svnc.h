@@ -155,6 +155,9 @@ typedef struct _svnc_ctx {
 #define SVNC_NFLUSHCACHE 0x02
 #define SVNC_NNOCHECK 0x04
 #define SVNC_NVERBOSE 0x08
+
+int all_spaces(const char *, size_t);
+void bin2hex(char *, const unsigned char *, size_t);
 const char *svnc_kind2str(int);
 int svnc_kind2int(const char *);
 svnc_ctx_t *svnc_new(const char *, const char *, unsigned int, int);

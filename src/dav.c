@@ -11,20 +11,6 @@
 
 #include "diag.h"
 
-int
-all_spaces(const char *s, size_t sz)
-{
-    size_t i;
-
-    for (i = 0; i < sz; ++i) {
-        char c = *(s + i);
-        if (!(c == ' ' || c == '\t' || c == '\r' || c == '\n')) {
-            return 0;
-        }
-    }
-    return 1;
-}
-
 void
 debug_ns_start(UNUSED void *udata, const XML_Char *prefix, const XML_Char *uri)
 {

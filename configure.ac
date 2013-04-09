@@ -24,6 +24,7 @@ dnl AM_MAINTAINER_MODE
 AC_CONFIG_FILES([Makefile src/Makefile src/test/Makefile man/Makefile])
 AC_CONFIG_HEADERS(config.h)
 
+AC_CHECK_HEADER_STDBOOL
 AC_CHECK_HEADERS([syslog.h])
 AC_CHECK_HEADERS([fcntl.h])
 AC_CHECK_HEADERS([limits.h])
@@ -38,6 +39,7 @@ AC_TYPE_SIZE_T
 AC_TYPE_OFF_T
 AC_TYPE_SSIZE_T
 AC_TYPE_UINT64_T
+AC_CHECK_TYPES([ptrdiff_t])
 
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
@@ -62,8 +64,16 @@ AC_CHECK_FUNCS([strncasecmp])
 
 AC_PRESERVE_HELP_ORDER
 
+AC_ARG_ENABLE(fcolor,
+              AC_HELP_STRING([--enable-fcolor],
+                             [Enable colored output (default=no)]),
+              [AM_CONDITIONAL([FCOLOR], [enable_fcolor=yes])],
+              [AM_CONDITIONAL([FCOLOR], [test "$enable_fcolor" = "yes"])],
+             )
 AC_CHECK_LIB(z, compress, [], [AC_MSG_FAILURE(libz.so is required.)]) 
-AC_CHECK_LIB(md, MD5Init, [], [AC_MSG_FAILURE(libmd.so is required.)]) 
+#AC_CHECK_LIB(md, MD5Init, [], [AC_MSG_FAILURE(libmd.so is required.)]) 
+AC_CHECK_LIB(crypto, MD5_Init, [], [AC_MSG_FAILURE(libcrypto.so is required.)]) 
+AC_CHECK_LIB(ssl, SSL_library_init, [], [AC_MSG_FAILURE(libssl.so is required.)]) 
 AC_CHECK_LIB(bsdxml, XML_ParserCreateNS, [], [AC_MSG_FAILURE(libbsdxml.so is required.)]) 
 # pass LDFLAGS=-L${LOCALBASE}/lib in the environment
 AC_CHECK_LIB(mrkcommon, _fini, [], [AC_MSG_FAILURE(libmrkcommon.so is required. Please find it at git@github.com:mkushnir/mrkcommon.git)]) 

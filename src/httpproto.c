@@ -115,6 +115,7 @@ httpproto_setup(UNUSED svnc_ctx_t *ctx)
     }
 
     if (http_parse_response(ctx->fd, &ctx->in,
+                            NULL,
                             setup_header_cb,
                             setup_body_cb, ctx->udata) != 0) {
 
@@ -134,7 +135,7 @@ httpproto_get_latest_rev(svnc_ctx_t *ctx, long *rev)
 }
 
 static int
-check_path_header_cb(http_ctx_t *ctx,
+check_path_status_cb(http_ctx_t *ctx,
                    UNUSED bytestream_t *in,
                    void *udata)
 {
@@ -147,9 +148,13 @@ check_path_header_cb(http_ctx_t *ctx,
         NULL,
     };
 
-    //TRACE("status=%d", ctx->status);
     if (ctx->status != 207) {
-        TRRET(CHECK_PATH_HEADER_CB + 1);
+        svnc_clear_last_error(davctx->svnctx);
+        davctx->svnctx->last_error.apr_error = ctx->status;
+#ifdef TRRET_DEBUG
+        TRACE("status=%d", ctx->status);
+#endif
+        //TRRET(CHECK_PATH_HEADER_CB + 1);
     }
 
     dav_setup_xml_parser(davctx, &cb, davctx,
@@ -159,6 +164,18 @@ check_path_header_cb(http_ctx_t *ctx,
 
 
     TRRET(0);
+}
+
+void
+check_path_error_chardata(void *udata,
+                          const XML_Char *s,
+                          int len)
+{
+    dav_ctx_t *davctx = udata;
+    if (!all_spaces(s, len)) {
+        davctx->svnctx->last_error.message = bytes_from_strn(s, len);
+        //D32(s, len);
+    }
 }
 
 static int
@@ -175,9 +192,21 @@ check_path_body_cb(http_ctx_t *ctx, bytestream_t *in, void *udata)
                     0);
 
     if (res != 1) {
+        davctx->svnctx->last_error.message =
+            bytes_from_str("Failed to check path");
         TRRET(CHECK_PATH_BODY_CB + 1);
     }
     if (davctx->match_result != 0) {
+        dav_xml_cb_t cb = {
+            NULL, NULL,
+            NULL, NULL,
+            check_path_error_chardata,
+        };
+        dav_setup_xml_parser(davctx, &cb, davctx, NULL);
+        XML_Parse(davctx->p,
+                  SDATA(in, ctx->body.start),
+                  ctx->body.end - ctx->body.start,
+                  1);
         TRRET(CHECK_PATH_BODY_CB + 2);
     }
     TRRET(0);
@@ -208,6 +237,9 @@ httpproto_check_path(svnc_ctx_t *ctx,
         "</propfind>";
 
     if (davctx->revroot == NULL || davctx->reproot == NULL) {
+#ifdef TRRET_DEBUG
+        TRACE("revroot=%s reproot=%s", davctx->revroot, davctx->reproot);
+#endif
         res = HTTPPROTO_CHECK_PATH + 1;
         goto END;
     }
@@ -225,7 +257,8 @@ httpproto_check_path(svnc_ctx_t *ctx,
 
 
     if (http_parse_response(ctx->fd, &ctx->in,
-                            check_path_header_cb,
+                            check_path_status_cb,
+                            NULL,
                             check_path_body_cb, davctx) != 0) {
 
         res = HTTPPROTO_CHECK_PATH + 3;
@@ -712,7 +745,7 @@ editor_chardata(void *udata,
 }
 
 static int
-editor_header_cb(http_ctx_t *ctx,
+editor_status_cb(http_ctx_t *ctx,
                    UNUSED bytestream_t *in,
                    void *udata)
 {
@@ -826,7 +859,8 @@ httpproto_editor(svnc_ctx_t *ctx)
     }
 
     if (http_parse_response(ctx->fd, &ctx->in,
-                            editor_header_cb,
+                            editor_status_cb,
+                            NULL,
                             editor_body_cb, davctx) != 0) {
 
         res = HTTPPROTO_EDITOR + 4;

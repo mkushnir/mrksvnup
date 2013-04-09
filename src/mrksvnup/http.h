@@ -58,6 +58,11 @@ int http_add_header_field(bytestream_t *, const char *, const char *);
 int http_end_of_header(bytestream_t *);
 int http_add_body(bytestream_t *, const char *, size_t);
 
-int http_parse_response(int, bytestream_t *, http_cb_t, http_cb_t, void *);
+int http_parse_response(int,
+                        bytestream_t *,
+                        http_cb_t,
+                        http_cb_t,
+                        http_cb_t,
+                        void *);
 
 #endif

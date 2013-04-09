@@ -955,7 +955,7 @@ test_http_simple(void)
 
     bytestream_rewind(&ctx->out);
 
-    res = http_parse_response(ctx->fd, &ctx->in, NULL, mychunkcb, NULL);
+    res = http_parse_response(ctx->fd, &ctx->in, NULL, NULL, mychunkcb, NULL);
     TRACE("res=%s", diag_str(res));
 
 
@@ -1009,7 +1009,7 @@ test_http_bigbody(void)
 
     bytestream_rewind(&ctx->out);
 
-    res = http_parse_response(ctx->fd, &ctx->in, NULL, mybigbodycb, NULL);
+    res = http_parse_response(ctx->fd, &ctx->in, NULL, NULL, mybigbodycb, NULL);
     TRACE("res=%s", diag_str(res));
 
 
