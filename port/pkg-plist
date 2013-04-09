@@ -13,4 +13,3 @@ lib/libmrksvnup.so.0
 lib/libmrksvnup.so
 lib/libmrksvnup.la
 lib/libmrksvnup.a
-man/man1/svnup.1

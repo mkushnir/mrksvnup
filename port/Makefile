@@ -9,7 +9,7 @@ MAINTAINER=	markiyan.kushnir@gmail.com
 COMMENT=	A fast svnup for FreeBSD
 
 MAN1=		svnup.1
-MANCOMPRESSED=	yes
+MANCOMPRESSED=	no
 USE_LDCONFIG=	yes
 
 # I assume it will be there,
