@@ -22,17 +22,16 @@ updating between _source_ and _target_ revisions. The solution I think was
 in the direction of Dag-Erling's experiment.
 
 _mrksvnup_ includes a simplified (and limited) implementation of the [SVN
-RA protocol][1], and the [svndiff1][2] editor. The supported transports
-are currently restricted to the _svn://_ only. Support of _http://_
-transport is under development. It will be based on a simple WebDAV
-implementation. The utility behaves more like a traditional svn client.
-It tracks the latest checked out revision in a dotfile in the root
-directory.  It then can update to a different revision _relative to the
-current one_ using svndiff documents downloaded from the server. When it's
-done on a regular basis, it's really fast. The utility doesn't delete
-files not being tracked on the remote side (for example, it won't wipe out
-custom kernel configurations during update) unless the containing
-directory was removed on the server.
+RA protocol][1], [WebDAV][6], and the [svndiff1][2] editor. The supported
+transports are currently restricted to the _svn://_ and _http://_ only.
+The utility behaves more like a traditional svn client.  It tracks the
+latest checked out revision in a dotfile in the root directory.  It then
+can update to a different revision _relative to the current one_ using
+svndiff documents downloaded from the server. When it's done on a regular
+basis, it's really fast. The utility doesn't delete files not being
+tracked on the remote side (for example, it won't wipe out custom kernel
+configurations during update) unless the containing directory was removed
+on the server.
 
 During an update procedure the server "pushes" _svndiff_ documents to the
 client given the source and target revisions. The client modifies the
@@ -80,3 +79,4 @@ TODO
 [3]: https://metacpan.org/module/Parse::SVNDiff
 [4]: http://en.wikipedia.org/wiki/GNU_build_system 
 [5]: https://github.com/mkushnir/mrkcommon
+[6]: http://svn.apache.org/repos/asf/subversion/trunk/notes/http-and-webdav/webdav-usage.html
