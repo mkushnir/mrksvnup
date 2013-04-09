@@ -21,14 +21,15 @@
 
 const char *_malloc_options = "J";
 
-static svnc_ctx_t *ctx;
+static svnc_ctx_t *ctx = NULL;
+static char *absroot = NULL;
 
 static void
 atexit_cb(void)
 {
     char *lockfile;
 
-    if ((lockfile = path_join(ctx->localroot, LOCKFILE)) == NULL) {
+    if ((lockfile = path_join(absroot, LOCKFILE)) == NULL) {
         FAIL("path_join");
     }
     if (unlink(lockfile) != 0) {
@@ -40,6 +41,8 @@ atexit_cb(void)
         free(ctx);
         ctx = NULL;
     }
+    free(absroot);
+    free(lockfile);
 }
 
 static void
@@ -320,7 +323,6 @@ main(int argc, char *argv[])
     char *url = NULL;
     long target_rev = -1;
     char *localroot = NULL;
-    char *absroot;
     char *lockfile = NULL;
     unsigned int flags = SVNC_NNOCHECK;
     int debug_level = 1;
@@ -428,11 +430,7 @@ main(int argc, char *argv[])
 
     run(url, target_rev, absroot, flags, debug_level);
 
-    if (unlink(lockfile) != 0) {
-        perror("[ignoring] unlink");
-    }
     free(lockfile);
-    free(absroot);
     lockfile = NULL;
 
     return res;
