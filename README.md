@@ -69,8 +69,6 @@ TODO
 ====
 
 * Support of different transports: https:// svn+ssh://.
-* Handle a previously interrupted run of update.
-* Support of a lock file to prevent stepping on itself.
 * Portability to other platforms (?).
 
 
