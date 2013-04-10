@@ -11,7 +11,6 @@
 #include "mrkcommon/dumpm.h"
 
 #include "mrksvnup/svnc.h"
-#include "mrksvnup/svnproto.h"
 #include "mrksvnup/svndiff.h"
 
 /* based on libsvn_delta/svndiff.c */

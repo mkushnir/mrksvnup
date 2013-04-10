@@ -17,7 +17,6 @@
 
 #include "mrksvnup/svnc.h"
 #include "mrksvnup/svncdir.h"
-#include "mrksvnup/svnproto.h"
 
 const char *_malloc_options = "J";
 

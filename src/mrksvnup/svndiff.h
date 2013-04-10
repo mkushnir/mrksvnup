@@ -7,8 +7,6 @@
 #include "mrkcommon/array.h"
 #include "mrkcommon/array.h"
 
-#include "mrksvnup/svnproto.h"
-
 /* include/svn_delta.h */
 #define SVN_TXDELTA_SOURCE 0
 #define SVN_TXDELTA_TARGET 1

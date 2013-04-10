@@ -19,8 +19,6 @@
 #include "mrksvnup/svnc.h"
 #include "mrksvnup/svnedit.h"
 #include "mrksvnup/svncdir.h"
-#include "mrksvnup/svnproto.h"
-#include "mrksvnup/http.h"
 
 static const char *kinds[] = {
     "none",

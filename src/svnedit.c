@@ -15,6 +15,8 @@
 #include "mrksvnup/svndiff.h"
 #include "mrksvnup/svnedit.h"
 
+#include "diag.h"
+
 #define VCBUFSZ (PAGE_SIZE * 512)
 
 static svnc_ctx_t *shadow_ctx = NULL;
