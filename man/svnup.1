@@ -9,6 +9,8 @@
 .Op Fl r Ar REV
 .Op Fl v Ar LEVEL
 .Op Fl R
+.Op Fl C
+.Op Fl f
 .Op Ar URL
 .Op Ar DIR
 .Nm
@@ -23,6 +25,15 @@ SVN server, or update the existing one.
 .Pp
 If the diretory doesn't exist, it will be created. If the supplied path is
 not a directory, the program will exit with an error.
+.Pp
+The
+.Nm
+utility is able to tolerate simple fault scenarios. If it is interrupted
+by SIGTERM or SIGINT signals, a subsequent run in this directory will
+correctly handle previously checked out or updated files. Although a hard
+termination, for example by sending the SIGKILL signal, would cause
+checksum cache corruption. A subsequent run would then lead to
+a segmentation fault. The -C option would help in this situation.
 .Pp
 The following command line options may be used:
 .Bl -tag
@@ -41,10 +52,17 @@ directory against the saved file checksums. In case of checksum mismatch,
 download the file from the server. Due to the full local copy scan, as
 opposed to svndiff1-based regular update, repair mode can take some time
 on large repositories.
+.It Fl C
+Clear checksum cache before starting. This option might be necessary when
+the checksum cache seems to be corrupted. A likely signal of it would be
+a segmentation fault during a previous run.
+.It Fl f
+Don't honor the lockfile. Useful after an unrecoverable error, that might
+lead to the lockfile hanging around.
 .It Fl h
 Print help message and exit.
 .It Fl V
-Print verion and exit.
+Print version and exit.
 .El
 .Pp
 For the first time checkout, the URL argument is required. When updating,

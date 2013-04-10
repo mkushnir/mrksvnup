@@ -70,6 +70,7 @@ typedef struct _svndiff_doc {
     int fd;
 #define SD_FLAG_MOD_SET 0x01
 #define SD_FLAG_SYMLINK_SET 0x02
+#define SD_FLAG_MAYBE_DIRTY 0x04
     unsigned flags;
     struct stat sb;
     /* svndiff windows */

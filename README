@@ -4,12 +4,12 @@ Testing
 To test against svn:
 
     # svn co -r NNNNNN svn://svn.freebsd.org/base/head head.svn
-    # svnup -u svn://svn.freebsd.org/base/head -r NNNNNN -l head.svnup
+    # svnup -r NNNNNN svn://svn.freebsd.org/base/head head.svnup
     # diff -r head.svnup/ head.svn | egrep -v 'FreeBSD|\-\-\-|^diff \-r|^[0-9]+c[0-9]+'
 
 Upgrade/downgrade scenario:
 
-    # svnup -u svn://svn.freebsd.org/base/head -r NNNNNN -l head.svnup
-    # svnup -u svn://svn.freebsd.org/base/head -r MMMMMM -l head.svnup
+    # svnup -r NNNNNN svn://svn.freebsd.org/base/head head.svnup
+    # svnup -r MMMMMM svn://svn.freebsd.org/base/head head.svnup
     # svn co -r MMMMMM svn://svn.freebsd.org/base/head head.svn
     # diff -r head.svnup/ head.svn | egrep -v 'FreeBSD|\-\-\-|^diff \-r|^[0-9]+c[0-9]+'

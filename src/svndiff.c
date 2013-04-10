@@ -509,7 +509,7 @@ svndiff_build_tview(svndiff_wnd_t *wnd, svndiff_doc_t *doc)
             if ((nread = pread(doc->fd, ptbuf, insn->len,
                                insn->offset + wnd->sview_offset)) < 0) {
                 /* add-file was combined with source insn? */
-                perror("pread");
+                perror("pread failure in svndiff_build_tview");
                 res = SVNDIFF_BUILD_TVIEW + 2;
                 goto END;
             }

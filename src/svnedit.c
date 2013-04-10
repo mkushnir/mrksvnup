@@ -355,9 +355,10 @@ svnedit_add_file(svnc_ctx_t *ctx)
 
     if (lstat(doc.lp, &doc.sb) == 0) {
         if (S_ISREG(doc.sb.st_mode) || S_ISLNK(doc.sb.st_mode)) {
-            if (unlink(doc.lp) != 0) {
-                FAIL("unlink");
-            }
+            doc.flags |= SD_FLAG_MAYBE_DIRTY;
+            //if (unlink(doc.lp) != 0) {
+            //    FAIL("unlink");
+            //}
         } else {
             /* we are not yet handling it */
             res = SVNEDIT_ADD_FILE + 2;
@@ -554,6 +555,9 @@ svnedit_open_file(svnc_ctx_t *ctx)
         }
         /* The file exists. */
     } else {
+        /*
+         * We are going to open a file, and it doesn't ever exist.
+         */
         if (checkout_file(ctx, &doc, doc.rev) != 0) {
             res = SVNEDIT_OPEN_FILE + 3;
             goto END;
@@ -633,27 +637,88 @@ svnedit_close_file(svnc_ctx_t *ctx,
             if (svnedit_verify_checksum(doc.fd,
                     doc.base_checksum) != 0) {
 
-                /* check it out clean? */
                 if (ctx->debug_level > 2) {
                     LTRACE(1, FRED("Base checksum mismatch: "
                                    "expected %s over %s"),
                            BDATA(doc.base_checksum), doc.lp);
                 }
 
-                close(doc.fd);
-                doc.fd = -1;
+                if (text_checksum != NULL) {
+                    if (svnedit_verify_checksum(doc.fd,
+                            text_checksum) != 0) {
+                        /* check it out clean? */
 
-                if (checkout_file(ctx, &doc, target_rev) != 0) {
-                    res = SVNEDIT_CLOSE_FILE + 2;
-                    goto END;
+                        if (ctx->debug_level > 2) {
+                            LTRACE(1, FRED("Target checksum mismatch: "
+                                           "expected %s over %s"),
+                                   BDATA(text_checksum), doc.lp);
+                        }
+
+                        close(doc.fd);
+                        doc.fd = -1;
+
+                        if (checkout_file(ctx, &doc, target_rev) != 0) {
+                            res = SVNEDIT_CLOSE_FILE + 2;
+                            goto END;
+                        }
+                    } else {
+                        /*
+                         * Since the file matches target cehcksum even before
+                         * editing, no editing is needed, early exit :)
+                         */
+                        if (ctx->debug_level > 2) {
+                            LTRACE(1, FYELLOW("Target checksum match: "
+                                           "%s over %s"),
+                                   BDATA(text_checksum), doc.lp);
+                        }
+
+                    }
+                } else {
+                    close(doc.fd);
+                    doc.fd = -1;
+
+                    if (checkout_file(ctx, &doc, target_rev) != 0) {
+                        res = SVNEDIT_CLOSE_FILE + 2;
+                        goto END;
+                    }
                 }
                 goto EDIT_COMPLETE;
             }
         } else {
             /*
              * cmd was add-file, but there was a local file in this
-             * place. Will discard its contents and replace with ours.
+             * place. Will see if it's OK to accept it.
              */
+            if (text_checksum != NULL) {
+                if (svnedit_verify_checksum(doc.fd,
+                        text_checksum) != 0) {
+                    /* check it out clean? */
+
+                    if (ctx->debug_level > 2) {
+                        LTRACE(1, FRED("Target checksum mismatch: "
+                                       "expected %s over %s"),
+                               BDATA(text_checksum), doc.lp);
+                    }
+
+                    close(doc.fd);
+                    doc.fd = -1;
+
+                    if (unlink(doc.lp) != 0) {
+                        FAIL("unlink");
+                    }
+                } else {
+                    /*
+                     * Since the file matches target cehcksum even before
+                     * editing, no editing is needed, early exit :)
+                     */
+                    if (ctx->debug_level > 2) {
+                        LTRACE(1, FYELLOW("Target checksum match: "
+                                       "%s over %s"),
+                               BDATA(text_checksum), doc.lp);
+                    }
+                    goto EDIT_COMPLETE;
+                }
+            }
         }
     } else {
         /*

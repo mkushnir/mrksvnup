@@ -336,11 +336,16 @@ main(int argc, char *argv[])
 
     progname = argv[0];
 
-    while ((ch = getopt(argc, argv, "fhr:Rv:V")) != -1) {
+    while ((ch = getopt(argc, argv, "Cfhr:Rv:V")) != -1) {
         switch (ch) {
-        case 'f':
-            /* flush cache */
+        case 'C':
+            /* clear cache */
             flags |= SVNC_NFLUSHCACHE;
+            break;
+
+        case 'f':
+            /* clear lock file */
+            flags |= SVNC_CLEAR_LOCKFILE;
             break;
 
         case 'h':
@@ -417,8 +422,15 @@ main(int argc, char *argv[])
         FAIL("path_join");
     }
     if (lstat(lockfile, &sb) == 0) {
-        LTRACE(0, "Cannot run: another instance is running on %s", localroot);
-        exit(1);
+        if (flags & SVNC_CLEAR_LOCKFILE) {
+            if (unlink(lockfile) != 0) {
+                /* ignore */
+                ;
+            }
+        } else {
+            LTRACE(0, "Cannot run: another instance is running on %s", localroot);
+            exit(1);
+        }
     }
     if ((lockfd = open(lockfile, O_WRONLY|O_CREAT|O_TRUNC, 0600)) < 0) {
         FAIL("open");
