@@ -303,7 +303,8 @@ static void
 usage(const char *progname)
 {
     printf("Usage:\n");
-    printf("   %s [-r REV] [-v LEVEL] [URL] [DIR]\n", progname);
+    printf("   %s [-r REV] [-v LEVEL] [-R] [-C] [-f] "
+           "[URL] [DIR]\n", progname);
     printf("   %s [-h]\n", progname);
     printf("   %s [-V]\n", progname);
 }
