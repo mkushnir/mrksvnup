@@ -24,14 +24,6 @@
 
 #include "svnc_private.h"
 
-/* keep it in sync with enum _svn_depth */
-UNUSED static const char *svn_depth_str[] = {
-    "empty",
-    "files",
-    "immediates",
-    "infinity",
-};
-
 int
 svnc_save_checksum(svnc_ctx_t *ctx,
                    const char *path,
