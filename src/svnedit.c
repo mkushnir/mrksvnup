@@ -315,28 +315,6 @@ svnedit_open_dir(svnc_ctx_t *ctx,
         }
     }
 
-    if ((localpath = path_join(ctx->localroot,
-                               BDATA(path))) == NULL) {
-        res = SVNEDIT_OPEN_DIR + 4;
-        goto END;
-    }
-
-    if (lstat(localpath, &sb) != 0) {
-        /*
-         * we are being told to open dir, but it doesn't even
-         * exist. Create it.
-         */
-        if (mkdir(localpath, 0755) != 0) {
-            res = SVNEDIT_OPEN_DIR + 5;
-            goto END;
-        }
-    } else {
-        if (!S_ISDIR(sb.st_mode)) {
-            res = SVNEDIT_OPEN_DIR + 6;
-            goto END;
-        }
-    }
-
 END:
     if (localpath != NULL) {
         free(localpath);
