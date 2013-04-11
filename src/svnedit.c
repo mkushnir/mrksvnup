@@ -206,7 +206,7 @@ svnedit_delete_entry(svnc_ctx_t *ctx,
     if (traverse_dir(localpath, delete_entry_cb, NULL) != 0) {
         /* Is this a file in first place? */
         if (lstat(localpath, &sb) != 0) {
-            if (ctx->debug_level > 1) {
+            if (ctx->debug_level > 0) {
                 LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
             }
 
@@ -218,7 +218,7 @@ svnedit_delete_entry(svnc_ctx_t *ctx,
                     res = SVNEDIT_DELETE_ENTRY + 2;
                     goto END;
                 }
-                if (ctx->debug_level > 1) {
+                if (ctx->debug_level > 0) {
                     LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
                 }
 
@@ -229,7 +229,7 @@ svnedit_delete_entry(svnc_ctx_t *ctx,
             }
         }
     } else {
-        if (ctx->debug_level > 1) {
+        if (ctx->debug_level > 0) {
             LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
         }
     }
