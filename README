@@ -13,3 +13,7 @@ Upgrade/downgrade scenario:
     # svnup -r MMMMMM svn://svn.freebsd.org/base/head head.svnup
     # svn co -r MMMMMM svn://svn.freebsd.org/base/head head.svn
     # diff -r head.svnup/ head.svn | egrep -v 'FreeBSD|\-\-\-|^diff \-r|^[0-9]+c[0-9]+'
+
+To use in make update:
+
+    # cd /usr/src; SUP_UPDATE=yes SUP=/usr/local/bin/svnup SUPFLAGS= SUPFILE= make update

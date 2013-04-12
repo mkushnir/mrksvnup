@@ -28,12 +28,26 @@ not a directory, the program will exit with an error.
 .Pp
 The
 .Nm
-utility is able to tolerate simple fault scenarios. If it is interrupted
-by SIGTERM or SIGINT signals, a subsequent run in this directory will
-correctly handle previously checked out or updated files. Although a hard
-termination, for example by sending the SIGKILL signal, would cause
-checksum cache corruption. A subsequent run would then lead to
-a segmentation fault. The -C option would help in this situation.
+utility can be used to check out or update any SVN tree, although its
+primary purpose is to use in FreeBSD source tree update scenarios as
+a replacement to the
+.Em
+csup utility. Please remember that the
+.Nm
+utility is not compatible with other SVN programs, mostly because of not
+expanding RCS keywords. In order to start using this utility, a fresh tree
+should first be checked out (optionally at the desired revision):
+.Bd -literal
+    # mv /usr/src /usr/src.old
+    # /usr/local/bin/svnup [-r NNNNNN] http://svn.freebsd.org/base/head /usr/src
+.Ed
+
+To continue using the
+.Nm
+utility, simply do:
+.Bd -literal
+    # cd /usr/src && SUP_UPDATE=yes SUP=/usr/local/bin/svnup SUPFLAGS= SUPFILE= make update
+.Ed
 .Pp
 The following command line options may be used:
 .Bl -tag
@@ -72,6 +86,15 @@ working directory.
 The
 .Nm
 utility does not expand RCS keywords.
+.Pp
+The
+.Nm
+utility is able to tolerate simple fault scenarios. If it is interrupted
+by SIGTERM or SIGINT signals, a subsequent run in this directory will
+correctly handle previously checked out or updated files. Although a hard
+termination, for example by sending the SIGKILL signal, would cause
+checksum cache corruption. A subsequent run would then lead to
+a segmentation fault. The -fC options would help in this situation.
 .Sh EXIT STATUS
 The
 .Nm
