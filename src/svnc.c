@@ -174,7 +174,6 @@ svnc_new(const char *url,
         FAIL("bytestream_init");
     }
 
-
     if ((ctx->url = strdup(url)) == NULL) {
         FAIL("strdup");
     }
@@ -188,7 +187,7 @@ svnc_new(const char *url,
         TRRETNULL(SVNC_NEW + 1);
     }
 
-    if (snprintf(portstr ,sizeof(portstr), "%d", ctx->port) <= 0) {
+    if (snprintf(portstr, sizeof(portstr), "%d", ctx->port) <= 0) {
         svnc_destroy(ctx);
         free(ctx);
         TRRETNULL(SVNC_NEW + 2);
@@ -238,7 +237,7 @@ svnc_new(const char *url,
         if ((ctx->cachedb = dbopen(ctx->cachepath,
                                    dbopen_flags,
                                    0600,
-                                   DB_HASH,
+                                   DB_BTREE,
                                    NULL)) == NULL) {
             if (debug_level > 0) {
                 LTRACE(0, FRED("Failed to open cache db: %s"), ctx->cachepath);
