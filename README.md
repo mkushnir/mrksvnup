@@ -62,6 +62,17 @@ used another [my library of common functions][5] (just for my convenience).
 This can be easily integrated into a single self-contained project. On
 FreeBSD, it can be turned into a port, please see the port directory.
 
+Even in its present form, the utility can easily be integrated in the
+FreeBSD build system.  In order to start using this utility, a fresh tree
+should first be checked out (optionally at the desired revision):
+
+    # mv /usr/src /usr/src.old
+    # /usr/local/bin/svnup [-r NNNNNN] http://svn.freebsd.org/base/head /usr/src
+
+To continue using the svnup utility, simply do:
+
+    # cd /usr/src && SUP_UPDATE=yes SUP=/usr/local/bin/svnup SUPFLAGS= SUPFILE= make update
+
 Everything is released under 2-clause BSD license.
 
 
