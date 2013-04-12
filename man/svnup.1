@@ -36,8 +36,9 @@ a replacement to the
 csup utility. Please remember that the
 .Nm
 utility is not compatible with other SVN programs, mostly because of not
-expanding RCS keywords. In order to start using this utility, a fresh tree
-should first be checked out (optionally at the desired revision):
+expanding RCS keywords, and different and much more limited file tracking
+mechanism. In order to start using this utility, a fresh tree should first
+be checked out (optionally at the desired revision):
 .Bd -literal
     # mv /usr/src /usr/src.old
     # /usr/local/bin/svnup [-r NNNNNN] http://svn.freebsd.org/base/head /usr/src
