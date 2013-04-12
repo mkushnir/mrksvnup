@@ -165,6 +165,7 @@ svnc_new(const char *url,
     ctx->update = NULL;
     ctx->editor = NULL;
     ctx->udata = NULL;
+    ctx->flags = flags;
 
     if (bytestream_init(&ctx->in) != 0) {
         FAIL("bytestream_init");
@@ -206,7 +207,7 @@ svnc_new(const char *url,
         TRRETNULL(SVNC_NEW + 3);
     }
 
-    if (!(flags & SVNC_NNOCACHE)) {
+    if (!(flags & SVNC_NOCACHE)) {
         int dbopen_flags = O_RDWR|O_CREAT|O_EXLOCK;
 
         if ((ctx->cacheroot = strdup(ctx->localroot)) == NULL) {
@@ -225,13 +226,13 @@ svnc_new(const char *url,
             TRRETNULL(SVNC_NEW + 5);
         }
 
-        if (flags & SVNC_NFLUSHCACHE) {
+        if (flags & SVNC_FLUSHCACHE) {
             dbopen_flags |= O_TRUNC;
-            ctx->flags |= SVNC_NO_CHECK_INTEGRITY;
+            ctx->flags &= ~SVNC_REPAIR;
         }
 
-        if (flags & SVNC_NNOCHECK) {
-            ctx->flags |= SVNC_NO_CHECK_INTEGRITY;
+        if (flags & SVNC_TOLERANT) {
+            ctx->flags &= ~SVNC_REPAIR;
         }
 
         if ((ctx->cachedb = dbopen(ctx->cachepath,

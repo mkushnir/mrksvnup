@@ -173,7 +173,7 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
     int i;
     size_t counter = 0;
 
-    if (ctx->flags & SVNC_NO_CHECK_INTEGRITY) {
+    if (!(ctx->flags & SVNC_REPAIR)) {
         if (ctx->debug_level > 1) {
             LTRACE(1, FYELLOW("Will not check files against database"));
         }

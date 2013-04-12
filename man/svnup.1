@@ -6,11 +6,12 @@
 .Nd A fast SVN update
 .Sh SYNOPSIS
 .Nm
-.Op Fl r Ar REV
-.Op Fl v Ar LEVEL
-.Op Fl R
 .Op Fl C
 .Op Fl f
+.Op Fl r Ar REV
+.Op Fl R
+.Op Fl t
+.Op Fl v Ar LEVEL
 .Op Ar URL
 .Op Ar DIR
 .Nm
@@ -51,21 +52,6 @@ utility, simply do:
 .Pp
 The following command line options may be used:
 .Bl -tag
-.It Fl r Ar REV
-The revision to check out or update to. If not specified, the latest
-revision will be assumed.
-.It Fl v Ar LEVEL
-The amount of verbosity to print. Specify 0 to silent the program
-completely. 1 will produce a line for each affected file and a brief
-summary. This is the default. 2 will additionally print actions taken to
-fix up the file, and other diagnostics. 3 or more will also print protocol
-details (useful for debugigng).
-.It Fl R
-Repair mode. After reglar updating, verify each file in the local
-directory against the saved file checksums. In case of checksum mismatch,
-download the file from the server. Due to the full local copy scan, as
-opposed to svndiff1-based regular update, repair mode can take some time
-on large repositories.
 .It Fl C
 Clear checksum cache before starting. This option might be necessary when
 the checksum cache seems to be corrupted. A likely signal of it would be
@@ -73,6 +59,25 @@ a segmentation fault during a previous run.
 .It Fl f
 Don't honor the lockfile. Useful after an unrecoverable error, that might
 lead to the lockfile hanging around.
+.It Fl r Ar REV
+The revision to check out or update to. If not specified, the latest
+revision will be assumed.
+.It Fl R
+Repair mode. After reglar updating, verify each file in the local
+directory against the saved file checksums. In case of checksum mismatch,
+download the file from the server. Due to the full local copy scan, as
+opposed to svndiff1-based regular update, repair mode can take some time
+on large repositories.
+.It t
+Be tolerant. Don't fix up files that were locally modified and thus failed
+checksum test. However those files that were on the way of newly added
+ones, or those that had to be removed will not be tolerated.
+.It Fl v Ar LEVEL
+The amount of verbosity to print. Specify 0 to silent the program
+completely. 1 will produce a line for each affected file and a brief
+summary. This is the default. 2 will additionally print actions taken to
+fix up the file, and other diagnostics. 3 or more will also print protocol
+details (useful for debugigng).
 .It Fl h
 Print help message and exit.
 .It Fl V

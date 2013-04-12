@@ -97,7 +97,12 @@ typedef struct _svnc_ctx {
     /* output buffer */
     bytestream_t out;
 #define SVNC_AUTH_MECH_OK 0x01
-#define SVNC_NO_CHECK_INTEGRITY 0x02
+#define SVNC_NOCACHE 0x02
+#define SVNC_FLUSHCACHE 0x04
+#define SVNC_REPAIR 0x08
+#define SVNC_CLEAR_LOCKFILE 0x10
+#define SVNC_TOLERANT 0x20
+
     unsigned int flags;
     int debug_level;
 
@@ -152,11 +157,6 @@ typedef struct _svnc_ctx {
 #define SVNC_KIND_FILE 1
 #define SVNC_KIND_DIR 2
 #define SVNC_KIND_UNKNOWN 3
-
-#define SVNC_NNOCACHE 0x01
-#define SVNC_NFLUSHCACHE 0x02
-#define SVNC_NNOCHECK 0x04
-#define SVNC_CLEAR_LOCKFILE 0x08
 
 int all_spaces(const char *, size_t);
 void bin2hex(char *, const unsigned char *, size_t);

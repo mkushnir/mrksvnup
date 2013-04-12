@@ -30,7 +30,7 @@ svnedit_init_shadow_ctx(svnc_ctx_t *ctx)
 
     if ((shadow_ctx = svnc_new(ctx->url,
                                ctx->localroot,
-                               SVNC_NNOCACHE,
+                               SVNC_NOCACHE,
                                ctx->debug_level)) == NULL) {
         TRRET(SVNEDIT_INIT_SHADOW_CTX + 1);
     }
@@ -637,10 +637,16 @@ svnedit_close_file(svnc_ctx_t *ctx,
                         close(doc.fd);
                         doc.fd = -1;
 
-                        if (checkout_file(ctx, &doc, target_rev) != 0) {
-                            res = SVNEDIT_CLOSE_FILE + 2;
-                            goto END;
+                        if (ctx->flags & SVNC_TOLERANT) {
+                            doc.flags |= SD_FLAG_MAYBE_DIRTY;
+                        } else {
+                            if (checkout_file(ctx, &doc, target_rev) != 0) {
+                                res = SVNEDIT_CLOSE_FILE + 2;
+                                goto END;
+                            }
+                            doc.flags &= ~SD_FLAG_MAYBE_DIRTY;
                         }
+
                     } else {
                         /*
                          * Since the file matches target cehcksum even before
@@ -657,9 +663,14 @@ svnedit_close_file(svnc_ctx_t *ctx,
                     close(doc.fd);
                     doc.fd = -1;
 
-                    if (checkout_file(ctx, &doc, target_rev) != 0) {
-                        res = SVNEDIT_CLOSE_FILE + 2;
-                        goto END;
+                    if (ctx->flags & SVNC_TOLERANT) {
+                        doc.flags |= SD_FLAG_MAYBE_DIRTY;
+                    } else {
+                        if (checkout_file(ctx, &doc, target_rev) != 0) {
+                            res = SVNEDIT_CLOSE_FILE + 2;
+                            goto END;
+                        }
+                        doc.flags &= ~SD_FLAG_MAYBE_DIRTY;
                     }
                 }
                 goto EDIT_COMPLETE;
@@ -881,16 +892,20 @@ EDIT_COMPLETE:
     }
 
     if (ctx->debug_level > 0) {
-        if (BDATA(doc.base_checksum) == NULL) {
-            /* this is for "presentation" purposes */
-            if (doc.flags & SD_FLAG_MOD_SET) {
-                LTRACE(1, FGREEN("~ %s -> %s (%04o)"),
-                       BDATA(doc.rp), doc.lp, doc.mod);
-            } else {
-                LTRACE(1, FGREEN("+ %s -> %s"), BDATA(doc.rp), doc.lp);
-            }
+        if (doc.flags & SD_FLAG_MAYBE_DIRTY) {
+            LTRACE(1, FYELLOW(". %s -> %s"), BDATA(doc.rp), doc.lp);
         } else {
-            LTRACE(1, FGREEN("~ %s -> %s"), BDATA(doc.rp), doc.lp);
+            if (BDATA(doc.base_checksum) == NULL) {
+                /* this is for "presentation" purposes */
+                if (doc.flags & SD_FLAG_MOD_SET) {
+                    LTRACE(1, FGREEN("~ %s -> %s (%04o)"),
+                           BDATA(doc.rp), doc.lp, doc.mod);
+                } else {
+                    LTRACE(1, FGREEN("+ %s -> %s"), BDATA(doc.rp), doc.lp);
+                }
+            } else {
+                LTRACE(1, FGREEN("~ %s -> %s"), BDATA(doc.rp), doc.lp);
+            }
         }
     }
 

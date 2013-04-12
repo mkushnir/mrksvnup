@@ -166,7 +166,7 @@ run(const char *cmdline_url,
         errx(1, "path_join() issue");
     }
 
-    if (flags & SVNC_NFLUSHCACHE) {
+    if (flags & SVNC_FLUSHCACHE) {
         /* forget about source revision */
         if (unlink(revfile) != 0) {
             ;
@@ -186,7 +186,7 @@ run(const char *cmdline_url,
             }
         } else {
             /* forget about old db, and don't do integrity check this time */
-            flags |= SVNC_NFLUSHCACHE;
+            flags |= SVNC_FLUSHCACHE;
         }
     }
 
@@ -303,7 +303,7 @@ static void
 usage(const char *progname)
 {
     printf("Usage:\n");
-    printf("   %s [-r REV] [-v LEVEL] [-R] [-C] [-f] "
+    printf("   %s [-r REV] [-v LEVEL] [-R] [-C] [-f] [-t] "
            "[URL] [DIR]\n", progname);
     printf("   %s [-h]\n", progname);
     printf("   %s [-V]\n", progname);
@@ -325,7 +325,7 @@ main(int argc, char *argv[])
     long target_rev = -1;
     char *localroot = NULL;
     char *lockfile = NULL;
-    unsigned int flags = SVNC_NNOCHECK;
+    unsigned int flags = 0;
     int debug_level = 1;
     struct sigaction act = {
         .sa_handler = sigterm_handler,
@@ -336,11 +336,11 @@ main(int argc, char *argv[])
 
     progname = argv[0];
 
-    while ((ch = getopt(argc, argv, "Cfhr:Rv:V")) != -1) {
+    while ((ch = getopt(argc, argv, "Cfhr:Rtv:V")) != -1) {
         switch (ch) {
         case 'C':
             /* clear cache */
-            flags |= SVNC_NFLUSHCACHE;
+            flags |= SVNC_FLUSHCACHE;
             break;
 
         case 'f':
@@ -359,7 +359,12 @@ main(int argc, char *argv[])
 
         case 'R':
             /* repair mode */
-            flags &= ~SVNC_NNOCHECK;
+            flags |= SVNC_REPAIR;
+            break;
+
+        case 't':
+            /* be tolerant */
+            flags |= SVNC_TOLERANT;
             break;
 
         case 'v':
@@ -380,6 +385,12 @@ main(int argc, char *argv[])
 
     argc -= optind;
     argv += optind;
+
+    if ((flags & SVNC_REPAIR) &&
+        (flags & (SVNC_FLUSHCACHE | SVNC_TOLERANT))) {
+
+        errx(1, "-R cannot be combined with neither -C nor -t.");
+    }
 
     if (argc > 0) {
         url = argv[0];
