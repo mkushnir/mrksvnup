@@ -69,7 +69,7 @@ parse_one_value(bytestream_t *in, svnproto_state_t *st)
                     st->tokenizer_state = TS_STRING_OUT;
                     SPCHR(in) = '\0';
 
-                  
+
                 } else if (st->tokenizer_state & TS_OUT) {
                     SINCR(in);
                     continue;

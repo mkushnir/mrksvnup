@@ -84,7 +84,6 @@ svnedit_verify_checksum(int fd, const bytes_t *cs)
         res = SVNEDIT_VERIFY_CHECKSUM + 1;
         goto END;
     }
-    
 
     if (lseek(fd, 0, SEEK_SET) != 0) {
         perror("lseek");
@@ -98,7 +97,7 @@ svnedit_verify_checksum(int fd, const bytes_t *cs)
             res = SVNEDIT_VERIFY_CHECKSUM + 3;
             goto END;
         }
-        
+
     }
 
     if (nread < 0) {
@@ -579,7 +578,7 @@ checksum_cb(svndiff_wnd_t *wnd, MD5_CTX *ctx)
     if (MD5_Update(ctx, wnd->tview, wnd->tview_len) != 1) {
         return 1;
     }
-    
+
     return 0;
 }
 
@@ -610,7 +609,7 @@ svnedit_close_file(svnc_ctx_t *ctx,
 
         if (doc.base_checksum != NULL) {
 
-            /* 
+            /*
              * cmd was open-file
              */
 

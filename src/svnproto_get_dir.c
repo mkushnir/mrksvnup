@@ -37,7 +37,7 @@
  *                    created-rev:number
  *                    [ created-date:string ]
  *                    [ last-author:string ]
- *                  ) 
+ *                  )
  */
 
 static int

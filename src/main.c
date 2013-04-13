@@ -223,7 +223,7 @@ run(const char *cmdline_url,
     }
 
     //TRACE("check_path kind=%s", svnc_kind2str(kind));
-    
+
     if (kind != SVNC_KIND_DIR) {
         errx(1, "Remote path is not a directory: %s", ctx->path);
     }

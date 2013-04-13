@@ -39,7 +39,7 @@ xmatch_init(xmatch_t *xmatch, const char *pattern)
     for (s1 = pattern, s2 = pattern; s2 != NULL; s2 = strchr(s1, '|')) {
         char **entry;
         ptrdiff_t d;
-        
+
         d = s2 - s1;
         if (d > 0) {
             if ((entry = array_incr(&xmatch->compiled_pattern)) == NULL) {

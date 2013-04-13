@@ -145,7 +145,7 @@ get_file_contents_body_cb(http_ctx_t *ctx, bytestream_t *in, void *udata)
 
         FAIL("bytes_from_mem");
     }
-    
+
     TRRET(0);
 }
 
