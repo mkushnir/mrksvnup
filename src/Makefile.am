@@ -19,7 +19,8 @@ nobase_include_HEADERS = mrksvnup/svnc.h \
 			 mrksvnup/httpproto.h \
 			 mrksvnup/dav.h \
 			 mrksvnup/xmatch.h \
-			 mrksvnup/version.h
+			 mrksvnup/version.h \
+			 bytestream_ssl_helper.h
 
 libmrksvnup_la_SOURCES = svnc.c \
 			 svnc_util.c \
@@ -44,7 +45,8 @@ libmrksvnup_la_SOURCES = svnc.c \
 			 svnproto_set_path.c \
 			 svnproto_finish_report.c \
 			 svnproto_abort_report.c \
-			 svnproto_editor.c
+			 svnproto_editor.c \
+			 bytestream_ssl_helper.c
 
 nodist_libmrksvnup_la_SOURCES = diag.c
 if FCOLOR

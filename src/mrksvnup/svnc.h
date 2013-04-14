@@ -7,6 +7,7 @@
 #include <db.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <openssl/ssl.h>
 
 #include "mrkcommon/array.h"
 #include "mrkcommon/bytestream.h"
@@ -92,6 +93,8 @@ typedef struct _svnc_ctx {
      * Client socket descriptor
      */
     int fd;
+    SSL_CTX *sslctx;
+    SSL *ssl;
     /* input buffer */
     bytestream_t in;
     /* output buffer */

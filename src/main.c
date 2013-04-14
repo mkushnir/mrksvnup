@@ -7,6 +7,9 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
 
 //#define TRRET_DEBUG
 #include "diag.h"
@@ -69,7 +72,7 @@ update_cb(svnc_ctx_t *ctx,
     if (ctx->set_path(ctx, params->path, params->source_rev,
                       NULL, SVN_DEPTH_INFINITY,
                       params->set_path_flags) != 0) {
-        errx(1, "svnproto_set_path");
+        errx(1, "set_path");
     }
 
     if (ctx->debug_level > 0) {
@@ -78,7 +81,7 @@ update_cb(svnc_ctx_t *ctx,
 
     assert(ctx->finish_report != NULL);
     if (ctx->finish_report(ctx) != 0) {
-        errx(1, "svnproto_finish_report");
+        errx(1, "finish_report");
     }
 
     if (ctx->debug_level > 0) {
@@ -153,6 +156,9 @@ run(const char *cmdline_url,
                 if (debug_level > 0) {
                     LTRACE(0, "Found saved URL: %s", url);
                 }
+            } else {
+                perror("open");
+                errx(1, "Cannot find URL.");
             }
         } else {
             errx(1, "Cannot find URL.");
@@ -195,7 +201,8 @@ run(const char *cmdline_url,
     }
 
     if (svnc_connect(ctx) != 0) {
-        errx(1, "svnc_connect");
+        errx(1, "svnc_connect: could not connect to %s:%d",
+             ctx->host, ctx->port);
     }
 
     if (target_rev <= 0) {
@@ -452,7 +459,13 @@ main(int argc, char *argv[])
     sigaction(SIGTERM, &act, NULL);
     sigaction(SIGINT, &act, NULL);
 
+    SSL_load_error_strings();
+    SSL_library_init();
+    OpenSSL_add_all_algorithms();
+
     run(url, target_rev, absroot, flags, debug_level);
+
+    ERR_free_strings();
 
     free(lockfile);
     lockfile = NULL;

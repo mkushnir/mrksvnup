@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <openssl/ssl.h>
 
 #include "diag.h"
 #include "mrkcommon/util.h"
@@ -23,6 +24,7 @@
 #include "mrksvnup/httpproto.h"
 
 #include "svnc_private.h"
+#include "bytestream_ssl_helper.h"
 
 int
 svnc_save_checksum(svnc_ctx_t *ctx,
@@ -141,6 +143,8 @@ svnc_new(const char *url,
 
     /* XXX manually initialize it here */
     ctx->fd = -1;
+    ctx->sslctx = NULL;
+    ctx->ssl = NULL;
     ctx->scheme = 0;
     ctx->url = NULL;
     ctx->host = NULL;
@@ -261,7 +265,8 @@ svnc_new(const char *url,
         ctx->executable_prop_name = "svn:executable";
         ctx->special_prop_name = "svn:special";
 
-    } else if (ctx->scheme == SVNC_SCHEME_HTTP) {
+    } else if (ctx->scheme == SVNC_SCHEME_HTTP ||
+               ctx->scheme == SVNC_SCHEME_HTTPS) {
         ctx->get_latest_rev = httpproto_get_latest_rev;
         ctx->check_path = httpproto_check_path;
         ctx->setup = httpproto_setup;
@@ -272,6 +277,10 @@ svnc_new(const char *url,
         ctx->editor = httpproto_editor;
         ctx->executable_prop_name = "http://subversion.tigris.org/xmlns/svn/executable";
         ctx->special_prop_name = "http://subversion.tigris.org/xmlns/svn/special";
+
+        if (ctx->scheme == SVNC_SCHEME_HTTPS) {
+            ctx->sslctx = SSL_CTX_new(SSLv23_client_method());
+        }
     }
 
     return (ctx);
@@ -292,6 +301,7 @@ svnc_socket_reconnect(svnc_ctx_t *ctx)
     for (ai = ctx->ai; ai != NULL; ai = ai->ai_next) {
         if ((ctx->fd = socket(ai->ai_family, ai->ai_socktype,
                               ai->ai_protocol)) >= 0) {
+
             if (connect(ctx->fd, ai->ai_addr, ai->ai_addrlen) == 0) {
                 break;
             } else {
@@ -306,6 +316,19 @@ svnc_socket_reconnect(svnc_ctx_t *ctx)
         TRRET(SVNC_SOCKET_RECONNECT + 1);
     }
 
+    if (ctx->scheme == SVNC_SCHEME_HTTPS) {
+        if (SSL_clear(ctx->ssl) != 1) {
+            FAIL("SSL_clear");
+        }
+        if (SSL_set_fd(ctx->ssl, ctx->fd) != 1) {
+            FAIL("SSL_set_fd");
+        }
+        if (SSL_connect(ctx->ssl) != 1) {
+            FAIL("SSL_connect");
+        }
+
+    }
+
     TRRET(0);
 }
 
@@ -314,9 +337,31 @@ svnc_connect(svnc_ctx_t *ctx)
 {
     struct addrinfo *ai;
 
+    if (ctx->scheme == SVNC_SCHEME_SVN) {
+        ctx->in.udata = svnproto_state_new();
+        ctx->in.read_more = bytestream_recv_more;
+        ctx->out.write = bytestream_send;
+
+    } else if (ctx->scheme == SVNC_SCHEME_HTTP) {
+        ctx->in.udata = http_ctx_new();
+        ctx->in.read_more = bytestream_recv_more;
+        ctx->out.write = bytestream_send;
+
+    } else if (ctx->scheme == SVNC_SCHEME_HTTPS) {
+        ctx->in.udata = http_ctx_new();
+        ctx->out.udata = ctx->in.udata;
+        ctx->in.read_more = bytestream_ssl_recv_more;
+        ctx->out.write = bytestream_ssl_send;
+
+    } else {
+        ctx->in.udata = NULL;
+    }
+
+
     for (ai = ctx->ai; ai != NULL; ai = ai->ai_next) {
         if ((ctx->fd = socket(ai->ai_family, ai->ai_socktype,
                               ai->ai_protocol)) >= 0) {
+
             if (connect(ctx->fd, ai->ai_addr, ai->ai_addrlen) == 0) {
                 break;
             } else {
@@ -326,21 +371,34 @@ svnc_connect(svnc_ctx_t *ctx)
         }
     }
 
-    ctx->in.read_more = bytestream_recv_more;
-
-    if (ctx->scheme == SVNC_SCHEME_SVN) {
-        ctx->in.udata = svnproto_state_new();
-    } else if (ctx->scheme == SVNC_SCHEME_HTTP) {
-        ctx->in.udata = http_ctx_new();
-    } else {
-        ctx->in.udata = NULL;
+    if (ctx->fd < 0) {
+        TRRET(SVNC_CONNECT + 1);
     }
 
-    ctx->out.write = bytestream_send;
+    if (ctx->scheme == SVNC_SCHEME_HTTPS) {
+        int res;
+        http_ctx_t *httpctx;
+
+        if ((ctx->ssl = SSL_new(ctx->sslctx)) == NULL) {
+            FAIL("SSL_new");
+        }
+        if (SSL_set_fd(ctx->ssl, ctx->fd) != 1) {
+            FAIL("SSL_set_fd");
+        }
+        if ((res = SSL_connect(ctx->ssl)) != 1) {
+            //TRACE("SSL_connect() error %d", SSL_get_error(ctx->ssl, res));
+            FAIL("SSL_connect");
+        }
+
+        httpctx = ctx->in.udata;
+        httpctx->udata = ctx->ssl;
+
+    }
+
 
     assert(ctx->setup != NULL);
     if (ctx->setup(ctx) != 0) {
-        TRRET(SVNC_CONNECT + 1);
+        TRRET(SVNC_CONNECT + 2);
     }
 
     return (0);
@@ -352,8 +410,11 @@ svnc_close(svnc_ctx_t *ctx)
     if (ctx->in.udata != NULL) {
         if (ctx->scheme == SVNC_SCHEME_SVN) {
             svnproto_state_destroy(ctx->in.udata);
-        } else if (ctx->scheme == SVNC_SCHEME_HTTP) {
+
+        } else if (ctx->scheme == SVNC_SCHEME_HTTP ||
+                   ctx->scheme == SVNC_SCHEME_HTTPS) {
             http_ctx_destroy(ctx->in.udata);
+
         } else {
             ;
         }
@@ -364,8 +425,14 @@ svnc_close(svnc_ctx_t *ctx)
     bytestream_fini(&ctx->out);
 
     if (ctx->fd != -1) {
-        if (close(ctx->fd) != 0) {
+        if (ctx->scheme == SVNC_SCHEME_HTTPS) {
+            assert(ctx->ssl != NULL);
+            SSL_shutdown(ctx->ssl);
+            SSL_free(ctx->ssl);
+            ctx->ssl = NULL;
+        }
 
+        if (close(ctx->fd) != 0) {
             TRRET(SVNC_CLOSE + 1);
         }
 
@@ -461,8 +528,19 @@ svnc_destroy(svnc_ctx_t *ctx)
 
     if (ctx->udata != NULL) {
         if (ctx->scheme == SVNC_SCHEME_SVN) {
-        } else if (ctx->scheme == SVNC_SCHEME_HTTP) {
+            ;
+
+        } else if (ctx->scheme == SVNC_SCHEME_HTTP ||
+                   ctx->scheme == SVNC_SCHEME_HTTPS) {
             dav_ctx_destroy((dav_ctx_t *)(ctx->udata));
+
+            if (ctx->scheme == SVNC_SCHEME_HTTPS) {
+                if (ctx->sslctx != NULL) {
+                    SSL_CTX_free(ctx->sslctx);
+                    ctx->sslctx = NULL;
+                }
+            }
+
         } else {
             ;
         }

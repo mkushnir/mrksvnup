@@ -2,7 +2,6 @@
 #define HTTP_H
 
 #include "mrkcommon/bytestream.h"
-#include "mrksvnup/svnc.h"
 
 /* bytestream_consume */
 #define PARSE_EOF (-1)
@@ -48,6 +47,7 @@ typedef struct _http_ctx {
     byterange_t body;
     int current_chunk_size;
     byterange_t current_chunk;
+    void *udata;
 } http_ctx_t;
 
 char * findcrlf(char *, int);

@@ -125,6 +125,7 @@ http_ctx_init(http_ctx_t *ctx)
     ctx->current_chunk_size = 0;
     ctx->current_chunk.start = 0;
     ctx->current_chunk.end = 0;
+    ctx->udata = NULL;
 }
 
 void
@@ -137,7 +138,7 @@ void
 http_ctx_dump(const http_ctx_t *ctx)
 {
     TRACE("PS=%s CPS=%s f=%d l=%ld/%ld HTTP/%d.%d %d "
-          "hn=%ld/%ld hv=%ld/%ld b=%d,%ld/%ld c=%d,%ld/%ld",
+          "hn=%ld/%ld hv=%ld/%ld b=%d,%ld/%ld c=%d,%ld/%ld udata=%p",
           PSSTR(ctx->parser_state),
           CPSSTR(ctx->chunk_parser_state),
           ctx->flags,
@@ -155,7 +156,8 @@ http_ctx_dump(const http_ctx_t *ctx)
           ctx->body.end,
           ctx->current_chunk_size,
           ctx->current_chunk.start,
-          ctx->current_chunk.end
+          ctx->current_chunk.end,
+          ctx->udata
          );
 }
 
@@ -174,6 +176,7 @@ http_ctx_new(void)
 void
 http_ctx_destroy(http_ctx_t *ctx)
 {
+    http_ctx_fini(ctx);
     free(ctx);
 }
 
