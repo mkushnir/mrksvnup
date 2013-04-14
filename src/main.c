@@ -389,7 +389,7 @@ main(int argc, char *argv[])
     if ((flags & SVNC_REPAIR) &&
         (flags & (SVNC_FLUSHCACHE | SVNC_TOLERANT))) {
 
-        errx(1, "-R cannot be combined with neither -C nor -t.");
+        errx(1, "-R can be combined with neither -C nor -t.");
     }
 
     if (argc > 0) {
