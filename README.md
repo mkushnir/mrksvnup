@@ -1,4 +1,4 @@
-mrksvnup - A Fast _svnup_ For FreeBSD.
+mrksvnup - A Fast svnup For FreeBSD.
 ======================================
 
 
