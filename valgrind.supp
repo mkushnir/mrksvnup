@@ -1,0 +1,102 @@
+{
+   BIO_push.1
+   Memcheck:Addr4
+   fun:CRYPTO_add_lock
+   fun:BIO_free
+   fun:editor_el_end
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   fun:XML_ParseBuffer
+   fun:editor_body_cb
+   fun:process_body
+   fun:http_parse_response
+   fun:httpproto_editor
+}
+
+{
+   BIO_push.2
+   Memcheck:Leak
+   fun:malloc
+   fun:CRYPTO_malloc
+   fun:BIO_new
+   fun:BIO_new_mem_buf
+   fun:editor_el_end
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   fun:XML_ParseBuffer
+   fun:editor_body_cb
+   fun:process_body
+}
+
+{
+   BIO_push.3
+   Memcheck:Addr8
+   obj:/lib/libcrypto.so.6
+   fun:BIO_free
+   fun:editor_el_end
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   fun:XML_ParseBuffer
+   fun:editor_body_cb
+   fun:process_body
+   fun:http_parse_response
+   fun:httpproto_editor
+}
+
+{
+   BIO_push.4
+   Memcheck:Addr8
+   fun:BIO_free
+   fun:editor_el_end
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   fun:XML_ParseBuffer
+   fun:editor_body_cb
+   fun:process_body
+   fun:http_parse_response
+   fun:httpproto_editor
+   fun:update_cb
+}
+
+{
+   BIO_push.5
+   Memcheck:Addr4
+   obj:/lib/libcrypto.so.6
+   fun:BIO_free
+   fun:editor_el_end
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   fun:XML_ParseBuffer
+   fun:editor_body_cb
+   fun:process_body
+   fun:http_parse_response
+   fun:httpproto_editor
+}
+
+{
+   BIO_push.6
+   Memcheck:Free
+   fun:free
+   fun:CRYPTO_free
+   fun:BIO_free
+   fun:editor_el_end
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   obj:/lib/libbsdxml.so.4
+   fun:XML_ParseBuffer
+   fun:editor_body_cb
+   fun:process_body
+   fun:http_parse_response
+}
+

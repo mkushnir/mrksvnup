@@ -231,5 +231,13 @@ END:
     array_fini(&server_mechs);
     array_fini(&server_caps);
     array_fini(&repo_caps);
+    if (uuid != NULL) {
+        free(uuid);
+        uuid = NULL;
+    }
+    if (repo_url != NULL) {
+        free(repo_url);
+        repo_url = NULL;
+    }
     TRRET(res);
 }

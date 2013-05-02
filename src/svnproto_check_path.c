@@ -88,26 +88,34 @@ svnproto_check_path(svnc_ctx_t *ctx, const char *path, long rev, int *kind)
     } params = {path, rev};
 
     if (pack_list(&ctx->out, pack1, ctx, &params) != 0) {
-        TRRET(SVNPROTO_CHECK_PATH + 6);
+        res = SVNPROTO_CHECK_PATH + 6;
+        goto END;
     }
 
     if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
-        TRRET(SVNPROTO_CHECK_PATH + 7);
+        res = SVNPROTO_CHECK_PATH + 7;
+        goto END;
     }
 
     if (svnproto_check_auth(ctx) != 0) {
-        TRRET(SVNPROTO_CHECK_PATH + 8);
+        res = SVNPROTO_CHECK_PATH + 8;
+        goto END;
     }
 
     if (svnproto_command_response(ctx, "(w)", &kind_str) != 0) {
-        TRRET(SVNPROTO_CHECK_PATH + 9);
+        res = SVNPROTO_CHECK_PATH + 9;
+        goto END;
     }
 
     *kind = svnc_kind2int(kind_str);
 
     bytestream_rewind(&ctx->out);
 
-
+END:
+    if (kind_str != NULL) {
+        free(kind_str);
+        kind_str = NULL;
+    }
     return res;
 }
 

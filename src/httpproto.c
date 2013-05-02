@@ -731,6 +731,11 @@ editor_chardata(void *udata,
         if (BDATA(davctx->set_prop_name) == NULL) {
             //TRACE("elname=%s %s=%s", elname,
             //      BDATA(davctx->set_prop_name), BDATA(v));
+            if (v != NULL) {
+                free(v);
+                v = NULL;
+            }
+
             return;
         }
 

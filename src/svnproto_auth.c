@@ -109,6 +109,10 @@ int svnproto_check_auth(svnc_ctx_t *ctx)
 
 END:
     array_fini(&auth_mechs);
+    if (realm != NULL) {
+        free(realm);
+        realm = NULL;
+    }
     TRRET(res);
 }
 

@@ -479,7 +479,7 @@ svndiff_build_tview(svndiff_wnd_t *wnd, svndiff_doc_t *doc)
     char *pbytes;
 
     /* Set up target */
-    if ((wnd->tview = malloc(wnd->tview_len)) == NULL) {
+    if ((wnd->tview = malloc(wnd->tview_len + 1)) == NULL) {
         FAIL("malloc");
     }
     ptbuf = wnd->tview;
