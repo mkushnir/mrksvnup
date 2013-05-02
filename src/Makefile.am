@@ -50,11 +50,19 @@ libmrksvnup_la_SOURCES = svnc.c \
 			 bytestream_ssl_helper.c
 
 nodist_libmrksvnup_la_SOURCES = diag.c
-if FCOLOR
-libmrksvnup_la_CFLAGS = -Wall -Wextra -Werror -g -std=c99 -I$(includedir) -O0 -ftrapv -fcatch-undefined-behavior
+if DEBUG
+DEBUG_FLAGS = -g -O0 -ftrapv -fcatch-undefined-behavior
 else
-libmrksvnup_la_CFLAGS = -Wall -Wextra -Werror -g -std=c99 -I$(includedir) -O0 -ftrapv -fcatch-undefined-behavior -DNOFCOLOR
+DEBUG_FLAGS = -DNDEBUG -O3
 endif
+
+if FCOLOR
+FCOLOR_FLAGS =
+else
+FCOLOR_FLAGS = -DNOFCOLOR
+endif
+libmrksvnup_la_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 -I$(includedir) $(FCOLOR_FLAGS)
+
 libmrksvnup_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon -lz -lbsdxml -lcrypto -ssl
 
 bin_PROGRAMS = svnup
