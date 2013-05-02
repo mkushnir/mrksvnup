@@ -19,8 +19,9 @@ nobase_include_HEADERS = mrksvnup/svnc.h \
 			 mrksvnup/httpproto.h \
 			 mrksvnup/dav.h \
 			 mrksvnup/xmatch.h \
-			 mrksvnup/version.h \
-			 bytestream_ssl_helper.h
+			 mrksvnup/version.h
+
+noinst_HEADERS = bytestream_ssl_helper.h
 
 libmrksvnup_la_SOURCES = svnc.c \
 			 svnc_util.c \
