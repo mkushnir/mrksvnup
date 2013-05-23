@@ -21,7 +21,9 @@
 #include "mrksvnup/svnc.h"
 #include "mrksvnup/svncdir.h"
 
+#ifndef NDEBUG
 const char *_malloc_options = "J";
+#endif
 
 static svnc_ctx_t *ctx = NULL;
 static char *absroot = NULL;
@@ -62,6 +64,7 @@ update_cb(svnc_ctx_t *ctx,
           UNUSED void *st,
           void *udata)
 {
+    int res;
     struct {
         const char *path;
         long source_rev;
@@ -69,10 +72,10 @@ update_cb(svnc_ctx_t *ctx,
     } *params = udata;
 
     assert(ctx->set_path != NULL);
-    if (ctx->set_path(ctx, params->path, params->source_rev,
+    if ((res = ctx->set_path(ctx, params->path, params->source_rev,
                       NULL, SVN_DEPTH_INFINITY,
-                      params->set_path_flags) != 0) {
-        errx(1, "set_path");
+                      params->set_path_flags)) != 0) {
+        errx(1, "set_path [%s]", diag_str(res));
     }
 
     if (ctx->debug_level > 0) {
@@ -80,8 +83,8 @@ update_cb(svnc_ctx_t *ctx,
     }
 
     assert(ctx->finish_report != NULL);
-    if (ctx->finish_report(ctx) != 0) {
-        errx(1, "finish_report");
+    if ((res = ctx->finish_report(ctx)) != 0) {
+        errx(1, "finish_report [%s]", diag_str(res));
     }
 
     if (ctx->debug_level > 0) {
@@ -89,9 +92,9 @@ update_cb(svnc_ctx_t *ctx,
     }
 
     assert(ctx->editor != NULL);
-    if (ctx->editor(ctx) != 0) {
+    if ((res = ctx->editor(ctx)) != 0) {
         svnc_print_last_error(ctx);
-        errx(1, "editor");
+        errx(1, "editor [%s]", diag_str(res));
     }
 
     return 0;
@@ -125,6 +128,7 @@ run(const char *cmdline_url,
     unsigned int flags,
     int debug_level)
 {
+    int res;
     char *revfile = NULL;
     char *repofile = NULL;
     long source_rev = -1;
@@ -140,7 +144,7 @@ run(const char *cmdline_url,
     } update_params = {"", -1, 0};
 
     if ((repofile = path_join(localroot, REPOFILE)) == NULL) {
-        errx(1, "path_join()");
+        errx(1, "path_join() REPOFILE");
     }
     if (cmdline_url == NULL) {
         if (lstat(repofile, &sb) == 0 && S_ISREG(sb.st_mode)) {
@@ -169,7 +173,7 @@ run(const char *cmdline_url,
 
     /* source revision is in a revfile (previously saved target revision) */
     if ((revfile = path_join(localroot, REVFILE)) == NULL) {
-        errx(1, "path_join() issue");
+        errx(1, "path_join() REVFILE");
     }
 
     if (flags & SVNC_FLUSHCACHE) {
@@ -207,8 +211,8 @@ run(const char *cmdline_url,
 
     if (target_rev <= 0) {
         assert(ctx->get_latest_rev != NULL);
-        if (ctx->get_latest_rev(ctx, &target_rev) != 0) {
-            errx(1, "get_latest_rev");
+        if ((res = ctx->get_latest_rev(ctx, &target_rev)) != 0) {
+            errx(1, "get_latest_rev [%s]", diag_str(res));
         }
     }
 
@@ -241,9 +245,9 @@ run(const char *cmdline_url,
     update_params.source_rev = source_rev;
 
     assert(ctx->update != NULL);
-    if (ctx->update(ctx, target_rev, update_params.path, 0,
-                        UPFLAG_RECURSE, update_cb, &update_params) != 0) {
-        errx(1, "update");
+    if ((res = ctx->update(ctx, target_rev, update_params.path, 0,
+                        UPFLAG_RECURSE, update_cb, &update_params)) != 0) {
+        errx(1, "update [%s]", diag_str(res));
     }
 
     /*
@@ -437,7 +441,7 @@ main(int argc, char *argv[])
 
     /* check and obtain lock */
     if ((lockfile = path_join(absroot, LOCKFILE)) == NULL) {
-        FAIL("path_join");
+        FAIL("path_join LOCKFILE");
     }
     if (lstat(lockfile, &sb) == 0) {
         if (flags & SVNC_CLEAR_LOCKFILE) {

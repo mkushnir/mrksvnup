@@ -841,7 +841,7 @@ httpproto_editor(svnc_ctx_t *ctx)
     dav_ctx_t *davctx = ctx->udata;
     char *buf = NULL;
     size_t sz, nwritten;
-    const char *body = 
+    const char *body =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         "<S:update-report send-all=\"true\" xmlns:S=\"svn:\">"
             "<S:src-path>%s</S:src-path>"
