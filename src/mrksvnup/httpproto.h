@@ -3,6 +3,10 @@
 
 #include "mrksvnup/svnc.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int httpproto_setup(svnc_ctx_t *);
 int httpproto_set_path(svnc_ctx_t *,
                        const char *,
@@ -31,5 +35,9 @@ int httpproto_check_path(svnc_ctx_t *,
                          int *);
 int httpproto_get_latest_rev(svnc_ctx_t *,
                              long *);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

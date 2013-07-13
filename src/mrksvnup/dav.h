@@ -8,6 +8,10 @@
 #include "mrksvnup/svnc.h"
 #include "mrksvnup/xmatch.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct _dav_ctx {
     XML_Parser p;
     long youngest_rev;
@@ -63,5 +67,9 @@ void dav_cwp_enter(dav_ctx_t *, const char *);
 void dav_cwp_leave(dav_ctx_t *);
 bytes_t *dav_cwp(dav_ctx_t *);
 char *dav_rvr_path(dav_ctx_t *, const char *, long);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,6 +1,10 @@
 #ifndef VERSION_H
 #define VERSION_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #else
@@ -17,5 +21,9 @@
  *  bld__________|
  */
 #define SVNUP_VERSION 0x00010000
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -7,6 +7,11 @@
 #include "mrksvnup/svnc.h"
 
 #include "diag.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Parser.
  */
@@ -125,5 +130,9 @@ int svnproto_abort_report(svnc_ctx_t *);
 
 /* Editor */
 int svnproto_editor(svnc_ctx_t *);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

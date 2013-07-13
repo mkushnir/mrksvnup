@@ -7,6 +7,10 @@
 #include "mrkcommon/array.h"
 #include "mrkcommon/array.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* include/svn_delta.h */
 #define SVN_TXDELTA_SOURCE 0
 #define SVN_TXDELTA_TARGET 1
@@ -26,7 +30,7 @@ typedef struct _svndiff_insn {
  * inslen
  * newlen
  *
- * 
+ *
  */
 
 typedef struct _svndiff_wnd {
@@ -84,6 +88,10 @@ int svndiff_doc_fini(svndiff_doc_t *);
 int svndiff_doc_dump(svndiff_doc_t *);
 
 int svndiff_build_tview(svndiff_wnd_t *, svndiff_doc_t *);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

@@ -4,6 +4,10 @@
 #include "mrksvnup/svnc.h"
 #include "mrksvnup/svndiff.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int svnedit_verify_checksum(int, const bytes_t *);
 int svnedit_init_shadow_ctx(svnc_ctx_t *);
 void svnedit_close_shadow_ctx(void);
@@ -39,5 +43,9 @@ int svnedit_change_file_prop(svnc_ctx_t *,
 int svnedit_close_file(svnc_ctx_t *,
                        bytes_t *,
                        bytes_t *);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

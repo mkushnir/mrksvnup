@@ -14,6 +14,10 @@
 
 #include "mrksvnup/version.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define SVN_DEFAULT_PORT 3690
 #define HTTP_DEFAULT_PORT 80
 #define HTTPS_DEFAULT_PORT 443
@@ -209,5 +213,9 @@ bytes_t *bytes_from_mem(const char *, size_t);
 
 /* set-path */
 #define SETPFLAG_START_EMPTY 0x20
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

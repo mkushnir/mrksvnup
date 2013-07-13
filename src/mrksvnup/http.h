@@ -3,6 +3,10 @@
 
 #include "mrkcommon/bytestream.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* bytestream_consume */
 #define PARSE_EOF (-1)
 #define PARSE_NEED_MORE (-2)
@@ -73,5 +77,9 @@ int http_parse_response(int,
                         http_cb_t,
                         http_cb_t,
                         void *);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

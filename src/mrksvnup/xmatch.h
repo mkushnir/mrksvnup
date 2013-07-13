@@ -3,6 +3,10 @@
 
 #include "mrkcommon/array.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct _xmatch {
     const char *pattern;
     array_t compiled_pattern;
@@ -15,5 +19,9 @@ void xmatch_push(xmatch_t *, const char *);
 void xmatch_pop(xmatch_t *);
 const char *xmatch_top(xmatch_t *, int);
 int xmatch_matches(xmatch_t *);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

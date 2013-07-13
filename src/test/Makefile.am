@@ -12,7 +12,7 @@ BUILT_SOURCES = ../diag.c ../diag.h
 CFLAGS = -Wall -Wextra -Werror -std=c99 -I.. -g -O0 -ftrapv -fcatch-undefined-behavior -I$(includedir)
 LDFLAGS += -L$(libdir) -lmrkcommon -lz -lbsdxml -lcrypto -lssl
 
-nobase_include_HEADERS = ../mrksvnup/svnc.h \
+noinst_HEADERS = ../mrksvnup/svnc.h \
 			 ../mrksvnup/svncdir.h \
 			 ../mrksvnup/svndiff.h \
 			 ../mrksvnup/svnedit.h \
@@ -57,4 +57,4 @@ testfoo_LDFLAGS =
 	sh ../gen-diag
 
 testrun: all
-	for i in $(noinst_PROGRAMS); do if test -x ./$$i; then LD_LIRARY_PATH=$(libdir) ./$$i; fi; done;
+	for i in $(noinst_PROGRAMS); do if test -x ./$$i; then LD_LIBRARY_PATH=$(libdir) ./$$i; fi; done;
