@@ -77,7 +77,6 @@ AC_ARG_ENABLE(fcolor,
               [AM_CONDITIONAL([FCOLOR], [test "$enable_fcolor" = "yes"])],
              )
 AC_CHECK_LIB(z, compress, [], [AC_MSG_FAILURE(libz.so is required.)]) 
-#AC_CHECK_LIB(md, MD5Init, [], [AC_MSG_FAILURE(libmd.so is required.)]) 
 AC_CHECK_LIB(crypto, MD5_Init, [], [AC_MSG_FAILURE(libcrypto.so is required.)]) 
 AC_CHECK_LIB(ssl, SSL_library_init, [], [AC_MSG_FAILURE(libssl.so is required.)]) 
 AC_CHECK_LIB(bsdxml, XML_ParserCreateNS, [], [AC_MSG_FAILURE(libbsdxml.so is required.)]) 
