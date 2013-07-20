@@ -19,6 +19,8 @@
 
 #define VCBUFSZ (PAGE_SIZE * 512)
 
+#pragma GCC diagnostic ignored "-Wnonnull"
+
 static svnc_ctx_t *shadow_ctx = NULL;
 static long target_rev;
 static svndiff_doc_t doc;

@@ -9,7 +9,13 @@ dist_HEADERS = unittest.h
 
 BUILT_SOURCES = ../diag.c ../diag.h
 
-CFLAGS = -Wall -Wextra -Werror -std=c99 -I.. -g -O0 -ftrapv -fcatch-undefined-behavior -I$(includedir)
+if DEBUG
+DEBUG_FLAGS = -g -O0 $(CLANG_DEBUG)
+else
+DEBUG_FLAGS = -DNDEBUG -O3
+endif
+
+CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 -I.. -I$(includedir)
 LDFLAGS += -L$(libdir) -lmrkcommon -lz -lbsdxml -lcrypto -lssl
 
 noinst_HEADERS = ../mrksvnup/svnc.h \

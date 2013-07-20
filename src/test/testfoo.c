@@ -18,7 +18,7 @@
 #include "mrksvnup/svncdir.h"
 #include "mrksvnup/svnproto.h"
 
-static int
+UNUSED static int
 mystrcmp(const char *a, const char *b)
 {
     if (a == NULL || b == NULL) {
@@ -27,7 +27,7 @@ mystrcmp(const char *a, const char *b)
     return strcmp(a, b);
 }
 
-static int
+UNUSED static int
 mymemcmp(const char *a, const char *b, size_t sz)
 {
     if (a == NULL || b == NULL) {

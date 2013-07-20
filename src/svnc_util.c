@@ -20,6 +20,8 @@
 #include "mrksvnup/svnedit.h"
 #include "mrksvnup/svncdir.h"
 
+#pragma GCC diagnostic ignored "-Wnonnull"
+
 static const char *kinds[] = {
     "none",
     "file",
@@ -164,6 +166,7 @@ svn_url_parse(const char *url, int *scheme, char **host, int *port, char **path)
 
     return (0);
 }
+
 
 void
 svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)

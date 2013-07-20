@@ -11,17 +11,17 @@
 #include <openssl/ssl.h>
 
 #include "diag.h"
-#include "mrkcommon/util.h"
+#include <mrkcommon/util.h>
 //#define TRRET_DEBUG
 //#define TRRET_DEBUG_VERBOSE
-#include "mrkcommon/dumpm.h"
-#include "mrkcommon/traversedir.h"
+#include <mrkcommon/dumpm.h>
+#include <mrkcommon/traversedir.h>
 
-#include "mrksvnup/svncdir.h"
-#include "mrksvnup/svnproto.h"
-#include "mrksvnup/http.h"
-#include "mrksvnup/dav.h"
-#include "mrksvnup/httpproto.h"
+#include <mrksvnup/svncdir.h>
+#include <mrksvnup/svnproto.h>
+#include <mrksvnup/http.h>
+#include <mrksvnup/dav.h>
+#include <mrksvnup/httpproto.h>
 
 #include "svnc_private.h"
 #include "bytestream_ssl_helper.h"

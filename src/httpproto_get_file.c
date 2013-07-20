@@ -13,6 +13,8 @@
 
 #include "diag.h"
 
+#pragma GCC diagnostic ignored "-Wnonnull"
+
 void
 get_file_props_el_start(void *udata,
                         const XML_Char *name,
