@@ -79,7 +79,7 @@ Everything is released under 2-clause BSD license.
 TODO
 ====
 
-* Support of different transports: https:// svn+ssh://.
+* Support of different transports: https:// svn+ssh://. (Now present but not tested.)
 * Portability to other platforms (?).
 
 
