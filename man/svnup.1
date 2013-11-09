@@ -24,7 +24,7 @@ Given a URL, a path to the local directory (the current directory will be used i
 supplied), and an optional SVN revision, check out a fresh tree from the
 SVN server, or update the existing one.
 .Pp
-If the diretory doesn't exist, it will be created. If the supplied path is
+If the directory doesn't exist, it will be created. If the supplied path is
 not a directory, the program will exit with an error.
 .Pp
 The
@@ -64,7 +64,7 @@ lead to the lockfile hanging around.
 The revision to check out or update to. If not specified, the latest
 revision will be assumed.
 .It Fl R
-Repair mode. After reglar updating, verify each file in the local
+Repair mode. After regular updating, verify each file in the local
 directory against the saved file checksums. In case of checksum mismatch,
 download the file from the server. Due to the full local copy scan, as
 opposed to svndiff1-based regular update, repair mode can take some time
@@ -78,7 +78,7 @@ The amount of verbosity to print. Specify 0 to silent the program
 completely. 1 will produce a line for each affected file and a brief
 summary. This is the default. 2 will additionally print actions taken to
 fix up the file, and other diagnostics. 3 or more will also print protocol
-details (useful for debugigng).
+details (useful for debugging).
 .It Fl h
 Print help message and exit.
 .It Fl V
@@ -120,7 +120,7 @@ Saved files checksums.
 Lockfile to prevent another instance of svnup to step on that running.
 .El
 .Sh AUTHORS
-This program and the man page was writted by
+This program and the man page was written by
 .An Markiyan Kushnir
 .Aq markiyan.kushnir@gmail.com
 .Sh BUGS
@@ -132,4 +132,4 @@ not mix using of
 .Nm
 and other SVN programs.
 .Pp
-Diagnostic is not always comprehensable.
+Diagnostic is not always comprehensible.
