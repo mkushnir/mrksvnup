@@ -109,6 +109,7 @@ typedef struct _svnc_ctx {
 #define SVNC_REPAIR 0x08
 #define SVNC_CLEAR_LOCKFILE 0x10
 #define SVNC_TOLERANT 0x20
+#define SVNC_PRINT_REVISION 0x40
 
     unsigned int flags;
     int debug_level;

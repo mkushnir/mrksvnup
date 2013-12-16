@@ -200,6 +200,11 @@ run(const char *cmdline_url,
         }
     }
 
+    if (flags & SVNC_PRINT_REVISION) {
+        printf("%ld\n", source_rev);
+        goto end;
+    }
+
     if ((ctx = svnc_new(url, localroot, flags, debug_level)) == NULL) {
         errx(1, "svnc_new");
     }
@@ -305,6 +310,8 @@ run(const char *cmdline_url,
     svnc_destroy(ctx);
     free(ctx);
     ctx = NULL;
+
+end:
     free(revfile);
     free(repofile);
     free(url);
@@ -314,7 +321,7 @@ static void
 usage(const char *progname)
 {
     printf("Usage:\n");
-    printf("   %s [-r REV] [-v LEVEL] [-R] [-C] [-f] [-t] "
+    printf("   %s [-r REV] [-v LEVEL] [-R] [-C] [-f] [-t] [-s] "
            "[URL] [DIR]\n", progname);
     printf("   %s [-h]\n", progname);
     printf("   %s [-V]\n", progname);
@@ -347,7 +354,7 @@ main(int argc, char *argv[])
 
     progname = argv[0];
 
-    while ((ch = getopt(argc, argv, "Cfhr:Rtv:V")) != -1) {
+    while ((ch = getopt(argc, argv, "Cfhr:Rstv:V")) != -1) {
         switch (ch) {
         case 'C':
             /* clear cache */
@@ -371,6 +378,11 @@ main(int argc, char *argv[])
         case 'R':
             /* repair mode */
             flags |= SVNC_REPAIR;
+            break;
+
+        case 's':
+            /* print svn revision */
+            flags = SVNC_PRINT_REVISION;
             break;
 
         case 't':

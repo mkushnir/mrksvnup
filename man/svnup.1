@@ -15,6 +15,9 @@
 .Op Ar URL
 .Op Ar DIR
 .Nm
+.Op Fl s
+.Op Fl v Ar LEVEL
+.Nm
 .Op Fl h
 .Nm
 .Op Fl V
@@ -69,6 +72,11 @@ directory against the saved file checksums. In case of checksum mismatch,
 download the file from the server. Due to the full local copy scan, as
 opposed to svndiff1-based regular update, repair mode can take some time
 on large repositories.
+.It Fl s
+Print current SVN revision. The
+.Ar DIR
+path (or the current working directory) should point to the root of the
+working copy.
 .It Fl t
 Be tolerant. Don't fix up files that were locally modified and thus failed
 checksum test. However those files that were on the way of newly added
@@ -119,6 +127,21 @@ Saved files checksums.
 .It .svnup.lock
 Lockfile to prevent another instance of svnup to step on that running.
 .El
+.Sh EXAMPLES
+.Pp
+Update the
+.Ar /usr/src
+tree:
+.Bd -literal
+    # cd /usr/src && /usr/local/bin/svnup
+.Ed
+.Pp
+Print the SVN revision number of the
+.Ar /usr/ports
+tree (don't print informative messages):
+.Bd -literal
+    # cd /usr/ports && /usr/local/bin/svnup -s -v0
+.Ed
 .Sh AUTHORS
 This program and the man page was written by
 .An Markiyan Kushnir
