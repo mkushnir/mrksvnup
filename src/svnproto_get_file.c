@@ -184,7 +184,9 @@ svnproto_get_file(svnc_ctx_t *ctx,
         long rev;
         int flags;
     } params = {path, rev, flags};
+    int reconnect_attempt = 0;
 
+DO_REQUEST:
     if (pack_list(&ctx->out, pack1, NULL, &params) != 0) {
         TRRET(SVNPROTO_GET_FILE + 9);
     }
@@ -194,7 +196,12 @@ svnproto_get_file(svnc_ctx_t *ctx,
     }
 
     if (svnproto_check_auth(ctx) != 0) {
-        TRRET(SVNPROTO_GET_FILE + 11);
+        if (!reconnect_attempt) {
+            ++reconnect_attempt;
+            goto TRY_RECONNECT;
+        } else {
+            TRRET(SVNPROTO_GET_FILE + 11);
+        }
     }
 
     if (svnproto_command_response(ctx, "((s?)n(r*)r?)",
@@ -216,6 +223,15 @@ svnproto_get_file(svnc_ctx_t *ctx,
     bytestream_rewind(&ctx->out);
 
     TRRET(res);
+
+TRY_RECONNECT:
+    if ((res = svnc_socket_reconnect(ctx)) != 0) {
+        TRRET(SVNPROTO_GET_FILE + 14);
+    }
+    if (ctx->setup(ctx) != 0) {
+        TRRET(SVNPROTO_GET_FILE + 15);
+    }
+    goto DO_REQUEST;
 }
 
 

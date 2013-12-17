@@ -311,8 +311,20 @@ svnedit_open_dir(svnc_ctx_t *ctx,
         }
     } else {
         if (!S_ISDIR(sb.st_mode)) {
-            res = SVNEDIT_OPEN_DIR + 3;
-            goto END;
+            if (S_ISLNK(sb.st_mode)) {
+                if (stat(localpath, &sb) != 0) {
+                    res = SVNEDIT_OPEN_DIR + 3;
+                    goto END;
+                } else {
+                    if (!S_ISDIR(sb.st_mode)) {
+                        res = SVNEDIT_OPEN_DIR + 4;
+                        goto END;
+                    }
+                }
+            } else {
+                res = SVNEDIT_OPEN_DIR + 5;
+                goto END;
+            }
         }
     }
 
@@ -642,6 +654,9 @@ svnedit_close_file(svnc_ctx_t *ctx,
                             doc.flags |= SD_FLAG_MAYBE_DIRTY;
                         } else {
                             if (checkout_file(ctx, &doc, target_rev) != 0) {
+                                if (ctx->debug_level > 1) {
+                                    LTRACE(1, FRED("Failed to check out %s to %s"), BDATA(doc.rp), doc.lp);
+                                }
                                 res = SVNEDIT_CLOSE_FILE + 2;
                                 goto END;
                             }
@@ -650,7 +665,7 @@ svnedit_close_file(svnc_ctx_t *ctx,
 
                     } else {
                         /*
-                         * Since the file matches target cehcksum even before
+                         * Since the file matches target checksum even before
                          * editing, no editing is needed, early exit :)
                          */
                         if (ctx->debug_level > 2) {

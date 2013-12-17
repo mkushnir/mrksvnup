@@ -12,7 +12,7 @@
 #include "diag.h"
 
 static int
-str_cmp(const char **s1, const char **s2)
+safe_strcmp(const char **s1, const char **s2)
 {
     //TRACE("%s - %s", *s1, *s2);
     if (*s1 == NULL && *s2 == NULL) {
@@ -114,6 +114,6 @@ xmatch_matches(xmatch_t *xmatch)
 
     return array_cmp(&xmatch->compiled_pattern,
                      &xmatch->input_stack,
-                     (array_compar_t)str_cmp, 0);
+                     (array_compar_t)safe_strcmp, 0);
 }
 
