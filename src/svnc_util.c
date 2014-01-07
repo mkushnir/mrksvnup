@@ -296,7 +296,7 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
                     }
                 }
                 if (ctx->debug_level > 1) {
-                    LTRACE(1, FGREEN("+ %s -> %s"), rp, lp);
+                    LTRACE(1, FGREEN("+ %s"), rp);
                 }
             }
         }

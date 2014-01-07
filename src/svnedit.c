@@ -208,7 +208,7 @@ svnedit_delete_entry(svnc_ctx_t *ctx,
         /* Is this a file in first place? */
         if (lstat(localpath, &sb) != 0) {
             if (ctx->debug_level > 0) {
-                LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
+                LTRACE(1, FGREEN("- %s"), BDATA(path));
             }
 
         } else {
@@ -220,7 +220,7 @@ svnedit_delete_entry(svnc_ctx_t *ctx,
                     goto END;
                 }
                 if (ctx->debug_level > 0) {
-                    LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
+                    LTRACE(1, FGREEN("- %s"), BDATA(path));
                 }
 
             } else {
@@ -231,7 +231,7 @@ svnedit_delete_entry(svnc_ctx_t *ctx,
         }
     } else {
         if (ctx->debug_level > 0) {
-            LTRACE(1, FGREEN("- %s -> %s"), BDATA(path), localpath);
+            LTRACE(1, FGREEN("- %s"), BDATA(path));
         }
     }
 
@@ -276,7 +276,7 @@ svnedit_add_dir(svnc_ctx_t *ctx,
     }
 
     if (ctx->debug_level > 0) {
-        LTRACE(1, FGREEN("+ %s -> %s"), BDATA(path), localpath);
+        LTRACE(1, FGREEN("+ %s"), BDATA(path));
     }
 
 END:
@@ -909,18 +909,18 @@ EDIT_COMPLETE:
 
     if (ctx->debug_level > 0) {
         if (doc.flags & SD_FLAG_MAYBE_DIRTY) {
-            LTRACE(1, FYELLOW(". %s -> %s"), BDATA(doc.rp), doc.lp);
+            LTRACE(1, FYELLOW(". %s"), BDATA(doc.rp));
         } else {
             if (BDATA(doc.base_checksum) == NULL) {
                 /* this is for "presentation" purposes */
                 if (doc.flags & SD_FLAG_MOD_SET) {
-                    LTRACE(1, FGREEN("~ %s -> %s (%04o)"),
-                           BDATA(doc.rp), doc.lp, doc.mod);
+                    LTRACE(1, FGREEN("~ %s (%04o)"),
+                           BDATA(doc.rp), doc.mod);
                 } else {
-                    LTRACE(1, FGREEN("+ %s -> %s"), BDATA(doc.rp), doc.lp);
+                    LTRACE(1, FGREEN("+ %s"), BDATA(doc.rp));
                 }
             } else {
-                LTRACE(1, FGREEN("~ %s -> %s"), BDATA(doc.rp), doc.lp);
+                LTRACE(1, FGREEN("~ %s"), BDATA(doc.rp));
             }
         }
     }
