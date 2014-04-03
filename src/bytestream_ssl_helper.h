@@ -1,5 +1,5 @@
 #ifndef BYTESTREAM_SSL_HELPER_H
-#define BYTESTREAM_SSL_HERLPER_H
+#define BYTESTREAM_SSL_HELPER_H
 
 #include "mrkcommon/bytestream.h"
 
