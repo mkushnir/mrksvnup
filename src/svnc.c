@@ -171,11 +171,11 @@ svnc_new(const char *url,
     ctx->udata = NULL;
     ctx->flags = flags;
 
-    if (bytestream_init(&ctx->in) != 0) {
+    if (bytestream_init(&ctx->in, 4096) != 0) {
         FAIL("bytestream_init");
     }
 
-    if (bytestream_init(&ctx->out) != 0) {
+    if (bytestream_init(&ctx->out, 4096) != 0) {
         FAIL("bytestream_init");
     }
 
@@ -560,7 +560,7 @@ svnc_debug_open(svnc_ctx_t *ctx, const char *path)
     if ((ctx->fd = open(path, O_RDONLY)) == -1) {
         TRRET(SVNC_DEBUG_OPEN + 1);
     }
-    if (bytestream_init(&ctx->in) != 0) {
+    if (bytestream_init(&ctx->in, 4096) != 0) {
         TRRET(SVNC_OPEN + 2);
     }
 
@@ -574,7 +574,7 @@ svnc_debug_open(svnc_ctx_t *ctx, const char *path)
 
     ctx->in.read_more = bytestream_read_more;
 
-    if (bytestream_init(&ctx->out) != 0) {
+    if (bytestream_init(&ctx->out, 4096) != 0) {
         TRRET(SVNC_OPEN + 3);
     }
     ctx->out.write = bytestream_stderr_write;
