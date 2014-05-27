@@ -757,7 +757,7 @@ END_S_STAR:
                  *  The SVN RA protocol specification seems to promise not
                  *  to introduce schemes that would put us in trouble.
                  */
-                recycled = bytestream_recycle(in, st->r.start);
+                recycled = bytestream_recycle(in, 512, st->r.start);
                 st->r.end -= recycled;
                 st->r.start -= recycled;
 

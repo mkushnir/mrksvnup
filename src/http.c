@@ -346,7 +346,7 @@ recycle_stream_buffer(http_ctx_t *ctx, bytestream_t *in)
     ctx->body.start = 0;
     ctx->body.end = 0;
 
-    recycled = bytestream_recycle(in, ctx->current_chunk.start);
+    recycled = bytestream_recycle(in, 512, ctx->current_chunk.start);
 
     ctx->current_chunk.start -= recycled;
     ctx->current_chunk.end -= recycled;
