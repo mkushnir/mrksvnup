@@ -38,11 +38,11 @@ pack_string(bytestream_t *out, size_t sz, const char *str)
         TRRET(PACK_STRING + 1);
     }
 
-    if (bytestream_cat(out, sz, str) != 0) {
+    if (bytestream_cat(out, sz, str) < 0) {
         TRRET(PACK_STRING + 2);
     }
 
-    if (bytestream_cat(out, 1, " ") != 0) {
+    if (bytestream_cat(out, 1, " ") < 0) {
         TRRET(PACK_STRING + 3);
     }
 

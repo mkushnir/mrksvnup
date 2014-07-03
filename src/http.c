@@ -242,8 +242,10 @@ http_end_of_header(bytestream_t *out)
 {
     int res = 0;
 
-    if ((res = bytestream_cat(out, 2, "\r\n")) != 0) {
+    if ((res = bytestream_cat(out, 2, "\r\n")) <= 0) {
         res = HTTP_END_OF_HEADER + 1;
+    } else {
+        res = 0;
     }
     TRRET(res);
 }
@@ -253,8 +255,10 @@ http_add_body(bytestream_t *out, const char *body, size_t sz)
 {
     int res = 0;
 
-    if ((res = bytestream_cat(out, sz, body)) != 0) {
+    if ((res = bytestream_cat(out, sz, body)) < 0) {
         res = HTTP_ADD_BODY + 1;
+    } else {
+        res = 0;
     }
     TRRET(res);
 }
