@@ -201,8 +201,10 @@ http_start_request(bytestream_t *out,
 
     if ((res = bytestream_nprintf(out, sz,
                                   "%s %s HTTP/1.1\r\n",
-                                  method, uri)) != 0) {
+                                  method, uri)) < 0) {
         res = HTTP_START_REQUEST + 1;
+    } else {
+        res = 0;
     }
     TRRET(res);
 }
@@ -227,8 +229,10 @@ http_add_header_field(bytestream_t *out,
 
     if ((res = bytestream_nprintf(out, sz,
                                   "%s: %s\r\n",
-                                  name, value)) != 0) {
+                                  name, value)) < 0) {
         res = HTTP_ADD_HEADER_FIELD + 1;
+    } else {
+        res = 0;
     }
     TRRET(res);
 }
