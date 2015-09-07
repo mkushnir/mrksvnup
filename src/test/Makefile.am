@@ -60,7 +60,7 @@ testfoo_CFLAGS =
 testfoo_LDFLAGS =
 
 ../diag.c ../diag.h: ../diag.txt
-	sh ../gen-diag mrksvnup
+	$(AM_V_GEN) /bin/sh ../gen-diag mrksvnup
 
 testrun: all
 	for i in $(noinst_PROGRAMS); do if test -x ./$$i; then LD_LIBRARY_PATH=$(libdir) ./$$i; fi; done;
