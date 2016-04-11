@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = foreign
 
 distdir = ../$(PACKAGE)-$(VERSION)/src
-dist_HEADERS =
+dist_HEADERS = svnc_private.h httpproto_private.h bytestream_ssl_helper.h
 
 BUILT_SOURCES = diag.c diag.h
 EXTRA_DIST = diag.txt gen-diag
@@ -21,7 +21,7 @@ nobase_include_HEADERS = mrksvnup/svnc.h \
 			 mrksvnup/xmatch.h \
 			 mrksvnup/version.h
 
-noinst_HEADERS = svnc_private.h httpproto_private.h bytestream_ssl_helper.h
+noinst_HEADERS =
 
 libmrksvnup_la_SOURCES = svnc.c \
 			 svnc_util.c \

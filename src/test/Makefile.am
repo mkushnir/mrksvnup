@@ -5,7 +5,6 @@ CLEANFILES = *.core
 noinst_PROGRAMS=testfoo
 
 distdir = ../../$(PACKAGE)-$(VERSION)/src/test
-dist_HEADERS =
 
 BUILT_SOURCES = ../diag.c ../diag.h
 
@@ -18,7 +17,7 @@ endif
 CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 -I.. -I$(includedir)
 LDFLAGS += -L$(libdir) -lmrkcommon -lz -lbsdxml -lcrypto -lssl
 
-noinst_HEADERS = unittest.h \
+dist_HEADERS = unittest.h \
 			 ../mrksvnup/svnc.h \
 			 ../mrksvnup/svncdir.h \
 			 ../mrksvnup/svndiff.h \
