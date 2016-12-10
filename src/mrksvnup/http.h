@@ -52,27 +52,27 @@ typedef struct _http_ctx {
     int current_chunk_size;
     byterange_t current_chunk;
     void *udata;
-} http_ctx_t;
+} mnhttp_ctx_t;
 
 char * findcrlf(char *, int);
 
-void http_ctx_init(http_ctx_t *);
-void http_ctx_fini(http_ctx_t *);
-http_ctx_t * http_ctx_new(void);
-void http_ctx_destroy(http_ctx_t *);
+void http_ctx_init(mnhttp_ctx_t *);
+void http_ctx_fini(mnhttp_ctx_t *);
+mnhttp_ctx_t * http_ctx_new(void);
+void http_ctx_destroy(mnhttp_ctx_t *);
 
-typedef int (*http_cb_t) (http_ctx_t *, bytestream_t *, void *);
+typedef int (*http_cb_t) (mnhttp_ctx_t *, mnbytestream_t *, void *);
 
 char *http_urlencode_reserved(const char *, size_t);
 char *http_urldecode(char *);
 
-int http_start_request(bytestream_t *, const char *, const char *);
-int http_add_header_field(bytestream_t *, const char *, const char *);
-int http_end_of_header(bytestream_t *);
-int http_add_body(bytestream_t *, const char *, size_t);
+int http_start_request(mnbytestream_t *, const char *, const char *);
+int http_add_header_field(mnbytestream_t *, const char *, const char *);
+int http_end_of_header(mnbytestream_t *);
+int http_add_body(mnbytestream_t *, const char *, size_t);
 
 int http_parse_response(int,
-                        bytestream_t *,
+                        mnbytestream_t *,
                         http_cb_t,
                         http_cb_t,
                         http_cb_t,

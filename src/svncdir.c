@@ -99,8 +99,8 @@ svncdir_walk(svnc_ctx_t *ctx, const char *path, svncdir_cb_t cb, void *udata)
     int res = 0;
     long rev = 0;
     int kind = -1;
-    array_t dirents;
-    array_iter_t it;
+    mnarray_t dirents;
+    mnarray_iter_t it;
     svnc_dirent_t *de;
     svnc_fileent_t fe;
 

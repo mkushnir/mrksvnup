@@ -7,9 +7,9 @@
 extern "C" {
 #endif
 
-ssize_t bytestream_ssl_recv_more(bytestream_t *, int, ssize_t);
+ssize_t bytestream_ssl_recv_more(mnbytestream_t *, int, ssize_t);
 
-ssize_t bytestream_ssl_send(bytestream_t *, int, size_t);
+ssize_t bytestream_ssl_send(mnbytestream_t *, int, size_t);
 
 #ifdef __cplusplus
 }

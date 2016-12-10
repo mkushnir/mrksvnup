@@ -19,7 +19,7 @@
 
 static int
 unpack1(svnc_ctx_t *ctx,
-        bytestream_t *in,
+        mnbytestream_t *in,
         UNUSED svnproto_state_t *st,
         UNUSED void *udata)
 {
@@ -116,7 +116,7 @@ TESTFAILURE:
 
 static int
 mycaps(UNUSED svnc_ctx_t *ctx,
-       bytestream_t *out,
+       mnbytestream_t *out,
        UNUSED void *v,
        UNUSED void *data)
 {
@@ -141,7 +141,7 @@ mycaps(UNUSED svnc_ctx_t *ctx,
 
 static int
 greeting_response(svnc_ctx_t *ctx,
-                  bytestream_t *out,
+                  mnbytestream_t *out,
                   UNUSED void *v,
                   UNUSED void *udata)
 {
@@ -174,7 +174,7 @@ svnproto_setup(svnc_ctx_t *ctx)
 {
     int res = 0;
     long minver = -1, maxver = -1;
-    array_t server_mechs, server_caps, repo_caps;
+    mnarray_t server_mechs, server_caps, repo_caps;
     char *uuid = NULL, *repo_url = NULL;
 
     init_string_array(&server_mechs);

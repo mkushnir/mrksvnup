@@ -21,7 +21,7 @@
  */
 static int
 auth_response(UNUSED svnc_ctx_t *ctx,
-              bytestream_t *out,
+              mnbytestream_t *out,
               UNUSED void *v,
               UNUSED void *udata)
 {
@@ -63,8 +63,8 @@ END:
 int svnproto_check_auth(svnc_ctx_t *ctx)
 {
     int res = 0;
-    array_t auth_mechs;
-    array_iter_t it;
+    mnarray_t auth_mechs;
+    mnarray_iter_t it;
     char *realm = NULL;
     char **ss = NULL;
 

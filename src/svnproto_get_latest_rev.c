@@ -18,7 +18,7 @@
  */
 static int
 pack1(UNUSED svnc_ctx_t *ctx,
-      bytestream_t *out,
+      mnbytestream_t *out,
       UNUSED void *v,
       UNUSED void *udata)
 {

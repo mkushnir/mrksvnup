@@ -111,7 +111,7 @@ dav_setup_xml_parser(dav_ctx_t *ctx,
 void
 dav_cwp_enter(dav_ctx_t *ctx, const char *dir)
 {
-    bytes_t **s;
+    mnbytes_t **s;
 
     if ((s = array_incr(&ctx->cwp)) == NULL) {
         FAIL("array_incr");
@@ -129,13 +129,13 @@ dav_cwp_leave(dav_ctx_t *ctx)
     }
 }
 
-bytes_t *
+mnbytes_t *
 dav_cwp(dav_ctx_t *ctx)
 {
-    bytes_t *res;
+    mnbytes_t *res;
     size_t sz = 0;
-    bytes_t **e;
-    array_iter_t it;
+    mnbytes_t **e;
+    mnarray_iter_t it;
     char *d;
 
     for (e = array_first(&ctx->cwp, &it);
@@ -144,7 +144,7 @@ dav_cwp(dav_ctx_t *ctx)
         sz += (*e)->sz;
     }
     sz += ctx->cwp.elnum;
-    if ((res = malloc(sizeof(bytes_t) + sz + 1)) == NULL) {
+    if ((res = malloc(sizeof(mnbytes_t) + sz + 1)) == NULL) {
         FAIL("malloc");
     }
     res->sz = sz;

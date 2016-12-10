@@ -29,7 +29,7 @@
 int
 svnc_save_checksum(svnc_ctx_t *ctx,
                    const char *path,
-                   bytes_t *checksum)
+                   mnbytes_t *checksum)
 {
     int res = 0;
     DBT k, v;
@@ -68,7 +68,7 @@ svnc_delete_checksum(svnc_ctx_t *ctx,
 int
 svnc_first_checksum(svnc_ctx_t *ctx,
                      char **path,
-                     bytes_t **checksum)
+                     mnbytes_t **checksum)
 {
     int res = 0;
     DBT k, v;
@@ -87,7 +87,7 @@ svnc_first_checksum(svnc_ctx_t *ctx,
     memcpy(*path, k.data, k.size);
     *((*path) + k.size) = '\0';
 
-    if ((*checksum = malloc(sizeof(bytes_t) + v.size)) == NULL) {
+    if ((*checksum = malloc(sizeof(mnbytes_t) + v.size)) == NULL) {
         FAIL("malloc");
     }
     (*checksum)->sz = v.size;
@@ -99,7 +99,7 @@ svnc_first_checksum(svnc_ctx_t *ctx,
 int
 svnc_next_checksum(svnc_ctx_t *ctx,
                    char **path,
-                   bytes_t **checksum)
+                   mnbytes_t **checksum)
 {
     int res = 0;
     DBT k, v;
@@ -118,7 +118,7 @@ svnc_next_checksum(svnc_ctx_t *ctx,
     memcpy(*path, k.data, k.size);
     *((*path) + k.size) = '\0';
 
-    if ((*checksum = malloc(sizeof(bytes_t) + v.size)) == NULL) {
+    if ((*checksum = malloc(sizeof(mnbytes_t) + v.size)) == NULL) {
         FAIL("malloc");
     }
     (*checksum)->sz = v.size;
@@ -377,7 +377,7 @@ svnc_connect(svnc_ctx_t *ctx)
 
     if (ctx->scheme == SVNC_SCHEME_HTTPS) {
         int res;
-        http_ctx_t *httpctx;
+        mnhttp_ctx_t *httpctx;
 
         if ((ctx->ssl = SSL_new(ctx->sslctx)) == NULL) {
             FAIL("SSL_new");

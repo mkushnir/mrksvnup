@@ -172,7 +172,7 @@ void
 svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
 {
     char *rp = NULL;
-    bytes_t *cs = NULL;
+    mnbytes_t *cs = NULL;
     int i;
     size_t counter = 0;
 
@@ -242,8 +242,8 @@ svnc_check_integrity(svnc_ctx_t *ctx, long target_rev)
                     ;
                 }
             } else {
-                array_iter_t it;
-                bytes_t **s;
+                mnarray_iter_t it;
+                mnbytes_t **s;
                 svnc_prop_t *prop;
                 ssize_t total_len = 0;
 
@@ -336,7 +336,7 @@ dump_long(long *v, UNUSED void *udata)
 }
 
 void
-init_long_array(array_t *ar)
+init_long_array(mnarray_t *ar)
 {
     if (array_init(ar, sizeof(long), 0,
                    NULL, NULL) != 0) {
@@ -345,7 +345,7 @@ init_long_array(array_t *ar)
 }
 
 void
-dump_long_array(array_t *ar) {
+dump_long_array(mnarray_t *ar) {
     array_traverse(ar, (array_traverser_t)dump_long, NULL);
 }
 
@@ -374,7 +374,7 @@ dump_string(const char **v, UNUSED void *udata)
 }
 
 void
-init_string_array(array_t *ar)
+init_string_array(mnarray_t *ar)
 {
     if (array_init(ar, sizeof(char *), 0,
                    (array_initializer_t)init_string,
@@ -384,12 +384,12 @@ init_string_array(array_t *ar)
 }
 
 void
-dump_string_array(array_t *ar) {
+dump_string_array(mnarray_t *ar) {
     array_traverse(ar, (array_traverser_t)dump_string, NULL);
 }
 
 void
-fini_string_array(array_t *ar)
+fini_string_array(mnarray_t *ar)
 {
     if (array_fini(ar) != 0) {
         FAIL("array_fini");
@@ -397,14 +397,14 @@ fini_string_array(array_t *ar)
 }
 
 static int
-init_bytes(bytes_t **v)
+init_bytes(mnbytes_t **v)
 {
     *v = NULL;
     return 0;
 }
 
 static int
-fini_bytes(bytes_t **v)
+fini_bytes(mnbytes_t **v)
 {
     if (*v != NULL) {
         free(*v);
@@ -414,7 +414,7 @@ fini_bytes(bytes_t **v)
 }
 
 static int
-dump_bytes(bytes_t **v, UNUSED void *udata)
+dump_bytes(mnbytes_t **v, UNUSED void *udata)
 {
     if (*v != NULL) {
         D16((*v)->data, MIN(64, (*v)->sz));
@@ -425,9 +425,9 @@ dump_bytes(bytes_t **v, UNUSED void *udata)
 }
 
 void
-init_bytes_array(array_t *ar)
+init_bytes_array(mnarray_t *ar)
 {
-    if (array_init(ar, sizeof(bytes_t *), 0,
+    if (array_init(ar, sizeof(mnbytes_t *), 0,
                    (array_initializer_t)init_bytes,
                    (array_finalizer_t)fini_bytes) != 0) {
         FAIL("array_init");
@@ -435,7 +435,7 @@ init_bytes_array(array_t *ar)
 }
 
 void
-fini_bytes_array(array_t *ar)
+fini_bytes_array(mnarray_t *ar)
 {
     if (array_fini(ar) != 0) {
         FAIL("array_fini");
@@ -443,15 +443,15 @@ fini_bytes_array(array_t *ar)
 }
 
 void
-dump_bytes_array(array_t *ar)
+dump_bytes_array(mnarray_t *ar)
 {
     array_traverse(ar, (array_traverser_t)dump_bytes, NULL);
 }
 
-bytes_t *
+mnbytes_t *
 bytes_from_str(const char *s)
 {
-    bytes_t *b = NULL;
+    mnbytes_t *b = NULL;
     size_t sz;
 
     if (s == NULL) {
@@ -460,7 +460,7 @@ bytes_from_str(const char *s)
 
     sz = strlen(s);
 
-    if ((b = malloc(sizeof(bytes_t) + sz + 1)) == NULL) {
+    if ((b = malloc(sizeof(mnbytes_t) + sz + 1)) == NULL) {
         FAIL("malloc");
     }
     b->sz = sz;
@@ -469,16 +469,16 @@ bytes_from_str(const char *s)
     return b;
 }
 
-bytes_t *
+mnbytes_t *
 bytes_from_strn(const char *s, size_t sz)
 {
-    bytes_t *b = NULL;
+    mnbytes_t *b = NULL;
 
     if (s == NULL) {
         return NULL;
     }
 
-    if ((b = malloc(sizeof(bytes_t) + sz + 1)) == NULL) {
+    if ((b = malloc(sizeof(mnbytes_t) + sz + 1)) == NULL) {
         FAIL("malloc");
     }
     b->sz = sz;
@@ -487,16 +487,16 @@ bytes_from_strn(const char *s, size_t sz)
     return b;
 }
 
-bytes_t *
+mnbytes_t *
 bytes_from_mem(const char *s, size_t sz)
 {
-    bytes_t *b = NULL;
+    mnbytes_t *b = NULL;
 
     if (s == NULL) {
         return NULL;
     }
 
-    if ((b = malloc(sizeof(bytes_t) + sz)) == NULL) {
+    if ((b = malloc(sizeof(mnbytes_t) + sz)) == NULL) {
         FAIL("malloc");
     }
     b->sz = sz;

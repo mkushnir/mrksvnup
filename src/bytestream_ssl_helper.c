@@ -11,11 +11,11 @@
 #define BLOCKSZ 4096
 
 ssize_t
-bytestream_ssl_recv_more(bytestream_t *stream,
+bytestream_ssl_recv_more(mnbytestream_t *stream,
                          UNUSED int fd,
                          ssize_t sz)
 {
-    http_ctx_t *httpctx = stream->udata;
+    mnhttp_ctx_t *httpctx = stream->udata;
     SSL *ssl = httpctx->udata;
     ssize_t nrecv;
     ssize_t need;
@@ -43,11 +43,11 @@ bytestream_ssl_recv_more(bytestream_t *stream,
 }
 
 
-ssize_t bytestream_ssl_send(bytestream_t *stream,
+ssize_t bytestream_ssl_send(mnbytestream_t *stream,
                             UNUSED int fd,
                             size_t sz)
 {
-    http_ctx_t *httpctx = stream->udata;
+    mnhttp_ctx_t *httpctx = stream->udata;
     SSL *ssl = httpctx->udata;
     ssize_t nwritten;
 

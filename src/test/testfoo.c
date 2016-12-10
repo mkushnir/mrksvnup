@@ -216,13 +216,13 @@ dump_string(const char **v, UNUSED void *udata)
 
 static int
 str_cb(UNUSED svnc_ctx_t *ctx,
-       UNUSED bytestream_t *in,
+       UNUSED mnbytestream_t *in,
        svnproto_state_t *st,
        UNUSED void *udata)
 {
     int res = 0;
-    bytes_t **b;
-    array_t *ar = udata;
+    mnbytes_t **b;
+    mnarray_t *ar = udata;
 
 
     if (st->r.end == st->r.start) {
@@ -234,7 +234,7 @@ str_cb(UNUSED svnc_ctx_t *ctx,
             FAIL("array_incr");
         }
 
-        if ((*b = malloc(sizeof(bytes_t) + st->r.end - st->r.start)) == NULL) {
+        if ((*b = malloc(sizeof(mnbytes_t) + st->r.end - st->r.start)) == NULL) {
             FAIL("malloc");
         }
         (*b)->sz = st->r.end - st->r.start;
@@ -252,7 +252,7 @@ test_unpack(void)
     long n1, n2, n3, n4, n5 = -1;
     char *s1 = NULL, *s2 = NULL, *s3 = NULL, *s4 = NULL,
          *s5 = NULL, *s6 = NULL, *s7 = NULL, *s8 = NULL;
-    array_t ar;
+    mnarray_t ar;
 
     if ((ctx = svnc_new("svn://localhost/mysvn", "qwe", 0, 0))
         == NULL) {
@@ -409,7 +409,7 @@ my_unpack_cb(svnc_ctx_t *ctx, UNUSED svnproto_state_t *st, UNUSED void *udata)
 {
     int res;
     long n1 = 0;
-    array_t ar;
+    mnarray_t ar;
 
     init_string_array(&ar);
     res = svnproto_unpack(ctx, &ctx->in, "(nw*)", &n1, &ar);
@@ -427,7 +427,7 @@ UNUSED static void
 test_unpack_cb(void)
 {
     svnc_ctx_t *ctx;
-    array_t ar;
+    mnarray_t ar;
 
     if ((ctx = svnc_new("svn://localhost/mysvn", "qwe", 0, 0))
         == NULL) {
@@ -515,7 +515,7 @@ test_pack(void)
 
 static int
 my_caps(UNUSED svnc_ctx_t *ctx,
-        bytestream_t *out,
+        mnbytestream_t *out,
         UNUSED void *st,
         UNUSED void *udata)
 {
@@ -541,7 +541,7 @@ my_caps(UNUSED svnc_ctx_t *ctx,
 
 static int
 my_response(UNUSED svnc_ctx_t *ctx,
-            bytestream_t *out,
+            mnbytestream_t *out,
             UNUSED void *st,
             UNUSED void *udata)
 {
@@ -623,8 +623,8 @@ test_simple(void)
     svnc_ctx_t *ctx;
     long rev = 0;
     int kind = -1;
-    array_t dirents;
-    array_iter_t it;
+    mnarray_t dirents;
+    mnarray_iter_t it;
     svnc_dirent_t *de;
     svnc_fileent_t fe;
 
@@ -710,8 +710,8 @@ walk_cb(svnc_ctx_t *ctx,
         if (lstat(localpath, &sb) != 0) {
             int fd;
             svnc_fileent_t ffe;
-            bytes_t **chunk;
-            array_iter_t it;
+            mnbytes_t **chunk;
+            mnarray_iter_t it;
 
             if ((fd = open(localpath, O_RDWR|O_CREAT)) < 0) {
                 perror("open");
@@ -777,7 +777,7 @@ test_conn2(void)
     struct stat sb;
     const char *localroot = "qwe";
     char *p = NULL;
-    bytes_t *c = NULL;
+    mnbytes_t *c = NULL;
     int i;
 
     if ((ctx =
@@ -908,8 +908,8 @@ test_get_file(void)
 }
 
 static int
-mychunkcb(http_ctx_t *ctx,
-            UNUSED bytestream_t *in,
+mychunkcb(mnhttp_ctx_t *ctx,
+            UNUSED mnbytestream_t *in,
             UNUSED void *udata)
 {
     TRACE("%ld-%ld=%ld", ctx->current_chunk.end, ctx->current_chunk.start,
@@ -965,8 +965,8 @@ test_http_simple(void)
 }
 
 static int
-mybigbodycb(http_ctx_t *ctx,
-            UNUSED bytestream_t *in,
+mybigbodycb(mnhttp_ctx_t *ctx,
+            UNUSED mnbytestream_t *in,
             UNUSED void *udata)
 {
     TRACE("%ld-%ld=%ld", ctx->body.end, ctx->body.start,

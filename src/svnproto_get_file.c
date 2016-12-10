@@ -25,7 +25,7 @@
 
 static int
 pack3(UNUSED svnc_ctx_t *ctx,
-      bytestream_t *out,
+      mnbytestream_t *out,
       UNUSED void *st,
       UNUSED void *udata)
 {
@@ -43,7 +43,7 @@ pack3(UNUSED svnc_ctx_t *ctx,
 
 static int
 pack2(UNUSED svnc_ctx_t *ctx,
-      bytestream_t *out,
+      mnbytestream_t *out,
       UNUSED void *st,
       UNUSED void *udata)
 {
@@ -82,7 +82,7 @@ pack2(UNUSED svnc_ctx_t *ctx,
 
 static int
 pack1(UNUSED svnc_ctx_t *ctx,
-      bytestream_t *out,
+      mnbytestream_t *out,
       UNUSED void *st,
       UNUSED void *udata)
 {
@@ -99,13 +99,13 @@ pack1(UNUSED svnc_ctx_t *ctx,
 
 static int
 unpack3(UNUSED svnc_ctx_t *ctx,
-              UNUSED bytestream_t *in,
+              UNUSED mnbytestream_t *in,
               svnproto_state_t *st,
               UNUSED void *udata)
 {
     int res = 0;
-    bytes_t **b;
-    array_t *ar = udata;
+    mnbytes_t **b;
+    mnarray_t *ar = udata;
     ssize_t sz;
 
     sz = st->r.end - st->r.start;
@@ -123,7 +123,7 @@ unpack3(UNUSED svnc_ctx_t *ctx,
             FAIL("array_incr");
         }
 
-        if ((*b = malloc(sizeof(bytes_t) + sz)) == NULL) {
+        if ((*b = malloc(sizeof(mnbytes_t) + sz)) == NULL) {
             FAIL("malloc");
         }
         (*b)->sz = sz;
@@ -134,7 +134,7 @@ unpack3(UNUSED svnc_ctx_t *ctx,
 
 static int
 unpack2(svnc_ctx_t *ctx,
-        bytestream_t *in,
+        mnbytestream_t *in,
         UNUSED svnproto_state_t *st,
         UNUSED void *udata)
 {
@@ -149,12 +149,12 @@ unpack2(svnc_ctx_t *ctx,
 
 static int
 unpack1(svnc_ctx_t *ctx,
-        bytestream_t *in,
+        mnbytestream_t *in,
         UNUSED svnproto_state_t *st,
         UNUSED void *udata)
 {
     int res;
-    bytes_t *name = NULL, *value = NULL;
+    mnbytes_t *name = NULL, *value = NULL;
     svnc_fileent_t *e = udata;
     svnc_prop_t *p;
 

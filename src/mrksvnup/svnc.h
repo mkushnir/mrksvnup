@@ -50,7 +50,7 @@ typedef enum _svn_depth {
 typedef struct _bytes {
     size_t sz;
     char data[];
-} bytes_t;
+} mnbytes_t;
 /*
  * This macro is also defined in bytestream.h for a different structure.
  * Surprisingly, it appears to be exactly the same.
@@ -61,19 +61,19 @@ typedef struct _bytes {
 #endif
 
 typedef struct _svnc_prop {
-    bytes_t *name;
-    bytes_t *value;
+    mnbytes_t *name;
+    mnbytes_t *value;
 } svnc_prop_t;
 
 typedef struct _svnc_fileent {
-    bytes_t *checksum;
+    mnbytes_t *checksum;
     long rev;
-    array_t props;
-    array_t contents;
+    mnarray_t props;
+    mnarray_t contents;
 } svnc_fileent_t;
 
 typedef struct _svnc_dirent {
-    bytes_t *name;
+    mnbytes_t *name;
     long rev; /* copied from get-dir response */
     int kind;
     ssize_t size;
@@ -81,7 +81,7 @@ typedef struct _svnc_dirent {
 
 struct _svnc_ctx;
 
-typedef int (*svnc_cb_t)(struct _svnc_ctx *, bytestream_t *, void *, void *);
+typedef int (*svnc_cb_t)(struct _svnc_ctx *, mnbytestream_t *, void *, void *);
 
 typedef struct _svnc_ctx {
 #define SVNC_SCHEME_SVN 1
@@ -100,9 +100,9 @@ typedef struct _svnc_ctx {
     SSL_CTX *sslctx;
     SSL *ssl;
     /* input buffer */
-    bytestream_t in;
+    mnbytestream_t in;
     /* output buffer */
-    bytestream_t out;
+    mnbytestream_t out;
 #define SVNC_AUTH_MECH_OK 0x01
 #define SVNC_NOCACHE 0x02
 #define SVNC_FLUSHCACHE 0x04
@@ -126,8 +126,8 @@ typedef struct _svnc_ctx {
 
     struct _error_info {
         long apr_error;
-        bytes_t *message;
-        bytes_t *file;
+        mnbytes_t *message;
+        mnbytes_t *file;
         long line;
     } last_error;
 
@@ -177,10 +177,10 @@ void svnc_clear_last_error(svnc_ctx_t *);
 void svnc_print_last_error(svnc_ctx_t *);
 int svnc_close(svnc_ctx_t *);
 int svnc_destroy(svnc_ctx_t *);
-int svnc_save_checksum(svnc_ctx_t *, const char *, bytes_t *);
+int svnc_save_checksum(svnc_ctx_t *, const char *, mnbytes_t *);
 int svnc_delete_checksum(svnc_ctx_t *, const char *);
-int svnc_first_checksum(svnc_ctx_t *, char **, bytes_t **);
-int svnc_next_checksum(svnc_ctx_t *, char **, bytes_t **);
+int svnc_first_checksum(svnc_ctx_t *, char **, mnbytes_t **);
+int svnc_next_checksum(svnc_ctx_t *, char **, mnbytes_t **);
 int svnc_debug_open(svnc_ctx_t *, const char *);
 
 /* Utilities */
@@ -189,17 +189,17 @@ void svnc_check_integrity(svnc_ctx_t *, long);
 int svnc_fileent_init(svnc_fileent_t *);
 int svnc_fileent_fini(svnc_fileent_t *);
 void svnc_fileent_dump(svnc_fileent_t *);
-void init_long_array(array_t *);
-void dump_long_array(array_t *);
-void init_string_array(array_t *);
-void dump_string_array(array_t *);
-void fini_string_array(array_t *);
-void init_bytes_array(array_t *ar);
-void fini_bytes_array(array_t *ar);
-void dump_bytes_array(array_t *ar);
-bytes_t *bytes_from_str(const char *);
-bytes_t *bytes_from_strn(const char *, size_t);
-bytes_t *bytes_from_mem(const char *, size_t);
+void init_long_array(mnarray_t *);
+void dump_long_array(mnarray_t *);
+void init_string_array(mnarray_t *);
+void dump_string_array(mnarray_t *);
+void fini_string_array(mnarray_t *);
+void init_bytes_array(mnarray_t *ar);
+void fini_bytes_array(mnarray_t *ar);
+void dump_bytes_array(mnarray_t *ar);
+mnbytes_t *bytes_from_str(const char *);
+mnbytes_t *bytes_from_strn(const char *, size_t);
+mnbytes_t *bytes_from_mem(const char *, size_t);
 
 /* Protocol API flags */
 

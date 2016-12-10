@@ -72,7 +72,7 @@ svnedit_get_doc(void)
 
 
 int
-svnedit_verify_checksum(int fd, const bytes_t *cs)
+svnedit_verify_checksum(int fd, const mnbytes_t *cs)
 {
     int res = 0;
     char buf[VCBUFSZ];
@@ -135,7 +135,7 @@ svnedit_target_rev(UNUSED svnc_ctx_t *ctx, long rev)
 int
 svnedit_open_root(svnc_ctx_t *ctx,
                  UNUSED long rev,
-                 UNUSED bytes_t *token)
+                 UNUSED mnbytes_t *token)
 {
     struct stat sb;
 
@@ -190,9 +190,9 @@ delete_entry_cb(const char *path,
 
 int
 svnedit_delete_entry(svnc_ctx_t *ctx,
-                     bytes_t *path,
+                     mnbytes_t *path,
                      UNUSED long rev,
-                     UNUSED bytes_t *token)
+                     UNUSED mnbytes_t *token)
 {
     int res = 0;
     char *localpath = NULL;
@@ -251,7 +251,7 @@ END:
 
 int
 svnedit_add_dir(svnc_ctx_t *ctx,
-                bytes_t *path)
+                mnbytes_t *path)
 {
     int res = 0;
     char *localpath = NULL;
@@ -288,7 +288,7 @@ END:
 
 int
 svnedit_open_dir(svnc_ctx_t *ctx,
-                 bytes_t *path)
+                 mnbytes_t *path)
 {
     int res = 0;
     char *localpath = NULL;
@@ -367,8 +367,8 @@ static int
 create_file(svndiff_doc_t *doc, svnc_fileent_t *fe)
 {
     int res = 0;
-    bytes_t **s;
-    array_iter_t it;
+    mnbytes_t **s;
+    mnarray_iter_t it;
     ssize_t total_len = 0;
     int fd = -1;
 
@@ -418,9 +418,9 @@ static int
 create_symlink(svndiff_doc_t *doc, svnc_fileent_t *fe)
 {
     int res = 0;
-    bytes_t **s;
-    array_iter_t it;
-    array_t lnk;
+    mnbytes_t **s;
+    mnarray_iter_t it;
+    mnarray_t lnk;
     char *data;
 
     if (array_init(&lnk, sizeof(char), 0, NULL, NULL) != 0) {
@@ -471,7 +471,7 @@ checkout_file(svnc_ctx_t *ctx, svndiff_doc_t *doc, long rev)
     int res = 0;
     svnc_fileent_t fe;
     svnc_prop_t *prop;
-    array_iter_t it;
+    mnarray_iter_t it;
 
     svnc_fileent_init(&fe);
 
@@ -563,8 +563,8 @@ END:
 
 int
 svnedit_change_file_prop(UNUSED svnc_ctx_t *ctx,
-                         bytes_t *name,
-                         bytes_t *value)
+                         mnbytes_t *name,
+                         mnbytes_t *value)
 {
     /*
      * XXX The below logic is quite simplistic. It should eventually be
@@ -598,12 +598,12 @@ checksum_cb(svndiff_wnd_t *wnd, MD5_CTX *ctx)
 
 int
 svnedit_close_file(svnc_ctx_t *ctx,
-                   bytes_t *file_token,
-                   bytes_t *text_checksum)
+                   mnbytes_t *file_token,
+                   mnbytes_t *text_checksum)
 {
     int res = 0;
     MD5_CTX mctx;
-    array_iter_t it;
+    mnarray_iter_t it;
     svndiff_wnd_t *wnd;
     ssize_t total_len;
 

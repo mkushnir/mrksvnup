@@ -19,16 +19,16 @@ extern "C" {
 /*
  * n    read long
  * n?   read long
- * n*   read array_t of long
+ * n*   read mnarray_t of long
  * w    read char *
  * w?   read char *
- * w*   read array_t of char *
- * s    read bytes_t *
- * s?   read bytes_t *
- * s*   read array_t of bytes_t *
- * S    cb, udata (read bytes_t *)
- * S?   cb, udata (read bytes_t *)
- * S*   cb, udata (read bytes_t *)
+ * w*   read mnarray_t of char *
+ * s    read mnbytes_t *
+ * s?   read mnbytes_t *
+ * s*   read mnarray_t of mnbytes_t *
+ * S    cb, udata (read mnbytes_t *)
+ * S?   cb, udata (read mnbytes_t *)
+ * S*   cb, udata (read mnbytes_t *)
  * r    cb, udata (no read)
  * r?   cb, udata (no read)
  * r*   cb, udata (no read)
@@ -86,8 +86,8 @@ typedef struct _svnproto_state {
 /*
  * Parser
  */
-int svnproto_unpack(svnc_ctx_t *, bytestream_t *, const char *, ...);
-int svnproto_vunpack(svnc_ctx_t *, bytestream_t *, const char *, va_list);
+int svnproto_unpack(svnc_ctx_t *, mnbytestream_t *, const char *, ...);
+int svnproto_vunpack(svnc_ctx_t *, mnbytestream_t *, const char *, va_list);
 int svnproto_command_response(svnc_ctx_t *, const char *, ...);
 
 /* for user-defined calbacks to terminate r* r? S* S? */
@@ -99,16 +99,16 @@ int svnproto_command_response(svnc_ctx_t *, const char *, ...);
 /*
  * Serializer.
  */
-int pack_word(bytestream_t *, size_t, const char *);
-int pack_number(bytestream_t *, int);
-int pack_string(bytestream_t *, size_t, const char *);
-int pack_list(bytestream_t *, svnc_cb_t, svnc_ctx_t *, void *);
+int pack_word(mnbytestream_t *, size_t, const char *);
+int pack_number(mnbytestream_t *, int);
+int pack_string(mnbytestream_t *, size_t, const char *);
+int pack_list(mnbytestream_t *, svnc_cb_t, svnc_ctx_t *, void *);
 
 /*
  * Helpers
  */
-void svnproto_init_dirent_array(array_t *ar);
-void svnproto_dump_dirent_array(array_t *ar);
+void svnproto_init_dirent_array(mnarray_t *ar);
+void svnproto_dump_dirent_array(mnarray_t *ar);
 
 /*
  * Protocol.
@@ -117,7 +117,7 @@ int svnproto_setup(svnc_ctx_t *);
 int svnproto_check_auth(svnc_ctx_t *);
 int svnproto_get_latest_rev(svnc_ctx_t *, long *);
 int svnproto_check_path(svnc_ctx_t *, const char *, long, int *);
-int svnproto_get_dir(svnc_ctx_t *, const char *, long, array_t *);
+int svnproto_get_dir(svnc_ctx_t *, const char *, long, mnarray_t *);
 int svnproto_get_file(svnc_ctx_t *, const char *, long, int,
                       svnc_fileent_t *);
 int svnproto_reparent(svnc_ctx_t *, const char *);

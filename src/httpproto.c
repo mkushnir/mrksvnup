@@ -27,7 +27,7 @@ httpproto_finish_report(UNUSED svnc_ctx_t *ctx)
 }
 
 static int
-setup_header_cb(http_ctx_t *ctx, bytestream_t *in, void *udata)
+setup_header_cb(mnhttp_ctx_t *ctx, mnbytestream_t *in, void *udata)
 {
     dav_ctx_t *davctx = udata;
     UNUSED dav_xml_cb_t cb = {
@@ -71,7 +71,7 @@ setup_header_cb(http_ctx_t *ctx, bytestream_t *in, void *udata)
 
 
 static int
-setup_body_cb(http_ctx_t *ctx, bytestream_t *in, void *udata)
+setup_body_cb(mnhttp_ctx_t *ctx, mnbytestream_t *in, void *udata)
 {
     dav_ctx_t *davctx = udata;
     enum XML_Status res;
@@ -150,8 +150,8 @@ httpproto_get_latest_rev(svnc_ctx_t *ctx, long *rev)
 }
 
 static int
-check_path_status_cb(http_ctx_t *ctx,
-                   UNUSED bytestream_t *in,
+check_path_status_cb(mnhttp_ctx_t *ctx,
+                   UNUSED mnbytestream_t *in,
                    void *udata)
 {
     dav_ctx_t *davctx = udata;
@@ -194,7 +194,7 @@ check_path_error_chardata(void *udata,
 }
 
 static int
-check_path_body_cb(http_ctx_t *ctx, bytestream_t *in, void *udata)
+check_path_body_cb(mnhttp_ctx_t *ctx, mnbytestream_t *in, void *udata)
 {
     dav_ctx_t *davctx = udata;
     enum XML_Status res;
@@ -393,7 +393,7 @@ editor_el_start(void *udata,
             }
 
         } else {
-            bytes_t *path = NULL;
+            mnbytes_t *path = NULL;
 
             dav_cwp_enter(davctx, dname);
 
@@ -433,7 +433,7 @@ editor_el_start(void *udata,
             TRACE(FRED("invalid add-directory, ignoring"));
 
         } else {
-            bytes_t *path = NULL;
+            mnbytes_t *path = NULL;
 
             dav_cwp_enter(davctx, dname);
 
@@ -598,7 +598,7 @@ editor_el_start(void *udata,
             TRACE(FRED("invalid delete-entry, ignoring"));
 
         } else {
-            bytes_t *path;
+            mnbytes_t *path;
 
             dav_cwp_enter(davctx, ename);
 
@@ -724,7 +724,7 @@ editor_chardata(void *udata,
 
     } else if (strcmp(elname, "svn:set-prop") == 0 ||
                strcmp(elname, "svn:remove-prop") == 0) {
-        bytes_t *v;
+        mnbytes_t *v;
 
         v = bytes_from_strn(s, len);
 
@@ -789,8 +789,8 @@ editor_chardata(void *udata,
 }
 
 static int
-editor_status_cb(http_ctx_t *ctx,
-                   UNUSED bytestream_t *in,
+editor_status_cb(mnhttp_ctx_t *ctx,
+                   UNUSED mnbytestream_t *in,
                    void *udata)
 {
     dav_ctx_t *davctx = udata;
@@ -813,7 +813,7 @@ editor_status_cb(http_ctx_t *ctx,
 }
 
 static int
-editor_body_cb(http_ctx_t *ctx, bytestream_t *in, void *udata)
+editor_body_cb(mnhttp_ctx_t *ctx, mnbytestream_t *in, void *udata)
 {
     dav_ctx_t *davctx = udata;
     enum XML_Status res;

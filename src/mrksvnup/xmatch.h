@@ -9,8 +9,8 @@ extern "C" {
 
 typedef struct _xmatch {
     const char *pattern;
-    array_t compiled_pattern;
-    array_t input_stack;
+    mnarray_t compiled_pattern;
+    mnarray_t input_stack;
 } xmatch_t;
 
 int xmatch_init(xmatch_t *, const char *);

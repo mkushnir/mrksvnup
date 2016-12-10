@@ -13,7 +13,7 @@
 #include "mrkcommon/bytestream.h"
 
 static int
-parse_one_value(bytestream_t *in, svnproto_state_t *st)
+parse_one_value(mnbytestream_t *in, svnproto_state_t *st)
 {
     while (!SNEEDMORE(in)) {
         char c;
@@ -162,7 +162,7 @@ parse_one_value(bytestream_t *in, svnproto_state_t *st)
 }
 
 static int
-read_one_value(int fd, bytestream_t *in, svnproto_state_t *st)
+read_one_value(int fd, mnbytestream_t *in, svnproto_state_t *st)
 {
     int res = 0;
     //off_t savedpos;
@@ -212,15 +212,15 @@ read_one_value(int fd, bytestream_t *in, svnproto_state_t *st)
     TRRET(res);
 }
 
-static bytes_t *
-byte_chunk(bytestream_t *in, svnproto_state_t *st)
+static mnbytes_t *
+byte_chunk(mnbytestream_t *in, svnproto_state_t *st)
 {
     char *res = NULL;
-    bytes_t *b = NULL;
+    mnbytes_t *b = NULL;
 
     if ((res = malloc(st->r.end - st->r.start +
-                      sizeof(bytes_t) + 1)) != NULL) {
-        b = (bytes_t *)res;
+                      sizeof(mnbytes_t) + 1)) != NULL) {
+        b = (mnbytes_t *)res;
         b->sz = st->r.end - st->r.start;
         memcpy(b->data, SDATA(in, st->r.start), b->sz);
         b->data[b->sz] = '\0';
@@ -259,7 +259,7 @@ svnproto_state_destroy(svnproto_state_t *st)
 
 int
 svnproto_vunpack(svnc_ctx_t *ctx,
-                 bytestream_t *in,
+                 mnbytestream_t *in,
                  const char *spec,
                  va_list ap)
 {
@@ -322,7 +322,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 /* no variable */
 
             } else if (ch == 'n') {
-                array_t *ar;
+                mnarray_t *ar;
                 long *pv;
 
                 if ((res = read_one_value(ctx->fd, in, st)) != 0) {
@@ -331,7 +331,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 }
 
                 if (ch1 == '*') {
-                    ar = va_arg(ap, array_t *);
+                    ar = va_arg(ap, mnarray_t *);
 
                     if (ar != NULL) {
                         while (st->tokenizer_state == TS_NUM_OUT) {
@@ -395,7 +395,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 }
 
             } else if (ch == 'w') {
-                array_t *ar;
+                mnarray_t *ar;
                 char **pv;
 
                 if ((res = read_one_value(ctx->fd, in, st)) != 0) {
@@ -404,7 +404,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 }
 
                 if (ch1 == '*') {
-                    ar = va_arg(ap, array_t *);
+                    ar = va_arg(ap, mnarray_t *);
 
                     if (ar != NULL) {
                         while (st->tokenizer_state == TS_TOK_OUT) {
@@ -469,8 +469,8 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 }
 
             } else if (ch == 's') {
-                array_t *ar;
-                bytes_t **pv;
+                mnarray_t *ar;
+                mnbytes_t **pv;
 
                 if ((res = read_one_value(ctx->fd, in, st)) != 0) {
                     /* read error */
@@ -478,7 +478,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 }
 
                 if (ch1 == '*') {
-                    ar = va_arg(ap, array_t *);
+                    ar = va_arg(ap, mnarray_t *);
 
                     if (ar != NULL) {
                         while (st->tokenizer_state == TS_STRING_OUT) {
@@ -510,7 +510,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                     //TRACE("backtrack @ s*");
 
                 } else if (ch1 == '?') {
-                    pv = va_arg(ap, bytes_t **);
+                    pv = va_arg(ap, mnbytes_t **);
 
                     if (st->tokenizer_state == TS_STRING_OUT) {
                         if (pv != NULL) {
@@ -528,7 +528,7 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                 } else {
                     if (st->tokenizer_state == TS_STRING_OUT) {
 
-                        pv = va_arg(ap, bytes_t **);
+                        pv = va_arg(ap, mnbytes_t **);
                         if (pv != NULL) {
                             *pv = byte_chunk(in, st);
                         }
@@ -805,7 +805,7 @@ END:
 
 int
 svnproto_unpack(svnc_ctx_t *ctx,
-                bytestream_t *in,
+                mnbytestream_t *in,
                 const char *spec,
                 ...)
 {

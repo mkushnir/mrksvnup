@@ -42,7 +42,7 @@
 
 static int
 pack4(UNUSED svnc_ctx_t *ctx,
-      bytestream_t *out,
+      mnbytestream_t *out,
       UNUSED void *st,
       UNUSED void *udata)
 {
@@ -62,7 +62,7 @@ pack4(UNUSED svnc_ctx_t *ctx,
 
 static int
 pack3(UNUSED svnc_ctx_t *ctx,
-      bytestream_t *out,
+      mnbytestream_t *out,
       UNUSED void *st,
       UNUSED void *udata)
 {
@@ -79,7 +79,7 @@ pack3(UNUSED svnc_ctx_t *ctx,
 
 static int
 pack2(UNUSED svnc_ctx_t *ctx,
-      bytestream_t *out,
+      mnbytestream_t *out,
       UNUSED void *st,
       UNUSED void *udata)
 {
@@ -114,7 +114,7 @@ pack2(UNUSED svnc_ctx_t *ctx,
 
 static int
 pack1(UNUSED svnc_ctx_t *ctx,
-      bytestream_t *out,
+      mnbytestream_t *out,
       UNUSED void *st,
       UNUSED void *udata)
 {
@@ -161,7 +161,7 @@ dirent_dump(svnc_dirent_t *e)
 }
 
 void
-svnproto_init_dirent_array(array_t *ar)
+svnproto_init_dirent_array(mnarray_t *ar)
 {
     if (array_init(ar, sizeof(svnc_dirent_t), 0,
                    (array_initializer_t)dirent_init,
@@ -171,14 +171,14 @@ svnproto_init_dirent_array(array_t *ar)
 }
 
 void
-svnproto_dump_dirent_array(array_t *ar)
+svnproto_dump_dirent_array(mnarray_t *ar)
 {
     array_traverse(ar, (array_traverser_t)dirent_dump, NULL);
 }
 
 static int
 unpack3(svnc_ctx_t *ctx,
-        bytestream_t *in,
+        mnbytestream_t *in,
         UNUSED svnproto_state_t *st,
         UNUSED void *udata)
 {
@@ -190,15 +190,15 @@ unpack3(svnc_ctx_t *ctx,
 
 static int
 unpack2(svnc_ctx_t *ctx,
-        bytestream_t *in,
+        mnbytestream_t *in,
         UNUSED svnproto_state_t *st,
         UNUSED void *udata)
 {
     int res;
-    bytes_t *name = NULL;
+    mnbytes_t *name = NULL;
     char *kind_str = NULL;
     long size;
-    array_t *dirents = udata;
+    mnarray_t *dirents = udata;
     svnc_dirent_t *e;
 
 
@@ -227,12 +227,12 @@ unpack2(svnc_ctx_t *ctx,
 
 static int
 unpack1(svnc_ctx_t *ctx,
-        bytestream_t *in,
+        mnbytestream_t *in,
         UNUSED svnproto_state_t *st,
         UNUSED void *udata)
 {
     int res;
-    bytes_t *key = NULL, *value = NULL;
+    mnbytes_t *key = NULL, *value = NULL;
 
     res = svnproto_unpack(ctx, in, "(ss)", &key, &value);
     //TRACE("key=%s value=%s", BDATA(key), BDATA(value));
@@ -253,7 +253,7 @@ svnproto_get_dir(svnc_ctx_t *ctx,
                  const char *path,
                  long rev,
                  /* TODO want-props want-contents fields want-iprops */
-                 array_t *dirents)
+                 mnarray_t *dirents)
 {
     int res = 0;
     struct {
@@ -262,7 +262,7 @@ svnproto_get_dir(svnc_ctx_t *ctx,
     } params = {path, rev};
     long orev;
     svnc_dirent_t *de;
-    array_iter_t it;
+    mnarray_iter_t it;
 
     if (pack_list(&ctx->out, pack1, NULL, &params) != 0) {
         TRRET(SVNPROTO_GET_DIR + 11);

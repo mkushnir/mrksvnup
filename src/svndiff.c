@@ -83,7 +83,7 @@ decode_insn(const char *start, const char *end, svndiff_insn_t *insn)
 
 static const char *
 decode_bytes(const char *start, const char *end,
-             size_t encoded_len, bytes_t **out)
+             size_t encoded_len, mnbytes_t **out)
 {
     long orig_len;
     const char *savedstart = start;
@@ -96,7 +96,7 @@ decode_bytes(const char *start, const char *end,
     //TRACE("orig_len=%ld", orig_len);
     encoded_len -= (start - savedstart);
 
-    if ((*out = malloc(sizeof(bytes_t) + orig_len)) == NULL) {
+    if ((*out = malloc(sizeof(mnbytes_t) + orig_len)) == NULL) {
         FAIL("malloc");
     }
     (*out)->sz = orig_len;
@@ -146,7 +146,7 @@ dump_insn(svndiff_insn_t *insn, UNUSED void *udata)
 
 
 static void
-init_insn_array(array_t *ar)
+init_insn_array(mnarray_t *ar)
 {
     if (array_init(ar, sizeof(svndiff_insn_t), 0,
                    (array_initializer_t)init_insn,
@@ -156,7 +156,7 @@ init_insn_array(array_t *ar)
 }
 
 static void
-fini_insn_array(array_t *ar)
+fini_insn_array(mnarray_t *ar)
 {
     if (array_fini(ar) != 0) {
         FAIL("array_fini");
@@ -164,7 +164,7 @@ fini_insn_array(array_t *ar)
 }
 
 static void
-dump_insn_array(array_t *ar)
+dump_insn_array(mnarray_t *ar)
 {
     array_traverse(ar, (array_traverser_t)dump_insn, NULL);
 }
@@ -223,7 +223,7 @@ dump_wnd(svndiff_wnd_t *wnd, UNUSED void *udata)
 }
 
 static void
-init_wnd_array(array_t *ar)
+init_wnd_array(mnarray_t *ar)
 {
     if (array_init(ar, sizeof(svndiff_wnd_t), 0,
                    (array_initializer_t)init_wnd,
@@ -233,7 +233,7 @@ init_wnd_array(array_t *ar)
 }
 
 static void
-fini_wnd_array(array_t *ar)
+fini_wnd_array(mnarray_t *ar)
 {
     if (array_fini(ar) != 0) {
         FAIL("array_fini");
@@ -241,7 +241,7 @@ fini_wnd_array(array_t *ar)
 }
 
 static void
-dump_wnd_array(array_t *ar)
+dump_wnd_array(mnarray_t *ar)
 {
     array_traverse(ar, (array_traverser_t)dump_wnd, NULL);
 }
@@ -398,7 +398,7 @@ svndiff_parse_doc(const char *start,
             }
 
         } else if (doc->parse_state == SD_STATE_INSNS) {
-            bytes_t *b = NULL;
+            mnbytes_t *b = NULL;
 
             if ((start = decode_bytes(start,
                                       end,
@@ -472,7 +472,7 @@ int
 svndiff_build_tview(svndiff_wnd_t *wnd, svndiff_doc_t *doc)
 {
     int res = 0;
-    array_iter_t it;
+    mnarray_iter_t it;
     svndiff_insn_t *insn;
     char *ptbuf;
     ssize_t navail;

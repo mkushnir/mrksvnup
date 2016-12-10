@@ -27,13 +27,13 @@ typedef struct _dav_ctx {
     svn_depth_t depth;
 
     long flags;
-    array_t cwp;
+    mnarray_t cwp;
 
     /* xml parser context */
 #define XPS_SET_PROP 1
     int xml_parser_state;
-    bytes_t *set_prop_name;
-    bytes_t *text_checksum;
+    mnbytes_t *set_prop_name;
+    mnbytes_t *text_checksum;
 
     /* ad hoc weak ref */
     const char *target;
@@ -65,7 +65,7 @@ void dav_ctx_destroy(dav_ctx_t *);
 void dav_setup_xml_parser(dav_ctx_t *, dav_xml_cb_t *, void *, const char *);
 void dav_cwp_enter(dav_ctx_t *, const char *);
 void dav_cwp_leave(dav_ctx_t *);
-bytes_t *dav_cwp(dav_ctx_t *);
+mnbytes_t *dav_cwp(dav_ctx_t *);
 char *dav_rvr_path(dav_ctx_t *, const char *, long);
 
 #ifdef __cplusplus

@@ -72,8 +72,8 @@ get_file_props_chardata(void *udata,
 
 
 static int
-get_file_props_body_cb(http_ctx_t *ctx,
-                       bytestream_t *in,
+get_file_props_body_cb(mnhttp_ctx_t *ctx,
+                       mnbytestream_t *in,
                        void *udata)
 {
     dav_ctx_t *davctx = udata;
@@ -94,8 +94,8 @@ get_file_props_body_cb(http_ctx_t *ctx,
 }
 
 static int
-get_file_props_status_cb(http_ctx_t *ctx,
-                         UNUSED bytestream_t *in,
+get_file_props_status_cb(mnhttp_ctx_t *ctx,
+                         UNUSED mnbytestream_t *in,
                          void *udata)
 {
     dav_ctx_t *davctx = udata;
@@ -118,8 +118,8 @@ get_file_props_status_cb(http_ctx_t *ctx,
 }
 
 static int
-get_file_contents_status_cb(http_ctx_t *ctx,
-                            UNUSED bytestream_t *in,
+get_file_contents_status_cb(mnhttp_ctx_t *ctx,
+                            UNUSED mnbytestream_t *in,
                             UNUSED void *udata)
 {
     if (ctx->status != 200) {
@@ -129,11 +129,11 @@ get_file_contents_status_cb(http_ctx_t *ctx,
 }
 
 static int
-get_file_contents_body_cb(http_ctx_t *ctx, bytestream_t *in, void *udata)
+get_file_contents_body_cb(mnhttp_ctx_t *ctx, mnbytestream_t *in, void *udata)
 {
     dav_ctx_t *davctx = udata;
     svnc_fileent_t *fe = davctx->fe;
-    bytes_t **b;
+    mnbytes_t **b;
 
     //D32(SDATA(in, ctx->current_chunk.start), ctx->current_chunk.end - ctx->current_chunk.start);
 

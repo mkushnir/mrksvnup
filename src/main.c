@@ -60,7 +60,7 @@ sigterm_handler(UNUSED int sig)
 
 static int
 update_cb(svnc_ctx_t *ctx,
-          UNUSED bytestream_t *stream,
+          UNUSED mnbytestream_t *stream,
           UNUSED void *st,
           void *udata)
 {
