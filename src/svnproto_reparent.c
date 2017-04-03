@@ -65,7 +65,7 @@ svnproto_reparent(svnc_ctx_t *ctx, const char *path)
         TRRET(SVNPROTO_REPARENT + 4);
     }
 
-    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+    if (bytestream_produce_data(&ctx->out, (void *)(intptr_t)ctx->fd) != 0) {
         TRRET(SVNPROTO_REPARENT + 5);
     }
 

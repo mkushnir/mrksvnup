@@ -12,7 +12,7 @@
 
 ssize_t
 bytestream_ssl_recv_more(mnbytestream_t *stream,
-                         UNUSED int fd,
+                         UNUSED void *fd,
                          ssize_t sz)
 {
     mnhttp_ctx_t *httpctx = stream->udata;
@@ -44,7 +44,7 @@ bytestream_ssl_recv_more(mnbytestream_t *stream,
 
 
 ssize_t bytestream_ssl_send(mnbytestream_t *stream,
-                            UNUSED int fd,
+                            UNUSED void *fd,
                             size_t sz)
 {
     mnhttp_ctx_t *httpctx = stream->udata;

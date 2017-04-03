@@ -43,7 +43,7 @@ svnproto_get_latest_rev(svnc_ctx_t *ctx, long *rev)
         TRRET(SVNPROTO_GET_LATEST_REV + 3);
     }
 
-    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+    if (bytestream_produce_data(&ctx->out, (void *)(intptr_t)ctx->fd) != 0) {
         TRRET(SVNPROTO_GET_LATEST_REV + 4);
     }
 

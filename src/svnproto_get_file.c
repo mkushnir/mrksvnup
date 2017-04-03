@@ -191,7 +191,7 @@ DO_REQUEST:
         TRRET(SVNPROTO_GET_FILE + 9);
     }
 
-    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+    if (bytestream_produce_data(&ctx->out, (void *)(intptr_t)ctx->fd) != 0) {
         TRRET(SVNPROTO_GET_FILE + 10);
     }
 

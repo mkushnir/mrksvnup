@@ -92,7 +92,7 @@ svnproto_check_path(svnc_ctx_t *ctx, const char *path, long rev, int *kind)
         goto END;
     }
 
-    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+    if (bytestream_produce_data(&ctx->out, (void *)(intptr_t)ctx->fd) != 0) {
         res = SVNPROTO_CHECK_PATH + 7;
         goto END;
     }

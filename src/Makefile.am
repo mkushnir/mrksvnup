@@ -65,7 +65,7 @@ endif
 
 libmrksvnup_la_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 -I$(includedir) $(FCOLOR_FLAGS)
 
-libmrksvnup_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon -lz -lbsdxml -lcrypto -ssl
+libmrksvnup_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon -lz -lbsdxml -lcrypto -lssl
 
 bin_PROGRAMS = svnup
 

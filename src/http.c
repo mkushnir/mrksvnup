@@ -512,7 +512,7 @@ http_parse_response(int fd,
 
         if (SNEEDMORE(in)) {
             int lres;
-            if ((lres = bytestream_consume_data(in, fd)) != 0) {
+            if ((lres = bytestream_consume_data(in, (void *)(intptr_t)fd)) != 0) {
                 /* this must be treated as EOF condition */
 #ifdef TRRET_DEBUG
                 http_ctx_dump(ctx);

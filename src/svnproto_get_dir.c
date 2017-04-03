@@ -268,7 +268,7 @@ svnproto_get_dir(svnc_ctx_t *ctx,
         TRRET(SVNPROTO_GET_DIR + 11);
     }
 
-    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+    if (bytestream_produce_data(&ctx->out, (void *)(intptr_t)ctx->fd) != 0) {
         TRRET(SVNPROTO_GET_DIR + 12);
     }
 

@@ -47,7 +47,7 @@ svnproto_finish_report(svnc_ctx_t * ctx)
         TRRET(SVNPROTO_FINISH_REPORT + 3);
     }
 
-    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+    if (bytestream_produce_data(&ctx->out, (void *)(intptr_t)ctx->fd) != 0) {
         TRRET(SVNPROTO_FINISH_REPORT + 4);
     }
 

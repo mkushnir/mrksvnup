@@ -93,7 +93,7 @@ int svnproto_check_auth(svnc_ctx_t *ctx)
                 goto END;
             }
 
-            if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+            if (bytestream_produce_data(&ctx->out, (void *)(intptr_t)ctx->fd) != 0) {
                 res = SVNPROTO_CHECK_AUTH + 3;
                 goto END;
             }

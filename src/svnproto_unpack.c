@@ -183,7 +183,7 @@ read_one_value(int fd, mnbytestream_t *in, svnproto_state_t *st)
         //bytestream_dump(in);
 
         if (SNEEDMORE(in)) {
-            if ((res = bytestream_consume_data(in, fd)) != 0) {
+            if ((res = bytestream_consume_data(in, (void *)(intptr_t)fd)) != 0) {
                 /* this must be treated as EOF condition */
                 res = PARSE_EOD;
                 break;

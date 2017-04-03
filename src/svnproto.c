@@ -206,7 +206,7 @@ svnproto_setup(svnc_ctx_t *ctx)
         goto END;
     }
 
-    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+    if (bytestream_produce_data(&ctx->out, (void *)(intptr_t)ctx->fd) != 0) {
         res = SVNPROTO_SETUP + 4;
         goto END;
     }

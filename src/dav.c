@@ -389,7 +389,7 @@ dav_request(svnc_ctx_t *ctx,
         }
     }
 
-    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+    if (bytestream_produce_data(&ctx->out, (void *)(intptr_t)ctx->fd) != 0) {
         TRRET(DAV_REQUEST + 5);
     }
 

@@ -141,7 +141,7 @@ svnproto_update(svnc_ctx_t *ctx,
         TRRET(SVNPROTO_UPDATE + 11);
     }
 
-    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+    if (bytestream_produce_data(&ctx->out, (void *)(intptr_t)ctx->fd) != 0) {
         TRRET(SVNPROTO_UPDATE + 12);
     }
 
@@ -160,7 +160,7 @@ svnproto_update(svnc_ctx_t *ctx,
         TRRET(SVNPROTO_UPDATE + 15);
     }
 
-    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+    if (bytestream_produce_data(&ctx->out, (void *)(intptr_t)ctx->fd) != 0) {
         TRRET(SVNPROTO_UPDATE + 16);
     }
 

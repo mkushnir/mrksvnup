@@ -949,7 +949,7 @@ test_http_simple(void)
         assert(0);
     }
 
-    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+    if (bytestream_produce_data(&ctx->out, (void *)(intptr_t)ctx->fd) != 0) {
         assert(0);
     }
 
@@ -1003,7 +1003,7 @@ test_http_bigbody(void)
         assert(0);
     }
 
-    if (bytestream_produce_data(&ctx->out, ctx->fd) != 0) {
+    if (bytestream_produce_data(&ctx->out, (void *)(intptr_t)ctx->fd) != 0) {
         assert(0);
     }
 
