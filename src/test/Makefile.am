@@ -6,7 +6,8 @@ noinst_PROGRAMS=testfoo
 
 distdir = ../../$(PACKAGE)-$(VERSION)/src/test
 
-BUILT_SOURCES = ../diag.c ../diag.h
+diags = ../diag.txt
+BUILT_SOURCES = diag.c diag.h
 
 if DEBUG
 DEBUG_FLAGS = -g -O0 @CLANG_DEBUG@
@@ -15,7 +16,7 @@ DEBUG_FLAGS = -DNDEBUG -O3
 endif
 
 CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 -I.. -I$(includedir)
-LDFLAGS += -L$(libdir) -lmrkcommon -lz -lbsdxml -lcrypto -lssl
+LDFLAGS += -L$(libdir) -lmrkcommon -lmndiag -lz -lbsdxml -lcrypto -lssl
 
 dist_HEADERS = unittest.h \
 			 ../mrksvnup/svnc.h \
@@ -29,7 +30,7 @@ dist_HEADERS = unittest.h \
 			 ../mrksvnup/xmatch.h \
 			 ../mrksvnup/version.h
 
-nodist_testfoo_SOURCES = ../diag.c
+nodist_testfoo_SOURCES = diag.c
 testfoo_SOURCES = ../svnc.c \
 		  ../http.c \
 		  ../httpproto.c \
@@ -59,8 +60,8 @@ testfoo_SOURCES = ../svnc.c \
 testfoo_CFLAGS =
 testfoo_LDFLAGS =
 
-../diag.c ../diag.h: ../diag.txt
-	$(AM_V_GEN) cat ../diag.txt | sort -u | /bin/sh ../gen-diag mrksvnup ..
+diag.c diag.h: $(diags)
+	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -S diag.txt.tmp -L mrksvnup -H diag.h -C diag.c ../*.[ch] ./*.[ch]
 
 testrun: all
 	for i in $(noinst_PROGRAMS); do if test -x ./$$i; then LD_LIBRARY_PATH=$(libdir) ./$$i; fi; done;

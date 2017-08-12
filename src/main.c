@@ -75,7 +75,10 @@ update_cb(svnc_ctx_t *ctx,
     if ((res = ctx->set_path(ctx, params->path, params->source_rev,
                       NULL, SVN_DEPTH_INFINITY,
                       params->set_path_flags)) != 0) {
-        errx(1, "set_path [%s]", diag_str(res));
+        char buf[64];
+
+        mndiag_mrksvnup_str(res, buf, sizeof(buf));
+        errx(1, "set_path [%s]", buf);
     }
 
     if (ctx->debug_level > 0) {
@@ -84,7 +87,10 @@ update_cb(svnc_ctx_t *ctx,
 
     assert(ctx->finish_report != NULL);
     if ((res = ctx->finish_report(ctx)) != 0) {
-        errx(1, "finish_report [%s]", diag_str(res));
+        char buf[64];
+
+        mndiag_mrksvnup_str(res, buf, sizeof(buf));
+        errx(1, "finish_report [%s]", buf);
     }
 
     if (ctx->debug_level > 0) {
@@ -93,8 +99,11 @@ update_cb(svnc_ctx_t *ctx,
 
     assert(ctx->editor != NULL);
     if ((res = ctx->editor(ctx)) != 0) {
+        char buf[64];
+
         svnc_print_last_error(ctx);
-        errx(1, "editor [%s]", diag_str(res));
+        mndiag_mrksvnup_str(res, buf, sizeof(buf));
+        errx(1, "editor [%s]", buf);
     }
 
     return 0;
@@ -217,7 +226,10 @@ run(const char *cmdline_url,
     if (target_rev <= 0) {
         assert(ctx->get_latest_rev != NULL);
         if ((res = ctx->get_latest_rev(ctx, &target_rev)) != 0) {
-            errx(1, "get_latest_rev [%s]", diag_str(res));
+            char buf[64];
+
+            mndiag_mrksvnup_str(res, buf, sizeof(buf));
+            errx(1, "get_latest_rev [%s]", buf);
         }
     }
 
@@ -252,7 +264,10 @@ run(const char *cmdline_url,
     assert(ctx->update != NULL);
     if ((res = ctx->update(ctx, target_rev, update_params.path, 0,
                         UPFLAG_RECURSE, update_cb, &update_params)) != 0) {
-        errx(1, "update [%s]", diag_str(res));
+        char buf[64];
+
+        mndiag_mrksvnup_str(res, buf, sizeof(buf));
+        errx(1, "update [%s]", buf);
     }
 
     /*

@@ -3,8 +3,9 @@ AUTOMAKE_OPTIONS = foreign
 distdir = ../$(PACKAGE)-$(VERSION)/src
 dist_HEADERS = svnc_private.h httpproto_private.h bytestream_ssl_helper.h
 
+diags = diag.txt
 BUILT_SOURCES = diag.c diag.h
-EXTRA_DIST = diag.txt gen-diag
+EXTRA_DIST = $(diags)
 CLEANFILES = $(BUILT_SOURCES) *.core
 #CLEANFILES += *.in
 
@@ -65,19 +66,19 @@ endif
 
 libmrksvnup_la_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 -I$(includedir) $(FCOLOR_FLAGS)
 
-libmrksvnup_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon -lz -lbsdxml -lcrypto -lssl
+libmrksvnup_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon -lmndiag -lz -lbsdxml -lcrypto -lssl
 
 bin_PROGRAMS = svnup
 
 svnup_SOURCES = main.c
 nodist_svnup_SOURCES =
 svnup_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -g -std=c99 -I$(includedir) $(FCOLOR_FLAGS)
-svnup_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon -lmrksvnup
+svnup_LDFLAGS = -version-info 0:0:0 -lmrksvnup -L$(libdir) -lmrkcommon -lmndiag
 
 SUBDIRS = . test
 
-diag.c diag.h: diag.txt
-	$(AM_V_GEN) cat diag.txt | sort -u | /bin/sh ./gen-diag mrksvnup
+diag.c diag.h: $(diags)
+	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -S diag.txt.tmp -L mrksvnup -H diag.h -C diag.c *.[ch]
 
 run: all
 	for i in $(bin_PROGRAMS); do if test -x ./$$i; then LD_LIBRARY_PATH=$(libdir) ./$$i; fi; done;

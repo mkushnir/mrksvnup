@@ -253,6 +253,7 @@ test_unpack(void)
     char *s1 = NULL, *s2 = NULL, *s3 = NULL, *s4 = NULL,
          *s5 = NULL, *s6 = NULL, *s7 = NULL, *s8 = NULL;
     mnarray_t ar;
+    char buf[64];
 
     if ((ctx = svnc_new("svn://localhost/mysvn", "qwe", 0, 0))
         == NULL) {
@@ -266,7 +267,8 @@ test_unpack(void)
     }
 
     res = svnproto_unpack(ctx, &ctx->in, "nnn", &n1, &n2, &n3);
-    TRACE("res=%s", diag_str(res));
+    mndiag_mrksvnup_str(res, buf, sizeof(buf));
+    TRACE("res=%s", buf);
     //if (SVNPROTO_UNPACK(ctx, &ctx->in, "nnn", &n1, &n2, &n3) != 0) {
     //    assert(0);
     //}
@@ -810,7 +812,10 @@ test_conn2(void)
         TRACE("deleting %s %s", p, BDATA(c));
 
         if ((res = svnc_delete_checksum(ctx, p)) != 0) {
-            TRACE("res=%s", diag_str(res));
+            char buf[64];
+
+            mndiag_mrksvnup_str(res, buf, sizeof(buf));
+            TRACE("res=%s", buf);
         }
 
         free(p);
@@ -922,6 +927,7 @@ UNUSED static void
 test_http_simple(void)
 {
     int res = 0;
+    char buf[64];
 
     svnc_ctx_t *ctx;
     if ((ctx =
@@ -956,7 +962,8 @@ test_http_simple(void)
     bytestream_rewind(&ctx->out);
 
     res = http_parse_response(ctx->fd, &ctx->in, NULL, NULL, mychunkcb, NULL);
-    TRACE("res=%s", diag_str(res));
+    mndiag_mrksvnup_str(res, buf, sizeof(buf));
+    TRACE("res=%s", buf);
 
 
     svnc_close(ctx);
@@ -981,6 +988,7 @@ UNUSED static void
 test_http_bigbody(void)
 {
     int res = 0;
+    char buf[64];
 
     svnc_ctx_t *ctx;
     if ((ctx =
@@ -1010,7 +1018,8 @@ test_http_bigbody(void)
     bytestream_rewind(&ctx->out);
 
     res = http_parse_response(ctx->fd, &ctx->in, NULL, NULL, mybigbodycb, NULL);
-    TRACE("res=%s", diag_str(res));
+    mndiag_mrksvnup_str(res, buf, sizeof(buf));
+    TRACE("res=%s", buf);
 
 
 }

@@ -94,7 +94,7 @@ int svnproto_command_response(svnc_ctx_t *, const char *, ...);
 #define SVNPROTO_UNPACK_NOMATCH_BACKTRACK (SVNPROTO_VUNPACK + 100)
 #define SVNPROTO_UNPACK_NOMATCH_GOAHEAD (SVNPROTO_VUNPACK + 101)
 #define SVNPROTO_IGNORE_VUNPACK(res) \
-    ((((res) & DIAG_CLASS_MASK) == SVNPROTO_VUNPACK) ? 0 : (res))
+    ((MNDIAG_CLASS(res) == MNDIAG_CLASS(SVNPROTO_VUNPACK)) ? 0 : (res))
 
 /*
  * Serializer.

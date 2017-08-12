@@ -560,8 +560,8 @@ svnproto_vunpack(svnc_ctx_t *ctx,
                         while (st->tokenizer_state == TS_STRING_OUT) {
                             if ((res = cb(ctx, in, st, udata)) != 0) {
 
-                                if ((res & DIAG_CLASS_MASK) !=
-                                     SVNPROTO_VUNPACK) {
+                                if (MNDIAG_CLASS(res) !=
+                                    MNDIAG_CLASS(SVNPROTO_VUNPACK)) {
 
                                     /* read error */
                                     goto END;
@@ -607,8 +607,8 @@ END_S_STAR:
 
                             if ((res = cb(ctx, in, st, udata)) != 0) {
 
-                                if ((res & DIAG_CLASS_MASK) !=
-                                     SVNPROTO_VUNPACK) {
+                                if (MNDIAG_CLASS(res) !=
+                                    MNDIAG_CLASS(SVNPROTO_VUNPACK)) {
 
                                     /* read error */
                                     goto END;
@@ -636,8 +636,8 @@ END_S_STAR:
                         if (cb != NULL) {
                             if ((res = cb(ctx, in, st, udata)) != 0) {
 
-                                if ((res & DIAG_CLASS_MASK) !=
-                                     SVNPROTO_VUNPACK) {
+                                if (MNDIAG_CLASS(res) !=
+                                    MNDIAG_CLASS(SVNPROTO_VUNPACK)) {
 
                                     /* read error */
                                     goto END;
@@ -680,7 +680,8 @@ END_S_STAR:
                             ;
                         }
 
-                        if ((res & DIAG_CLASS_MASK) != SVNPROTO_VUNPACK) {
+                        if (MNDIAG_CLASS(res) !=
+                            MNDIAG_CLASS(SVNPROTO_VUNPACK)) {
 
                             /* read error */
                             goto END;
@@ -703,7 +704,8 @@ END_S_STAR:
                     if (cb != NULL) {
                         if ((res = cb(ctx, in, st, udata)) != 0) {
 
-                            if ((res & DIAG_CLASS_MASK) != SVNPROTO_VUNPACK) {
+                            if (MNDIAG_CLASS(res) !=
+                                MNDIAG_CLASS(SVNPROTO_VUNPACK)) {
 
                                 /* read error */
                                 goto END;
@@ -723,7 +725,8 @@ END_S_STAR:
                 } else {
                     if (cb != NULL) {
                         if ((res = cb(ctx, in, st, udata)) != 0) {
-                            if ((res & DIAG_CLASS_MASK) != SVNPROTO_VUNPACK) {
+                            if (MNDIAG_CLASS(res) !=
+                                MNDIAG_CLASS(SVNPROTO_VUNPACK)) {
 
                                 /* read error */
                                 goto END;
@@ -770,8 +773,8 @@ END_S_STAR:
 
 END:
     /* supress SVNPROTO_UNPACK_NOMATCH */
-    if (res == SVNPROTO_UNPACK_NOMATCH_GOAHEAD ||
-        res == SVNPROTO_UNPACK_NOMATCH_BACKTRACK) {
+    if (res == (int)SVNPROTO_UNPACK_NOMATCH_GOAHEAD ||
+        res == (int)SVNPROTO_UNPACK_NOMATCH_BACKTRACK) {
 #ifdef TRRET_DEBUG
         TRACE("Suppressing SVNPROTO_UNPACK_NOMATCH returned by callback");
 #endif

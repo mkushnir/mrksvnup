@@ -10,7 +10,6 @@
 #include <sys/types.h>
 #include <openssl/ssl.h>
 
-#include "diag.h"
 #include <mrkcommon/util.h>
 //#define TRRET_DEBUG
 //#define TRRET_DEBUG_VERBOSE
@@ -25,6 +24,8 @@
 
 #include "svnc_private.h"
 #include "bytestream_ssl_helper.h"
+
+#include "diag.h"
 
 int
 svnc_save_checksum(svnc_ctx_t *ctx,
