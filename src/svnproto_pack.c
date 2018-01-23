@@ -34,7 +34,7 @@ pack_number(mnbytestream_t *out, int n)
 int
 pack_string(mnbytestream_t *out, size_t sz, const char *str)
 {
-    if (bytestream_nprintf(out, 32, "%d:", sz) < 0) {
+    if (bytestream_nprintf(out, 32, "%zd:", sz) < 0) {
         TRRET(PACK_STRING + 1);
     }
 
