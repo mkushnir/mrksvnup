@@ -73,9 +73,11 @@ bin_PROGRAMS = svnup
 svnup_SOURCES = main.c
 nodist_svnup_SOURCES =
 svnup_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -g -std=c99 -I$(includedir) $(FCOLOR_FLAGS)
-svnup_LDFLAGS = -version-info 0:0:0 -lmrksvnup -L$(libdir) -lmrkcommon -lmndiag
+svnup_LDFLAGS = -version-info 0:0:0 -L. -lmrksvnup -L$(libdir) -lmrkcommon -lmndiag
 
 SUBDIRS = . test
+
+svnup: libmrksvnup.la
 
 diag.c diag.h: $(diags)
 	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -v -S diag.txt.tmp -L mrksvnup -H diag.h -C diag.c *.[ch]
