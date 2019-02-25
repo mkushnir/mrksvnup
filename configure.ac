@@ -1,4 +1,10 @@
 AC_INIT(mrksvnup, 0.1, markiyan.kushnir@gmail.com)
+
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_AUX_DIR([.ac-aux])
+AC_CONFIG_FILES([Makefile src/Makefile src/test/Makefile man/Makefile])
+AC_CONFIG_HEADERS(config.h)
+
 if test -n "$USE_GCC"
 then
     if test "$USE_GCC" = "46" && which gcc46
@@ -40,14 +46,12 @@ else
     fi
 fi
 
-AC_CONFIG_MACRO_DIR([m4])
 
 AC_LANG(C)
 
 AC_PROG_CC
 AC_PROG_CXX
 AM_PROG_AR
-AC_PROG_RANLIB
 AC_PROG_INSTALL
 
 LT_INIT
@@ -55,9 +59,6 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_SILENT_RULES([yes])
 
 dnl AM_MAINTAINER_MODE
-
-AC_CONFIG_FILES([Makefile src/Makefile src/test/Makefile man/Makefile])
-AC_CONFIG_HEADERS(config.h)
 
 AC_CHECK_HEADER_STDBOOL
 AC_CHECK_HEADERS([syslog.h])
@@ -113,7 +114,7 @@ AC_ARG_ENABLE(fcolor,
              )
 AC_CHECK_LIB(z, compress, [], [AC_MSG_FAILURE(libz.so is required.)]) 
 AC_CHECK_LIB(crypto, MD5_Init, [], [AC_MSG_FAILURE(libcrypto.so is required.)]) 
-AC_CHECK_LIB(ssl, SSL_library_init, [], [AC_MSG_FAILURE(libssl.so is required.)]) 
+AC_CHECK_LIB(ssl, OPENSSL_init_ssl, [], [AC_MSG_FAILURE(libssl.so is required.)]) 
 AC_CHECK_LIB(bsdxml, XML_ParserCreateNS, [], [AC_MSG_FAILURE(libbsdxml.so is required.)]) 
 # pass LDFLAGS=-L${LOCALBASE}/lib in the environment
 AC_CHECK_LIB(mrkcommon, _fini, [], [AC_MSG_FAILURE(libmrkcommon.so is required. Please find it at git@github.com:mkushnir/mrkcommon.git)]) 

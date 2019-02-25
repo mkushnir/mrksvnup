@@ -2,7 +2,7 @@
 
 if test "$1" = "init"
 then
-    export LDFLAGS=-L$HOME/lib
+    export LDFLAGS="-L$HOME/lib -L/usr/lib"
     export CFLAGS=-I$HOME/include
 
     aclocal
@@ -16,14 +16,14 @@ then
     make
 elif test "$1" = "dev"
 then
-    export LDFLAGS=-L$HOME/lib
+    export LDFLAGS="-L$HOME/lib -L/usr/lib"
     export CFLAGS=-I$HOME/include
     autoreconf
     ./configure --prefix=$HOME --enable-debug --enable-fcolor
     make
 elif test "$1" = "dev-ndebug"
 then
-    export LDFLAGS=-L$HOME/lib
+    export LDFLAGS="-L$HOME/lib -L/usr/lib"
     export CFLAGS=-I$HOME/include
     autoreconf
     ./configure --prefix=$HOME
