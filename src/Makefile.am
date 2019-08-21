@@ -77,7 +77,7 @@ svnup_LDFLAGS = -version-info 0:0:0 -L. -lmrksvnup -L$(libdir) -lmrkcommon -lmnd
 
 SUBDIRS = . test
 
-svnup: libmrksvnup.la
+svnup$(EXEEXT): libmrksvnup.la
 
 diag.c diag.h: $(diags)
 	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -v -S diag.txt.tmp -L mrksvnup -H diag.h -C diag.c *.[ch]
