@@ -58,7 +58,7 @@ testfoo_SOURCES = ../svnc.c \
 		  ../bytestream_ssl_helper.c \
 		  testfoo.c
 testfoo_CFLAGS =
-testfoo_LDFLAGS =
+testfoo_LDFLAGS = -L$(libdir) -lmrkapp
 
 diag.c diag.h: $(diags)
 	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -v -S diag.txt.tmp -L mrksvnup -H diag.h -C diag.c ../*.[ch] ./*.[ch]

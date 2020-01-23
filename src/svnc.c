@@ -15,6 +15,7 @@
 //#define TRRET_DEBUG_VERBOSE
 #include <mrkcommon/dumpm.h>
 #include <mrkcommon/traversedir.h>
+#include "bytestream_ssl_helper.h"
 
 #include <mrksvnup/svncdir.h>
 #include <mrksvnup/svnproto.h>
@@ -23,7 +24,6 @@
 #include <mrksvnup/httpproto.h>
 
 #include "svnc_private.h"
-#include "bytestream_ssl_helper.h"
 
 #include "diag.h"
 

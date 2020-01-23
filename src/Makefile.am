@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = foreign
 
 distdir = ../$(PACKAGE)-$(VERSION)/src
-dist_HEADERS = svnc_private.h httpproto_private.h bytestream_ssl_helper.h
+dist_HEADERS = svnc_private.h httpproto_private.h
 
 diags = diag.txt
 BUILT_SOURCES = diag.c diag.h
@@ -22,7 +22,7 @@ nobase_include_HEADERS = mrksvnup/svnc.h \
 			 mrksvnup/xmatch.h \
 			 mrksvnup/version.h
 
-noinst_HEADERS =
+noinst_HEADERS = bytestream_ssl_helper.h
 
 libmrksvnup_la_SOURCES = svnc.c \
 			 svnc_util.c \
@@ -73,11 +73,11 @@ bin_PROGRAMS = svnup
 svnup_SOURCES = main.c
 nodist_svnup_SOURCES =
 svnup_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -g -std=c99 -I$(includedir) $(FCOLOR_FLAGS)
-svnup_LDFLAGS = -version-info 0:0:0 -L. -lmrksvnup -L$(libdir) -lmrkcommon -lmndiag
+svnup_LDFLAGS = -L. -lmrksvnup -L$(libdir) -lmrkcommon -lmndiag
 
 SUBDIRS = . test
 
-svnup$(EXEEXT): libmrksvnup.la
+#svnup$(EXEEXT): libmrksvnup.la
 
 diag.c diag.h: $(diags)
 	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -v -S diag.txt.tmp -L mrksvnup -H diag.h -C diag.c *.[ch]
